@@ -46,7 +46,12 @@ export function BuyCreditsModal({ open, onClose }: BuyCreditsModalProps) {
         setError("Failed to get checkout URL");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Payment failed");
+      const msg = err instanceof Error ? err.message : "Payment failed";
+      if (msg.includes("Expecting value") || msg.includes("empty body")) {
+        setError("Payment provider error. Please try again or contact support.");
+      } else {
+        setError(msg);
+      }
     } finally {
       setPurchasing(null);
     }

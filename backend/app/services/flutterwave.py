@@ -69,7 +69,12 @@ async def create_flutterwave_charge(
             },
         )
 
-        data = response.json()
+        try:
+            data = response.json()
+        except Exception as e:
+            logger.error("Flutterwave invalid JSON (status %s): %s", response.status_code, response.text[:500])
+            raise ValueError(f"Payment provider error: sent {response.status_code} with empty body. Check FLW_SECRET_KEY and FLW_BASE_URL config.")
+
         if data.get("status") != "success":
             logger.error("Flutterwave charge failed: %s", data)
             raise ValueError(data.get("message", "Payment initialization failed"))
