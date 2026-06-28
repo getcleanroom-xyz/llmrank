@@ -19,22 +19,19 @@ export default function CreditsSuccessPage() {
   useEffect(() => {
     const status = searchParams.get("status");
     const transactionId = searchParams.get("transaction_id");
-    const txRef = searchParams.get("tx_ref");
 
     if (!transactionId || status !== "successful") {
-      setState({
-        status: "failed",
-        reason: status === "cancelled" ? "Payment was cancelled." : "Payment was not successful.",
-      });
+      const reason = status === "cancelled" ? "Payment was cancelled." : "Payment was not successful.";
+      setState({ status: "failed", reason });
       return;
     }
 
     verifyPayment(transactionId)
       .then((res: Record<string, unknown>) => {
-        const status = res.status as string;
-        if (status === "successful") {
+        const s = res.status as string;
+        if (s === "successful") {
           setState({ status: "success", credits: (res.credits_granted as number) ?? 0 });
-        } else if (status === "already_credited") {
+        } else if (s === "already_credited") {
           setState({ status: "already_credited" });
         } else {
           setState({ status: "failed", reason: "Payment verification did not confirm success." });
