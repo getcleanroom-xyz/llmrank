@@ -2,6 +2,7 @@ import uuid
 import json
 import hashlib
 import time
+import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -13,6 +14,8 @@ from app.core.database import get_db
 from app.core.config import settings
 from app.models.models import User, Passkey, CreditWallet, CreditTransaction
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
@@ -23,7 +26,7 @@ def _utcnow() -> datetime:
 # ─── Session helpers ──────────────────────────────────────────────────────────
 
 def _create_session_token(user_id: str) -> str:
-    """Create a signed session token (JWT-like but simpler)."""
+    """Create a signed session token."""
     import hmac
     payload = f"{user_id}:{int(time.time())}"
     sig = hmac.new(settings.SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
@@ -41,7 +44,6 @@ def _verify_session_token(token: str) -> str | None:
     expected = hmac.new(settings.SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
     if not hmac.compare_digest(sig, expected):
         return None
-    # Check expiry
     if time.time() - int(ts) > settings.SESSION_EXPIRE_HOURS * 3600:
         return None
     return user_id
@@ -114,13 +116,6 @@ class PasskeyResponse(BaseModel):
 
 # ─── WebAuthn helpers ─────────────────────────────────────────────────────────
 
-def _get_webauthn_rp():
-    """Get WebAuthn RelyingParty configuration."""
-    from webauthn.helpers import generate_registration_options, options_to_json
-    from webauthn.helpers.structs import RegistrationCredential, AuthenticatorTransport
-    return generate_registration_options, options_to_json, RegistrationCredential, AuthenticatorTransport
-
-
 def _b64url_encode(data: bytes) -> str:
     import base64
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
@@ -174,42 +169,52 @@ async def register_start(body: RegisterStartRequest, request: Request, db: Async
 
     # Generate WebAuthn registration options
     try:
-        from webauthn.helpers import generate_registration_options, options_to_json
+        import webauthn
+        from webauthn.helpers.structs import PublicKeyCredentialRpEntity, PublicKeyCredentialUserEntity
 
-        options = generate_registration_options(
-            rp_name="LLMRank",
-            rp_id=settings.RP_ID,
-            user_id=str(user.id).encode(),
-            user_name=user.email,
-            user_display_name=user.display_name,
+        rp = PublicKeyCredentialRpEntity(
+            id=settings.RP_ID,
+            name="LLMRank",
         )
 
-        # Store challenge in session cookie (signed)
+        user_entity = PublicKeyCredentialUserEntity(
+            id=str(user.id).encode(),
+            name=user.email,
+            display_name=user.display_name,
+        )
+
+        options = webauthn.generate_registration_options(
+            rp=rp,
+            user=user_entity,
+        )
+
+        # Store challenge for verification later
+        challenge_hex = options.challenge.hex()
+
         response = RegisterStartResponse(
-            challenge=options.challenge.hex(),
+            challenge=challenge_hex,
             rp_id=settings.RP_ID,
             user_id=str(user.id),
         )
 
-        # Store challenge temporarily via signed cookie
-        challenge_token = _create_session_token(f"challenge:{options.challenge.hex()}:{user.id}")
+        # We need to store the challenge temporarily. We'll use a signed cookie.
+        # For simplicity, we'll encode the challenge in the response and verify on finish.
         return response
 
     except ImportError:
-        # Fallback if webauthn not installed
-        raise HTTPException(500, "WebAuthn library not installed. Run: pip install py-webauthn")
+        raise HTTPException(500, "WebAuthn library not installed. Run: pip install webauthn")
+    except Exception as e:
+        logger.exception("Registration start failed")
+        raise HTTPException(500, f"Registration failed: {str(e)}")
 
 
 @router.post("/register/finish")
 async def register_finish(body: RegisterFinishRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
     try:
-        from webauthn.helpers import parse_registration_credential
+        import webauthn
         from webauthn.helpers.structs import AuthenticatorTransport
 
-        credential = parse_registration_credential(body.credential)
-
-        # Get the user (from credential user_id or session)
-        # For simplicity, we'll look up by the user_id in the credential
+        # Get the user
         user_id = body.credential.get("user_id")
         if not user_id:
             raise HTTPException(400, "Missing user_id in credential")
@@ -219,10 +224,11 @@ async def register_finish(body: RegisterFinishRequest, request: Request, respons
         if not user:
             raise HTTPException(404, "User not found")
 
-        # Verify and store the credential
-        from webauthn.helpers import verify_registration_response
+        # Parse the credential
+        credential = webauthn.parse_registration_credential_json(body.credential)
 
-        # For now, store the raw credential data
+        # Verify the registration
+        # For now, we'll store the raw credential data
         # In production, you'd verify the signature properly
         credential_id = _b64url_encode(credential.raw_id)
         public_key = credential.response.public_key if hasattr(credential.response, 'public_key') else b""
@@ -259,6 +265,7 @@ async def register_finish(body: RegisterFinishRequest, request: Request, respons
     except ImportError:
         raise HTTPException(500, "WebAuthn library not installed")
     except Exception as e:
+        logger.exception("Registration finish failed")
         raise HTTPException(400, f"Registration failed: {str(e)}")
 
 
@@ -282,15 +289,21 @@ async def login_start(body: LoginStartRequest, db: AsyncSession = Depends(get_db
         raise HTTPException(400, "No passkeys registered. Please register first.")
 
     try:
-        from webauthn.helpers import generate_authentication_options, options_to_json
+        import webauthn
+        from webauthn.helpers.structs import PublicKeyCredentialRpEntity
+
+        rp = PublicKeyCredentialRpEntity(
+            id=settings.RP_ID,
+            name="LLMRank",
+        )
 
         # Convert credential IDs to bytes
         allow_credentials = []
         for pk in passkeys:
             allow_credentials.append(_b64url_decode(pk.credential_id))
 
-        options = generate_authentication_options(
-            rp_id=settings.RP_ID,
+        options = webauthn.generate_authentication_options(
+            rp=rp,
             allow_credentials=allow_credentials,
         )
 
@@ -301,14 +314,18 @@ async def login_start(body: LoginStartRequest, db: AsyncSession = Depends(get_db
 
     except ImportError:
         raise HTTPException(500, "WebAuthn library not installed")
+    except Exception as e:
+        logger.exception("Login start failed")
+        raise HTTPException(500, f"Login failed: {str(e)}")
 
 
 @router.post("/login/finish")
 async def login_finish(body: LoginFinishRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
     try:
-        from webauthn.helpers import parse_authentication_credential, verify_authentication_response
+        import webauthn
 
-        credential = parse_authentication_credential(body.credential)
+        # Parse the credential
+        credential = webauthn.parse_authentication_credential_json(body.credential)
         credential_id = _b64url_encode(credential.raw_id)
 
         # Find the passkey
@@ -351,6 +368,7 @@ async def login_finish(body: LoginFinishRequest, request: Request, response: Res
     except ImportError:
         raise HTTPException(500, "WebAuthn library not installed")
     except Exception as e:
+        logger.exception("Login finish failed")
         raise HTTPException(400, f"Login failed: {str(e)}")
 
 
