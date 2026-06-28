@@ -2,26 +2,14 @@
 
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
-import { AuthButton } from "@/components/auth/AuthButton";
+import { AppHeader } from "@/components/AppHeader";
 
 export default function HomePage() {
   const { user } = useAuth();
 
   return (
     <main className="page" style={{ display: "flex", flexDirection: "column" }}>
-      <nav style={{ background: "var(--surface)", borderBottom: "2px solid var(--border)", padding: "0 var(--page-px)" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", height: 48, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Link href="/" style={{ fontSize: 18, fontWeight: 800, color: "var(--text)", textDecoration: "none" }}>
-            llm<span style={{ background: "var(--primary)", padding: "0 4px", border: "2px solid var(--border)" }}>rank</span>
-          </Link>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {user && (
-              <Link href="/brands" className="btn btn-ghost btn-sm">Dashboard</Link>
-            )}
-            <AuthButton />
-          </div>
-        </div>
-      </nav>
+      <AppHeader after={user ? <Link href="/brands" className="btn btn-ghost btn-sm" style={{ fontSize: 11, padding: "2px 8px", lineHeight: "20px" }}>Dashboard</Link> : undefined} />
 
       <div style={{ flex: 1, maxWidth: 720, margin: "0 auto", padding: "0 var(--page-px)", width: "100%" }}>
         <header style={{ paddingTop: "clamp(40px, 10vh, 80px)", paddingBottom: 32 }}>

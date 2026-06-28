@@ -1,11 +1,13 @@
 "use client";
 
 import { Suspense, useEffect, useState, useCallback, useRef } from "react";
+import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { getDashboard, getQueries } from "@/lib/api";
+import { getDashboard, getQueries, getCredits, type CreditBalance } from "@/lib/api";
 import type { DashboardData, MonitoredQuery } from "@/types";
 import { KpiCard, ScoreRing, InsightRow } from "@/components/ui";
-import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { AppHeader } from "@/components/AppHeader";
+import { ScanControls } from "@/components/dashboard/DashboardHeader";
 import { LLMBreakdownTable } from "@/components/dashboard/LLMBreakdownTable";
 import { CompetitorShare } from "@/components/dashboard/CompetitorShare";
 import { QueryChipsPanel } from "@/components/dashboard/QueryChipsPanel";
@@ -26,6 +28,7 @@ function BrandDashboardPageInner() {
   const [queries, setQueries] = useState<MonitoredQuery[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [credits, setCredits] = useState<CreditBalance | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const setTab = useCallback((t: Tab, extras?: Record<string, string>) => {
@@ -57,7 +60,7 @@ function BrandDashboardPageInner() {
     }
   }, [brandId]);
 
-  useEffect(() => { loadDashboard(); return () => abortRef.current?.abort(); }, [loadDashboard]);
+  useEffect(() => { loadDashboard(); getCredits().then(setCredits).catch(() => {}); return () => abortRef.current?.abort(); }, [loadDashboard]);
 
   useEffect(() => {
     const scan = data?.active_scan;
@@ -84,7 +87,22 @@ function BrandDashboardPageInner() {
 
   return (
     <div className="page" style={{ display: "flex", flexDirection: "column" }}>
-      <DashboardHeader brand={brand} latestScan={active_scan ?? latest_scan} onScanTriggered={loadDashboard} onRefresh={loadDashboard} />
+      <AppHeader
+        before={
+          <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+            <Link href="/brands" style={{ fontSize: 12, color: "var(--text-muted)", textDecoration: "none", fontWeight: 700, flexShrink: 0 }}>brands</Link>
+            <span style={{ color: "var(--text-muted)", flexShrink: 0, fontSize: 11 }}>/</span>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{brand.name}</div>
+              <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {brand.domain}
+                {(active_scan ?? latest_scan)?.completed_at && <span style={{ marginLeft: 4 }}>{new Date((active_scan ?? latest_scan)!.completed_at!).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>}
+              </div>
+            </div>
+          </div>
+        }
+        after={<ScanControls brandId={brandId} latestScan={active_scan ?? latest_scan} credits={credits} onScanTriggered={loadDashboard} />}
+      />
       <div style={{ flex: 1, padding: "var(--gap) var(--page-px)", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
         {error && data && <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "8px 12px", marginBottom: 12, fontSize: 13, color: "#991B1B", fontWeight: 600 }}>{error}</div>}
 
