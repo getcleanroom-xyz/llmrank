@@ -11,7 +11,7 @@ import type { Brand } from "@/types";
 const PAGE_SIZE = 10;
 
 function BrandsPageInner() {
-  const { user } = useAuth();
+  const { user, openAuthModal } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const search = searchParams.get("search") ?? "";
@@ -198,7 +198,7 @@ function BrandsPageInner() {
         ) : !user ? (
           <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
             <div style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 14, fontWeight: 600 }}>Sign in to manage your brands.</div>
-            <button data-auth-trigger className="btn btn-primary">Sign in</button>
+            <button onClick={() => openAuthModal("login")} className="btn btn-primary">Sign in</button>
           </div>
         ) : filtered.length === 0 && !search ? (
           <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>

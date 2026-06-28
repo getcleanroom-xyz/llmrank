@@ -50,7 +50,6 @@ export default function HomePage() {
             <LandingCTA variant="primary" />
             <LandingCTA variant="secondary" />
           </div>
-          <button data-auth-trigger className="hidden" />
         </header>
 
         <section style={{ paddingBottom: 24, borderBottom: "2px solid var(--border)", marginBottom: 24 }}>

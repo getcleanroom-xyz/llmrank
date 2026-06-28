@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import {
   authRegisterStart,
@@ -10,21 +10,24 @@ import {
   authLogout,
 } from "@/lib/api";
 
-interface AuthModalProps {
-  open: boolean;
-  onClose: () => void;
-}
-
-export function AuthModal({ open, onClose }: AuthModalProps) {
-  const { user, setUser } = useAuth();
-  const [mode, setMode] = useState<"login" | "register">("login");
+export function AuthModal() {
+  const { user, setUser, closeAuthModal, authModalOpen, authModalMode } = useAuth();
+  const [mode, setMode] = useState<"login" | "register">(authModalMode);
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [deviceName, setDeviceName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  if (!open) return null;
+  useEffect(() => {
+    setMode(authModalMode);
+    setEmail("");
+    setDisplayName("");
+    setDeviceName("");
+    setError("");
+  }, [authModalMode]);
+
+  if (!authModalOpen) return null;
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +40,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
       const credential = await createPasskeyCredential(challenge, rp_id, user_id, email, displayName);
       const result = await authRegisterFinish(credential, device);
       setUser(result.user);
-      onClose();
+      closeAuthModal();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
@@ -55,7 +58,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
       const credential = await getPasskeyCredential(challenge, rp_id);
       const result = await authLoginFinish(credential);
       setUser(result.user);
-      onClose();
+      closeAuthModal();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -66,18 +69,15 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
   const handleLogout = async () => {
     await authLogout();
     setUser(null);
-    onClose();
+    closeAuthModal();
   };
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      {/* Backdrop */}
-      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" }} onClick={onClose} />
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" }} onClick={closeAuthModal} />
 
-      {/* Modal */}
       <div className="card" style={{ position: "relative", width: "100%", maxWidth: 400, margin: "0 16px", padding: 24, zIndex: 10 }}>
         {user ? (
-          // Logged in state
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
             <div style={{ width: 48, height: 48, borderRadius: "var(--radius)", background: "var(--primary)", border: "2px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 800 }}>
               {user.display_name.charAt(0).toUpperCase()}
@@ -91,7 +91,6 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
             </button>
           </div>
         ) : (
-          // Auth form
           <>
             <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
               <button

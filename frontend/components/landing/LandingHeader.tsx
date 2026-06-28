@@ -4,18 +4,12 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 
 export function LandingCTA({ variant = "primary" }: { variant?: "primary" | "secondary" }) {
-  const { user } = useAuth();
+  const { user, openAuthModal } = useAuth();
 
   if (variant === "secondary") {
     return (
       <Link
-        href={user ? "/brands" : "#"}
-        onClick={(e) => {
-          if (!user) {
-            e.preventDefault();
-            document.querySelector<HTMLButtonElement>("[data-auth-trigger]")?.click();
-          }
-        }}
+        href="/#how-it-works"
         className="btn btn-ghost"
       >
         See how it works
@@ -24,23 +18,17 @@ export function LandingCTA({ variant = "primary" }: { variant?: "primary" | "sec
   }
 
   return (
-    <Link
-      href={user ? "/brands" : "#"}
-      onClick={(e) => {
-        if (!user) {
-          e.preventDefault();
-          document.querySelector<HTMLButtonElement>("[data-auth-trigger]")?.click();
-        }
-      }}
+    <button
+      onClick={() => (user ? (window.location.href = "/brands") : openAuthModal("register"))}
       className="btn btn-primary"
     >
-      Start tracking for free
-    </Link>
+      {user ? "Go to Dashboard" : "Start tracking for free"}
+    </button>
   );
 }
 
 export function LandingHeader() {
-  const { user } = useAuth();
+  const { user, openAuthModal } = useAuth();
 
   return (
     <header className="app-header">
@@ -63,7 +51,7 @@ export function LandingHeader() {
             ) : (
               <button
                 className="btn btn-primary btn-sm"
-                onClick={() => document.querySelector<HTMLButtonElement>("[data-auth-trigger]")?.click()}
+                onClick={() => openAuthModal("login")}
               >
                 Sign in
               </button>

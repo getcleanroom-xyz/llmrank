@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { AuthModal } from "@/components/auth/AuthModal";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className={inter.className}>
         <AuthProvider>
           <ErrorBoundary>{children}</ErrorBoundary>
+          <AuthModal />
           <Analytics />
         </AuthProvider>
       </body>

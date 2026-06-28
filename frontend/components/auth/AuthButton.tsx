@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { authLogout } from "@/lib/api";
-import { AuthModal } from "./AuthModal";
 import type { CreditBalance } from "@/lib/api";
 
 interface AuthButtonProps {
@@ -13,9 +12,8 @@ interface AuthButtonProps {
 }
 
 export function AuthButton({ credits, onBuyClick }: AuthButtonProps) {
-  const { user, setUser } = useAuth();
+  const { user, setUser, openAuthModal } = useAuth();
   const router = useRouter();
-  const [showModal, setShowModal] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -32,12 +30,9 @@ export function AuthButton({ credits, onBuyClick }: AuthButtonProps) {
 
   if (!user) {
     return (
-      <>
-        <button onClick={() => setShowModal(true)} className="btn btn-sm">
-          <span>Sign in</span>
-        </button>
-        <AuthModal open={showModal} onClose={() => setShowModal(false)} />
-      </>
+      <button onClick={() => openAuthModal("login")} className="btn btn-sm">
+        <span>Sign in</span>
+      </button>
     );
   }
 
