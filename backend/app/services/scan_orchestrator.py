@@ -248,14 +248,31 @@ async def generate_query_suggestions(brand_name: str, domain: str, keywords: lis
     combined = "\n\n".join(all_content)[:MAX_TOTAL_CONTENT]
     logger.info("Crawled %d pages from %s (%d chars of content)", len(visited), base_domain, len(combined))
 
-    # Build prompt
-    context_block = f"\n\nWebsite content (crawled {len(visited)} pages):\n{combined}" if combined else ""
     keyword_block = f"\n\nContext keywords: {', '.join(keywords)}" if keywords else ""
+    has_useful_content = len(combined) >= 300
+    thin_signal = f"Brand name: {brand_name} | Domain: {domain}"
 
-    prompt = f"""You are an SEO expert. Based on the crawled content from "{brand_name}" (website: {domain}), generate 12 realistic search queries that potential customers would ask an AI assistant (like ChatGPT or Google Gemini) when looking for the products, services, or tools this company offers.{context_block}{keyword_block}
+    # Extract meta description for thin-content fallback
+    if not has_useful_content:
+        try:
+            import httpx as _httpx2
+            async with _httpx2.AsyncClient(timeout=5, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0"}) as c:
+                r = await c.get(BASE_URL)
+                m = re.search(r'<meta\s+name=["\']description["\']\s+content=["\']([^"\']+)["\']', r.text, re.IGNORECASE)
+                if m:
+                    thin_signal += f" | Tagline: {m.group(1)}"
+        except Exception:
+            pass
+
+    content_signal = combined if has_useful_content else thin_signal
+    content_label = "crawled website content" if has_useful_content else "brand signals (name, domain, tagline)"
+
+    prompt = f"""You are an SEO expert. Based on the following {content_label}, generate 12 realistic search queries that potential customers would ask an AI assistant (like ChatGPT or Google Gemini) when looking for the products, services, or tools this company offers.
+
+{content_signal}{keyword_block}
 
 Requirements:
-- Queries must be directly relevant to what this company actually does/sells (based on the crawled content)
+- Queries must be directly relevant to what this company actually does/sells
 - Natural, conversational questions a real user would ask
 - Mix of: "best X for Y", "X vs Y", "how to do Z", "tool for Z", "alternatives to X"
 - Do NOT include the brand name — these are queries where the brand SHOULD appear organically
