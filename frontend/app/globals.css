@@ -270,7 +270,7 @@ body {
   border-bottom: 2px solid var(--border);
 }
 .app-header-inner {
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 8px var(--page-px);
   width: 100%;
@@ -278,6 +278,6 @@ body {
 .app-header-content {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 2rem;
   flex-wrap: wrap;
 }
