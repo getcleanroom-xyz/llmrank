@@ -34,20 +34,18 @@ export function AppHeader({ before, after }: { before?: React.ReactNode; after?:
           </Link>
 
           {before && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+            <div className="app-header-breadcrumb">
               {before}
             </div>
           )}
 
-          <div style={{ flex: 1 }} />
+          <div style={{ flex: 1, minWidth: 0 }} />
 
-          {after && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-              {after}
-            </div>
-          )}
+          <div className="app-header-actions">
+            {after}
 
-          <AuthButton credits={credits} onBuyClick={() => setShowBuy(true)} />
+            <AuthButton credits={credits} onBuyClick={() => setShowBuy(true)} />
+          </div>
         </div>
       </div>
       <BuyCreditsModal open={showBuy} onClose={() => setShowBuy(false)} />

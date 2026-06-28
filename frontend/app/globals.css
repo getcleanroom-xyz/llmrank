@@ -278,6 +278,29 @@ body {
 .app-header-content {
   display: flex;
   align-items: center;
-  gap: 2rem;
-  flex-wrap: wrap;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+.app-header-breadcrumb {
+  min-width: 0;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (min-width: 768px) {
+  .app-header-breadcrumb {
+    max-width: 400px;
+  }
+}
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+@media (min-width: 768px) {
+  .app-header-content {
+    gap: 2rem;
+  }
 }
