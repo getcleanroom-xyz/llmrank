@@ -1,6 +1,6 @@
 # LLMRank — AI SEO Visibility Tool
 
-Track exactly how ChatGPT, Gemini, Llama, and Claude rank your brand when users ask the questions that matter.
+Track exactly how ChatGPT, Gemini, Llama, Claude, DeepSeek, and more rank your brand when users ask the questions that matter.
 
 ---
 
@@ -20,7 +20,7 @@ Track exactly how ChatGPT, Gemini, Llama, and Claude rank your brand when users 
 |---|---|
 | Frontend | Next.js 16, TypeScript, Tailwind CSS, Recharts |
 | Backend | FastAPI, SQLAlchemy async, PostgreSQL, Alembic |
-| LLMs | Gemini 1.5 Flash (free), Groq/Llama 3.3 70B (free), GPT-4o-mini, Claude Haiku |
+| LLMs | OpenRouter (GPT-4o, Gemini 2.5 Flash, Llama 3.3 70B, Claude Haiku, DeepSeek, Mistral, Qwen) |
 | Infra | Docker Compose |
 
 ---
@@ -38,10 +38,8 @@ cp backend/.env.example backend/.env
 Edit `backend/.env`:
 
 ```env
-GEMINI_API_KEY=your_key        # Free: aistudio.google.com
-GROQ_API_KEY=your_key          # Free: console.groq.com
-OPENAI_API_KEY=your_key        # Optional — paid
-ANTHROPIC_API_KEY=your_key     # Optional — paid
+OPENROUTER_API_KEY=your_key    # Required: openrouter.ai/keys
+SECRET_KEY=change_this_to_a_random_secret
 ```
 
 ### 2. Run with Docker Compose
@@ -73,16 +71,22 @@ npm run dev
 
 ---
 
-## Free tier guide
+## Supported LLMs
 
-Run the whole product for free:
+All models are accessed via OpenRouter. Set `OPENROUTER_API_KEY` in your `.env` to enable:
 
-| LLM | Provider | Cost | Limit |
-|---|---|---|---|
-| Gemini 1.5 Flash | Google AI Studio | Free | 1,500 req/day |
-| Llama 3.3 70B | Groq | Free | ~14,400 req/day |
-
-Leave `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` empty — those LLMs simply won't appear in results.
+| Model | Provider | Cost/Request |
+|---|---|---|
+| GPT-4o Mini | OpenAI | $0.01 |
+| GPT-4o | OpenAI | $0.03 |
+| Gemini 2.5 Flash | Google | $0.02 |
+| Llama 3.3 70B | Meta | $0.01 |
+| Llama 3.1 8B | Meta | $0.005 |
+| Claude Haiku | Anthropic | $0.01 |
+| DeepSeek Chat | DeepSeek | $0.01 |
+| DeepSeek R1 | DeepSeek | $0.01 |
+| Mistral Large | Mistral | $0.02 |
+| Qwen 2.5 72B | Alibaba | $0.01 |
 
 ---
 
@@ -93,14 +97,28 @@ Full interactive docs at `/docs` (Swagger UI) when the backend is running.
 Key endpoints:
 
 ```
-POST   /api/v1/brands                              Create brand
-GET    /api/v1/brands                              List brands
-GET    /api/v1/brands/{id}/dashboard               Full dashboard data
-POST   /api/v1/brands/{id}/scans                   Trigger scan
-GET    /api/v1/brands/{id}/scans/{scanId}/stream   SSE live scan progress
-GET    /api/v1/brands/{id}/queries                 List queries
-POST   /api/v1/brands/{id}/queries/suggest         AI query suggestions
-GET    /api/v1/brands/{id}/queries/{queryId}/drilldown  Per-query drilldown
+POST   /api/v1/brands                                  Create brand
+GET    /api/v1/brands                                  List brands
+GET    /api/v1/brands/{id}                             Get brand
+DELETE /api/v1/brands/{id}                             Delete brand
+GET    /api/v1/brands/{id}/dashboard                   Full dashboard data
+
+GET    /api/v1/brands/{id}/queries                     List queries
+POST   /api/v1/brands/{id}/queries                     Add query
+DELETE /api/v1/brands/{id}/queries/{queryId}           Delete query
+POST   /api/v1/brands/{id}/queries/suggest             AI query suggestions
+
+POST   /api/v1/brands/{id}/scans                       Trigger scan
+GET    /api/v1/brands/{id}/scans                       List scans
+GET    /api/v1/brands/{id}/scans/{scanId}              Get scan
+GET    /api/v1/brands/{id}/scans/{scanId}/stream       SSE live scan progress
+GET    /api/v1/brands/{id}/queries/{queryId}/drilldown Per-query drilldown
+
+GET    /api/v1/credits                                 Get credit balance
+POST   /api/v1/credits/grant                           Grant credits (BMC webhook)
+GET    /api/v1/credits/history                         Credit transaction history
+
+POST   /api/v1/webhooks/bmc                            Buy Me a Coffee webhook
 ```
 
 ---
@@ -120,7 +138,7 @@ GET    /api/v1/brands/{id}/queries/{queryId}/drilldown  Per-query drilldown
 │  ├── Scan orchestrator (asyncio, parallel LLM calls)│
 │  ├── Ranking engine (mention, position, sentiment)  │
 │  ├── Insight engine (actionable recommendations)    │
-│  └── LLM adapters (Gemini, Groq, OpenAI, Claude)   │
+│  └── LLM adapters (OpenRouter unified gateway)     │
 └──────────────────────┬──────────────────────────────┘
                        │ SQLAlchemy async
 ┌──────────────────────▼──────────────────────────────┐
@@ -153,14 +171,15 @@ Luxury car aesthetic: obsidian backgrounds (`#08090A`), warm platinum text (`#F0
 
 CSS custom properties are defined in `globals.css` — all colors reference variables, making theming a one-file change.
 
+A shared component library lives in `design-system/` with reusable UI primitives (Button, Card, Input, Modal, Select, Tabs, Toast, Tooltip).
+
 ---
 
 ## Roadmap
 
 - [ ] Scheduled automatic scans (cron)
 - [ ] Email/Slack alerts on score drops
-- [ ] Anonymous Shareable report links
+- [ ] Shareable report links
 - [ ] Score trend notifications
 - [ ] Multi-user / team support
 - [ ] Export to PDF report
-# llmrank
