@@ -203,8 +203,7 @@ async def register_start(body: RegisterStartRequest, request: Request, db: Async
 @router.post("/register/finish")
 async def register_finish(body: RegisterFinishRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
     try:
-        import webauthn
-        from webauthn.helpers.structs import AuthenticatorTransport
+        from webauthn.helpers import parse_registration_credential_json
 
         # Get the user
         user_id = body.credential.get("user_id")
@@ -217,7 +216,7 @@ async def register_finish(body: RegisterFinishRequest, request: Request, respons
             raise HTTPException(404, "User not found")
 
         # Parse the credential
-        credential = webauthn.parse_registration_credential_json(body.credential)
+        credential = parse_registration_credential_json(body.credential)
 
         # Verify the registration
         # For now, we'll store the raw credential data
@@ -308,10 +307,10 @@ async def login_start(body: LoginStartRequest, db: AsyncSession = Depends(get_db
 @router.post("/login/finish")
 async def login_finish(body: LoginFinishRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
     try:
-        import webauthn
+        from webauthn.helpers import parse_authentication_credential_json
 
         # Parse the credential
-        credential = webauthn.parse_authentication_credential_json(body.credential)
+        credential = parse_authentication_credential_json(body.credential)
         credential_id = _b64url_encode(credential.raw_id)
 
         # Find the passkey
