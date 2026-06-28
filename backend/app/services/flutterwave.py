@@ -46,7 +46,7 @@ async def create_flutterwave_charge(
 
     async with httpx.AsyncClient(timeout=30) as client:
         response = await client.post(
-            f"{settings.FLW_BASE_URL}/orchestration/direct-charges",
+            f"{settings.FLW_BASE_URL}/payments",
             headers={
                 "Authorization": f"Bearer {settings.FLW_SECRET_KEY}",
                 "Content-Type": "application/json",
@@ -80,9 +80,9 @@ async def create_flutterwave_charge(
             raise ValueError(data.get("message", "Payment initialization failed"))
 
         return {
-            "charge_id": data["data"]["id"],
+            "charge_id": str(data["data"]["id"]),
             "reference": reference,
-            "checkout_url": data["data"].get("next_action", {}).get("redirect_url", {}).get("url"),
+            "checkout_url": data["data"].get("link"),
             "amount": package["amount_usd"],
             "currency": currency,
         }
