@@ -163,3 +163,28 @@ export const authListPasskeys = () => apiFetch<PasskeyInfo[]>("/auth/passkeys");
 
 export const authDeletePasskey = (passkeyId: string) =>
   apiFetch<{ status: string }>(`/auth/passkeys/${passkeyId}`, { method: "DELETE" });
+
+// ─── Payments ────────────────────────────────────────────────────────────────
+
+export interface CreditPackage {
+  key: string;
+  credits: number;
+  amount_usd: number;
+  label: string;
+}
+
+export interface CheckoutSession {
+  charge_id: string;
+  reference: string;
+  checkout_url: string | null;
+  amount: number;
+  currency: string;
+}
+
+export const getCreditPackages = () => apiFetch<CreditPackage[]>("/payments/packages");
+
+export const createCheckout = (packageKey: string, currency: string = "USD") =>
+  apiFetch<CheckoutSession>("/payments/checkout", {
+    method: "POST",
+    body: JSON.stringify({ package_key: packageKey, currency }),
+  });

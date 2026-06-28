@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import type { Brand, Scan } from "@/types";
 import { triggerScan, getCredits, type CreditBalance } from "@/lib/api";
+import { BuyCreditsModal } from "@/components/BuyCreditsModal";
 
 const LLM_OPTIONS = [
   { id: "llama", label: "Llama 3.3 70B", provider: "Meta" },
@@ -21,6 +22,7 @@ export function DashboardHeader({ brand, latestScan, onScanTriggered, onRefresh 
   const [selectedLLMs, setSelectedLLMs] = useState(["chatgpt", "llama"]);
   const [showConfig, setShowConfig] = useState(false);
   const [credits, setCredits] = useState<CreditBalance | null>(null);
+  const [showBuyCredits, setShowBuyCredits] = useState(false);
   const configRef = useRef<HTMLDivElement>(null);
 
   const isRunning = latestScan?.status === "pending" || latestScan?.status === "running";
@@ -92,9 +94,13 @@ export function DashboardHeader({ brand, latestScan, onScanTriggered, onRefresh 
                 {credits.balance} credits
               </div>
               {credits.balance <= 50 && (
-                <a href="https://www.buymeacoffee.com/llmrank" target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-sm" style={{ fontSize: 10, padding: "3px 8px" }}>
+                <button
+                  onClick={() => setShowBuyCredits(true)}
+                  className="btn btn-primary btn-sm"
+                  style={{ fontSize: 10, padding: "3px 8px" }}
+                >
                   Get more
-                </a>
+                </button>
               )}
             </div>
           )}
@@ -130,6 +136,7 @@ export function DashboardHeader({ brand, latestScan, onScanTriggered, onRefresh 
       </div>
       {scanError && <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 var(--page-px) 8px" }}><div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "6px 10px", fontSize: 12, color: "#991B1B", fontWeight: 600 }}>{scanError}</div></div>}
       {isRunning && <div className="scan-progress"><div className="scan-progress-fill" /></div>}
+      <BuyCreditsModal open={showBuyCredits} onClose={() => setShowBuyCredits(false)} />
     </header>
   );
 }
