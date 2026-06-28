@@ -129,6 +129,14 @@ app = FastAPI(
     description="AI SEO visibility tracking — see how LLMs rank your brand",
     version="1.0.0",
     lifespan=lifespan,
+    tags=[
+        {"name": "Brands", "description": "Create, list, and manage brands"},
+        {"name": "Queries", "description": "Manage monitored queries and get AI suggestions"},
+        {"name": "Scans", "description": "Trigger and monitor LLM scans"},
+        {"name": "Dashboard", "description": "Dashboard data and query drilldowns"},
+        {"name": "Credits", "description": "Credit balance and transaction history"},
+        {"name": "Webhooks", "description": "External webhook endpoints"},
+    ],
 )
 
 app.state.limiter = limiter

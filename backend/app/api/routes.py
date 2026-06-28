@@ -37,7 +37,7 @@ def _utcnow() -> datetime:
 
 # ─── Brands ────────────────────────────────────────────────────────────────────
 
-@router.post("/brands", response_model=BrandOut, status_code=201)
+@router.post("/brands", response_model=BrandOut, status_code=201, tags=["Brands"])
 @limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")
 async def create_brand(request: Request, body: BrandCreate, db: AsyncSession = Depends(get_db)):
     brand = Brand(id=uuid.uuid4(), name=body.name, domain=body.domain)
@@ -47,13 +47,13 @@ async def create_brand(request: Request, body: BrandCreate, db: AsyncSession = D
     return brand
 
 
-@router.get("/brands", response_model=list[BrandOut])
+@router.get("/brands", response_model=list[BrandOut], tags=["Brands"])
 async def list_brands(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Brand).order_by(desc(Brand.created_at)))
     return result.scalars().all()
 
 
-@router.get("/brands/{brand_id}", response_model=BrandOut)
+@router.get("/brands/{brand_id}", response_model=BrandOut, tags=["Brands"])
 async def get_brand(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Brand).where(Brand.id == brand_id))
     brand = result.scalar_one_or_none()
@@ -62,7 +62,7 @@ async def get_brand(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     return brand
 
 
-@router.delete("/brands/{brand_id}", status_code=204)
+@router.delete("/brands/{brand_id}", status_code=204, tags=["Brands"])
 @limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")
 async def delete_brand(request: Request, brand_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Brand).where(Brand.id == brand_id))
@@ -75,7 +75,7 @@ async def delete_brand(request: Request, brand_id: uuid.UUID, db: AsyncSession =
 
 # ─── Queries ───────────────────────────────────────────────────────────────────
 
-@router.get("/brands/{brand_id}/queries", response_model=list[QueryOut])
+@router.get("/brands/{brand_id}/queries", response_model=list[QueryOut], tags=["Queries"])
 async def list_queries(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(MonitoredQuery)
@@ -85,7 +85,7 @@ async def list_queries(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     return result.scalars().all()
 
 
-@router.post("/brands/{brand_id}/queries", response_model=QueryOut, status_code=201)
+@router.post("/brands/{brand_id}/queries", response_model=QueryOut, status_code=201, tags=["Queries"])
 @limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")
 async def add_query(request: Request, brand_id: uuid.UUID, body: QueryCreate, db: AsyncSession = Depends(get_db)):
     brand_result = await db.execute(select(Brand).where(Brand.id == brand_id))
@@ -103,7 +103,7 @@ async def add_query(request: Request, brand_id: uuid.UUID, body: QueryCreate, db
     return query
 
 
-@router.delete("/brands/{brand_id}/queries/{query_id}", status_code=204)
+@router.delete("/brands/{brand_id}/queries/{query_id}", status_code=204, tags=["Queries"])
 @limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")
 async def delete_query(request: Request, brand_id: uuid.UUID, query_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
@@ -117,7 +117,7 @@ async def delete_query(request: Request, brand_id: uuid.UUID, query_id: uuid.UUI
     await db.commit()
 
 
-@router.post("/brands/{brand_id}/queries/suggest", response_model=QuerySuggestResponse)
+@router.post("/brands/{brand_id}/queries/suggest", response_model=QuerySuggestResponse, tags=["Queries"])
 @limiter.limit("5/minute")
 async def suggest_queries(request: Request, brand_id: uuid.UUID, body: QuerySuggestRequest, db: AsyncSession = Depends(get_db)):
     # Verify brand exists and use its actual data
@@ -131,7 +131,7 @@ async def suggest_queries(request: Request, brand_id: uuid.UUID, body: QuerySugg
 
 # ─── Scans ─────────────────────────────────────────────────────────────────────
 
-@router.post("/brands/{brand_id}/scans", response_model=ScanOut, status_code=202)
+@router.post("/brands/{brand_id}/scans", response_model=ScanOut, status_code=202, tags=["Scans"])
 @limiter.limit("5/minute")
 async def trigger_scan(
     request: Request,
@@ -237,7 +237,7 @@ async def _run_scan_background(brand_id: uuid.UUID, scan_id: uuid.UUID, llm_name
                 logger.exception("Failed to mark scan as failed: scan_id=%s error=%s", scan_id, inner_e)
 
 
-@router.get("/brands/{brand_id}/scans", response_model=list[ScanOut])
+@router.get("/brands/{brand_id}/scans", response_model=list[ScanOut], tags=["Scans"])
 async def list_scans(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Scan)
@@ -248,7 +248,7 @@ async def list_scans(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     return result.scalars().all()
 
 
-@router.get("/brands/{brand_id}/scans/{scan_id}", response_model=ScanOut)
+@router.get("/brands/{brand_id}/scans/{scan_id}", response_model=ScanOut, tags=["Scans"])
 async def get_scan(brand_id: uuid.UUID, scan_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Scan).where(Scan.id == scan_id, Scan.brand_id == brand_id)
@@ -261,7 +261,7 @@ async def get_scan(brand_id: uuid.UUID, scan_id: uuid.UUID, db: AsyncSession = D
 
 # ─── SSE: live scan progress ────────────────────────────────────────────────────
 
-@router.get("/brands/{brand_id}/scans/{scan_id}/stream")
+@router.get("/brands/{brand_id}/scans/{scan_id}/stream", tags=["Scans"])
 async def stream_scan_progress(
     brand_id: uuid.UUID,
     scan_id: uuid.UUID,
@@ -293,7 +293,7 @@ async def stream_scan_progress(
 
 # ─── Dashboard ─────────────────────────────────────────────────────────────────
 
-@router.get("/brands/{brand_id}/dashboard", response_model=DashboardOut)
+@router.get("/brands/{brand_id}/dashboard", response_model=DashboardOut, tags=["Dashboard"])
 async def get_dashboard(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     # Brand
     brand_result = await db.execute(select(Brand).where(Brand.id == brand_id))
@@ -454,7 +454,7 @@ async def get_dashboard(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db))
 
 # ─── Query drilldown ────────────────────────────────────────────────────────────
 
-@router.get("/brands/{brand_id}/queries/{query_id}/drilldown", response_model=QueryDrilldownOut)
+@router.get("/brands/{brand_id}/queries/{query_id}/drilldown", response_model=QueryDrilldownOut, tags=["Dashboard"])
 async def get_query_drilldown(
     brand_id: uuid.UUID,
     query_id: uuid.UUID,
@@ -537,7 +537,7 @@ async def get_query_drilldown(
 
 # ─── Credits ──────────────────────────────────────────────────────────────────
 
-@router.get("/credits", response_model=CreditBalanceOut)
+@router.get("/credits", response_model=CreditBalanceOut, tags=["Credits"])
 async def get_credits(db: AsyncSession = Depends(get_db)):
     wallet = await get_or_create_wallet(db)
     return CreditBalanceOut(
@@ -548,7 +548,7 @@ async def get_credits(db: AsyncSession = Depends(get_db)):
     )
 
 
-@router.post("/credits/grant", response_model=CreditBalanceOut)
+@router.post("/credits/grant", response_model=CreditBalanceOut, tags=["Credits"])
 async def admin_grant_credits(body: CreditGrantRequest, db: AsyncSession = Depends(get_db)):
     wallet = await grant_credits(db, body.amount, body.description)
     await db.commit()
@@ -560,13 +560,13 @@ async def admin_grant_credits(body: CreditGrantRequest, db: AsyncSession = Depen
     )
 
 
-@router.get("/credits/history", response_model=list[CreditTransactionOut])
+@router.get("/credits/history", response_model=list[CreditTransactionOut], tags=["Credits"])
 async def credit_history(db: AsyncSession = Depends(get_db)):
     transactions = await get_credit_history(db)
     return transactions
 
 
-@router.post("/webhooks/bmc")
+@router.post("/webhooks/bmc", tags=["Webhooks"])
 async def bmc_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     """Buy Me a Coffee webhook — converts donations to credits."""
     from fastapi.responses import JSONResponse
