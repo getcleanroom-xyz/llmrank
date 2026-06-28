@@ -383,7 +383,13 @@ async def get_me(user: User = Depends(get_current_user)):
 
 @router.post("/logout")
 async def logout(response: Response):
-    response.delete_cookie("session")
+    response.delete_cookie(
+        key="session",
+        path="/",
+        httponly=True,
+        secure=settings.RP_ORIGIN.startswith("https"),
+        samesite="none" if settings.RP_ORIGIN.startswith("https") else "lax",
+    )
     return {"status": "ok"}
 
 
