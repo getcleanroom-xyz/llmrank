@@ -1,5 +1,4 @@
 import uuid
-import json
 import hashlib
 import time
 import logging
@@ -47,6 +46,24 @@ def _verify_session_token(token: str) -> str | None:
     if time.time() - int(ts) > settings.SESSION_EXPIRE_HOURS * 3600:
         return None
     return user_id
+
+
+def _sign_data(data: str) -> str:
+    import hmac
+    sig = hmac.new(settings.SECRET_KEY.encode(), data.encode(), hashlib.sha256).hexdigest()
+    return f"{data}:{sig}"
+
+
+def _verify_signed_data(signed: str) -> str | None:
+    import hmac
+    last_colon = signed.rfind(":")
+    if last_colon == -1:
+        return None
+    data, sig = signed[:last_colon], signed[last_colon + 1:]
+    expected = hmac.new(settings.SECRET_KEY.encode(), data.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(sig, expected):
+        return None
+    return data
 
 
 async def get_current_user(request: Request, db: AsyncSession = Depends(get_db)) -> User:
@@ -132,43 +149,21 @@ def _b64url_decode(data: str) -> bytes:
 # ─── Registration ─────────────────────────────────────────────────────────────
 
 @router.post("/register/start", response_model=RegisterStartResponse)
-async def register_start(body: RegisterStartRequest, request: Request, db: AsyncSession = Depends(get_db)):
-    # Check if email already exists
+async def register_start(body: RegisterStartRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
     existing = await db.execute(select(User).where(User.email == body.email))
     if existing.scalar_one_or_none():
         raise HTTPException(409, "Email already registered")
 
-    # Create user
-    user = User(
-        id=uuid.uuid4(),
-        email=body.email,
-        display_name=body.display_name,
-    )
+    user = User(id=uuid.uuid4(), email=body.email, display_name=body.display_name)
     db.add(user)
-    await db.flush()  # Flush user first so foreign key constraints are satisfied
+    await db.flush()
 
-    # Create wallet with 500 free credits
-    wallet = CreditWallet(
-        id=uuid.uuid4(),
-        user_id=user.id,
-        balance=500,
-        total_purchased=0,
-        total_used=0,
-    )
+    wallet = CreditWallet(id=uuid.uuid4(), user_id=user.id, balance=500, total_purchased=0, total_used=0)
     db.add(wallet)
-    db.add(CreditTransaction(
-        id=uuid.uuid4(),
-        user_id=user.id,
-        amount=500,
-        type="signup_bonus",
-        description="Welcome — 500 free credits",
-        balance_after=500,
-    ))
-
+    db.add(CreditTransaction(id=uuid.uuid4(), user_id=user.id, amount=500, type="signup_bonus", description="Welcome — 500 free credits", balance_after=500))
     await db.commit()
     await db.refresh(user)
 
-    # Generate WebAuthn registration options
     try:
         import webauthn
 
@@ -180,18 +175,17 @@ async def register_start(body: RegisterStartRequest, request: Request, db: Async
             user_display_name=user.display_name,
         )
 
-        # Store challenge for verification later
-        challenge_hex = options.challenge.hex()
-
-        response = RegisterStartResponse(
-            challenge=challenge_hex,
-            rp_id=settings.RP_ID,
-            user_id=str(user.id),
+        challenge_b64 = webauthn.helpers.bytes_to_base64url(options.challenge)
+        response.set_cookie(
+            key="challenge",
+            value=_sign_data(challenge_b64),
+            httponly=True,
+            secure=settings.RP_ORIGIN.startswith("https"),
+            samesite="lax",
+            max_age=300,  # 5 minutes
         )
 
-        # We need to store the challenge temporarily. We'll use a signed cookie.
-        # For simplicity, we'll encode the challenge in the response and verify on finish.
-        return response
+        return RegisterStartResponse(challenge=options.challenge.hex(), rp_id=settings.RP_ID, user_id=str(user.id))
 
     except ImportError:
         raise HTTPException(500, "WebAuthn library not installed. Run: pip install webauthn")
@@ -203,9 +197,15 @@ async def register_start(body: RegisterStartRequest, request: Request, db: Async
 @router.post("/register/finish")
 async def register_finish(body: RegisterFinishRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
     try:
-        from webauthn.helpers import parse_registration_credential_json
+        from webauthn import verify_registration_response, base64url_to_bytes
 
-        # Get the user
+        signed_challenge = request.cookies.get("challenge")
+        if not signed_challenge:
+            raise HTTPException(400, "Missing challenge cookie — restart registration")
+        challenge_b64 = _verify_signed_data(signed_challenge)
+        if not challenge_b64:
+            raise HTTPException(400, "Invalid challenge — restart registration")
+
         user_id = body.credential.get("user_id")
         if not user_id:
             raise HTTPException(400, "Missing user_id in credential")
@@ -215,27 +215,27 @@ async def register_finish(body: RegisterFinishRequest, request: Request, respons
         if not user:
             raise HTTPException(404, "User not found")
 
-        # Parse the credential
-        credential = parse_registration_credential_json(body.credential)
+        from webauthn.helpers import bytes_to_base64url
 
-        # Verify the registration
-        # For now, we'll store the raw credential data
-        # In production, you'd verify the signature properly
-        credential_id = _b64url_encode(credential.raw_id)
-        public_key = credential.response.public_key if hasattr(credential.response, 'public_key') else b""
+        verification = verify_registration_response(
+            credential=body.credential,
+            expected_challenge=base64url_to_bytes(challenge_b64),
+            expected_origin=settings.RP_ORIGIN,
+            expected_rp_id=settings.RP_ID,
+        )
 
         passkey = Passkey(
             id=uuid.uuid4(),
             user_id=user.id,
-            credential_id=credential_id,
-            credential_public_key=public_key if isinstance(public_key, bytes) else public_key.encode(),
-            sign_count=0,
+            credential_id=_b64url_encode(verification.credential_id),
+            credential_public_key=bytes_to_base64url(verification.credential_public_key),
+            sign_count=verification.sign_count,
             device_name=body.device_name or "Unknown device",
         )
         db.add(passkey)
         await db.commit()
 
-        # Set session cookie
+        response.delete_cookie("challenge")
         token = _create_session_token(str(user.id))
         response.set_cookie(
             key="session",
@@ -263,26 +263,20 @@ async def register_finish(body: RegisterFinishRequest, request: Request, respons
 # ─── Login ────────────────────────────────────────────────────────────────────
 
 @router.post("/login/start", response_model=LoginStartResponse)
-async def login_start(body: LoginStartRequest, db: AsyncSession = Depends(get_db)):
-    # Check if user exists
+async def login_start(body: LoginStartRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == body.email))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(404, "No account found with this email")
 
-    # Get user's passkeys
-    passkeys_result = await db.execute(
-        select(Passkey).where(Passkey.user_id == user.id)
-    )
+    passkeys_result = await db.execute(select(Passkey).where(Passkey.user_id == user.id))
     passkeys = passkeys_result.scalars().all()
-
     if not passkeys:
         raise HTTPException(400, "No passkeys registered. Please register first.")
 
     try:
         import webauthn
 
-        # Convert credential IDs to bytes
         allow_credentials = []
         for pk in passkeys:
             allow_credentials.append(_b64url_decode(pk.credential_id))
@@ -292,10 +286,17 @@ async def login_start(body: LoginStartRequest, db: AsyncSession = Depends(get_db
             allow_credentials=allow_credentials,
         )
 
-        return LoginStartResponse(
-            challenge=options.challenge.hex(),
-            rp_id=settings.RP_ID,
+        challenge_b64 = webauthn.helpers.bytes_to_base64url(options.challenge)
+        response.set_cookie(
+            key="challenge",
+            value=_sign_data(challenge_b64),
+            httponly=True,
+            secure=settings.RP_ORIGIN.startswith("https"),
+            samesite="lax",
+            max_age=300,
         )
+
+        return LoginStartResponse(challenge=options.challenge.hex(), rp_id=settings.RP_ID)
 
     except ImportError:
         raise HTTPException(500, "WebAuthn library not installed")
@@ -307,32 +308,41 @@ async def login_start(body: LoginStartRequest, db: AsyncSession = Depends(get_db
 @router.post("/login/finish")
 async def login_finish(body: LoginFinishRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
     try:
-        from webauthn.helpers import parse_authentication_credential_json
+        from webauthn import verify_authentication_response, base64url_to_bytes
 
-        # Parse the credential
-        credential = parse_authentication_credential_json(body.credential)
-        credential_id = _b64url_encode(credential.raw_id)
+        signed_challenge = request.cookies.get("challenge")
+        if not signed_challenge:
+            raise HTTPException(400, "Missing challenge cookie — restart login")
+        challenge_b64 = _verify_signed_data(signed_challenge)
+        if not challenge_b64:
+            raise HTTPException(400, "Invalid challenge — restart login")
 
-        # Find the passkey
-        result = await db.execute(
-            select(Passkey).where(Passkey.credential_id == credential_id)
-        )
-        passkey = result.scalar_one_or_none()
-        if not passkey:
+        credential_id = body.credential.get("id") if isinstance(body.credential, dict) else ""
+        result = await db.execute(select(Passkey).where(Passkey.credential_id == credential_id))
+        pk = result.scalar_one_or_none()
+        if not pk:
             raise HTTPException(404, "Passkey not found")
 
-        # Get the user
-        user_result = await db.execute(select(User).where(User.id == passkey.user_id))
+        verification = verify_authentication_response(
+            credential=body.credential,
+            expected_challenge=base64url_to_bytes(challenge_b64),
+            expected_rp_id=settings.RP_ID,
+            expected_origin=settings.RP_ORIGIN,
+            credential_public_key=base64url_to_bytes(pk.credential_public_key),
+            credential_current_sign_count=pk.sign_count,
+            require_user_verification=False,
+        )
+
+        user_result = await db.execute(select(User).where(User.id == pk.user_id))
         user = user_result.scalar_one_or_none()
         if not user:
             raise HTTPException(404, "User not found")
 
-        # Update last used
-        passkey.last_used_at = _utcnow()
-        passkey.sign_count += 1
+        pk.last_used_at = _utcnow()
+        pk.sign_count = verification.new_sign_count
         await db.commit()
 
-        # Set session cookie
+        response.delete_cookie("challenge")
         token = _create_session_token(str(user.id))
         response.set_cookie(
             key="session",
