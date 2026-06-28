@@ -171,22 +171,13 @@ async def register_start(body: RegisterStartRequest, request: Request, db: Async
     # Generate WebAuthn registration options
     try:
         import webauthn
-        from webauthn.helpers.structs import PublicKeyCredentialRpEntity, PublicKeyCredentialUserEntity
-
-        rp = PublicKeyCredentialRpEntity(
-            id=settings.RP_ID,
-            name="LLMRank",
-        )
-
-        user_entity = PublicKeyCredentialUserEntity(
-            id=str(user.id).encode(),
-            name=user.email,
-            display_name=user.display_name,
-        )
 
         options = webauthn.generate_registration_options(
-            rp=rp,
-            user=user_entity,
+            rp_id=settings.RP_ID,
+            rp_name="LLMRank",
+            user_id=str(user.id).encode(),
+            user_name=user.email,
+            user_display_name=user.display_name,
         )
 
         # Store challenge for verification later
@@ -291,12 +282,6 @@ async def login_start(body: LoginStartRequest, db: AsyncSession = Depends(get_db
 
     try:
         import webauthn
-        from webauthn.helpers.structs import PublicKeyCredentialRpEntity
-
-        rp = PublicKeyCredentialRpEntity(
-            id=settings.RP_ID,
-            name="LLMRank",
-        )
 
         # Convert credential IDs to bytes
         allow_credentials = []
@@ -304,7 +289,7 @@ async def login_start(body: LoginStartRequest, db: AsyncSession = Depends(get_db
             allow_credentials.append(_b64url_decode(pk.credential_id))
 
         options = webauthn.generate_authentication_options(
-            rp=rp,
+            rp_id=settings.RP_ID,
             allow_credentials=allow_credentials,
         )
 
