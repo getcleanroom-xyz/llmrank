@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     RATE_LIMIT_PER_MINUTE: int = 10
     BMC_WEBHOOK_SECRET: str = ""  # Buy Me a Coffee webhook secret
     BMC_USERNAME: str = "llmrank"  # Buy Me a Coffee username for links
+    RP_ID: str = "localhost"  # WebAuthn Relying Party ID
+    RP_ORIGIN: str = "http://localhost:3000"  # WebAuthn origin URL
+    SESSION_EXPIRE_HOURS: int = 720  # 30 days
 
     @property
     def cors_origins_list(self) -> list[str]:

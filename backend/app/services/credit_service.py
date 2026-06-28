@@ -52,6 +52,9 @@ BMC_CREDITS_MAP: dict[int, int] = {
     25: 25000,  # $25 → 25000 credits
 }
 
+# Default user ID for migration (matches 0003_add_auth.py)
+DEFAULT_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
+
 
 def calculate_scan_cost(llm_names: list[str], num_queries: int) -> int:
     """Calculate total credits needed for a scan."""
@@ -62,7 +65,7 @@ def calculate_scan_cost(llm_names: list[str], num_queries: int) -> int:
     return total
 
 
-async def get_or_create_wallet(db: AsyncSession, user_id: str = "default") -> CreditWallet:
+async def get_or_create_wallet(db: AsyncSession, user_id: uuid.UUID) -> CreditWallet:
     """Get or create a credit wallet for a user."""
     result = await db.execute(select(CreditWallet).where(CreditWallet.user_id == user_id))
     wallet = result.scalar_one_or_none()
@@ -90,14 +93,14 @@ async def get_or_create_wallet(db: AsyncSession, user_id: str = "default") -> Cr
     return wallet
 
 
-async def check_credits(db: AsyncSession, llm_names: list[str], num_queries: int, user_id: str = "default") -> tuple[bool, int, int]:
+async def check_credits(db: AsyncSession, llm_names: list[str], num_queries: int, user_id: uuid.UUID = DEFAULT_USER_ID) -> tuple[bool, int, int]:
     """Check if user has enough credits. Returns (has_enough, cost, balance)."""
     wallet = await get_or_create_wallet(db, user_id)
     cost = calculate_scan_cost(llm_names, num_queries)
     return wallet.balance >= cost, cost, wallet.balance
 
 
-async def deduct_credits(db: AsyncSession, amount: int, description: str, user_id: str = "default") -> CreditWallet:
+async def deduct_credits(db: AsyncSession, amount: int, description: str, user_id: uuid.UUID = DEFAULT_USER_ID) -> CreditWallet:
     """Deduct credits from wallet. Returns updated wallet."""
     wallet = await get_or_create_wallet(db, user_id)
     wallet.balance -= amount
@@ -118,7 +121,7 @@ async def deduct_credits(db: AsyncSession, amount: int, description: str, user_i
     return wallet
 
 
-async def grant_credits(db: AsyncSession, amount: int, description: str, tx_type: str = "admin_grant", user_id: str = "default") -> CreditWallet:
+async def grant_credits(db: AsyncSession, amount: int, description: str, tx_type: str = "admin_grant", user_id: uuid.UUID = DEFAULT_USER_ID) -> CreditWallet:
     """Add credits to wallet. Returns updated wallet."""
     wallet = await get_or_create_wallet(db, user_id)
     wallet.balance += amount
@@ -139,7 +142,7 @@ async def grant_credits(db: AsyncSession, amount: int, description: str, tx_type
     return wallet
 
 
-async def get_credit_history(db: AsyncSession, user_id: str = "default", limit: int = 50) -> list[CreditTransaction]:
+async def get_credit_history(db: AsyncSession, user_id: uuid.UUID = DEFAULT_USER_ID, limit: int = 50) -> list[CreditTransaction]:
     """Get recent credit transactions."""
     result = await db.execute(
         select(CreditTransaction)

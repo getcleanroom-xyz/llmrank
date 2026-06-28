@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AuthProvider } from "@/components/auth/AuthProvider";
 
 export const metadata: Metadata = {
   title: "LLMRank",
@@ -13,8 +14,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <body>
-        <ErrorBoundary>{children}</ErrorBoundary>
-        <Analytics />
+        <AuthProvider>
+          <ErrorBoundary>{children}</ErrorBoundary>
+          <Analytics />
+        </AuthProvider>
       </body>
     </html>
   );

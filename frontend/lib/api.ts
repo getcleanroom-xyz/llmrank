@@ -113,3 +113,53 @@ export interface CreditTransaction {
 export const getCredits = () => apiFetch<CreditBalance>("/credits");
 
 export const getCreditHistory = () => apiFetch<CreditTransaction[]>("/credits/history");
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  display_name: string;
+  created_at: string;
+}
+
+export interface PasskeyInfo {
+  id: string;
+  device_name: string;
+  created_at: string;
+  last_used_at: string;
+}
+
+export const authRegisterStart = (email: string, display_name: string) =>
+  apiFetch<{ challenge: string; rp_id: string; user_id: string }>("/auth/register/start", {
+    method: "POST",
+    body: JSON.stringify({ email, display_name }),
+  });
+
+export const authRegisterFinish = (credential: Record<string, unknown>, device_name: string) =>
+  apiFetch<{ status: string; user: AuthUser }>("/auth/register/finish", {
+    method: "POST",
+    body: JSON.stringify({ credential, device_name }),
+  });
+
+export const authLoginStart = (email: string) =>
+  apiFetch<{ challenge: string; rp_id: string }>("/auth/login/start", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+
+export const authLoginFinish = (credential: Record<string, unknown>) =>
+  apiFetch<{ status: string; user: AuthUser }>("/auth/login/finish", {
+    method: "POST",
+    body: JSON.stringify({ credential }),
+  });
+
+export const authGetMe = () => apiFetch<AuthUser>("/auth/me");
+
+export const authLogout = () =>
+  apiFetch<{ status: string }>("/auth/logout", { method: "POST" });
+
+export const authListPasskeys = () => apiFetch<PasskeyInfo[]>("/auth/passkeys");
+
+export const authDeletePasskey = (passkeyId: string) =>
+  apiFetch<{ status: string }>(`/auth/passkeys/${passkeyId}`, { method: "DELETE" });

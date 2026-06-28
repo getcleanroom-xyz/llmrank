@@ -15,6 +15,7 @@ class BrandOut(BaseModel):
     id: UUID
     name: str
     domain: str
+    owner_id: Optional[UUID] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

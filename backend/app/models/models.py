@@ -27,14 +27,45 @@ class Sentiment(str, enum.Enum):
     not_mentioned = "not_mentioned"
 
 
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    display_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+    passkeys: Mapped[list["Passkey"]] = relationship("Passkey", back_populates="user", cascade="all, delete-orphan")
+    wallet: Mapped["CreditWallet | None"] = relationship("CreditWallet", back_populates="user", uselist=False)
+    brands: Mapped[list["Brand"]] = relationship("Brand", back_populates="owner")
+
+
+class Passkey(Base):
+    __tablename__ = "passkeys"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    credential_id: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    credential_public_key: Mapped[bytes] = mapped_column(Text, nullable=False)
+    sign_count: Mapped[int] = mapped_column(Integer, default=0)
+    transports: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    device_name: Mapped[str] = mapped_column(String(200), nullable=False, default="Unknown device")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    last_used_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+    user: Mapped["User"] = relationship("User", back_populates="passkeys")
+
+
 class Brand(Base):
     __tablename__ = "brands"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    owner_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     domain: Mapped[str] = mapped_column(String(200), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
+    owner: Mapped["User | None"] = relationship("User", back_populates="brands")
     queries: Mapped[list["MonitoredQuery"]] = relationship("MonitoredQuery", back_populates="brand", cascade="all, delete-orphan")
     scans: Mapped[list["Scan"]] = relationship("Scan", back_populates="brand", cascade="all, delete-orphan")
 
@@ -92,12 +123,14 @@ class CreditWallet(Base):
     __tablename__ = "credit_wallets"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, default="default")
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, unique=True)
     balance: Mapped[int] = mapped_column(Integer, default=500)
     total_purchased: Mapped[int] = mapped_column(Integer, default=0)
     total_used: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+    user: Mapped["User | None"] = relationship("User", back_populates="wallet")
 
 
 class CreditTransaction(Base):
@@ -105,7 +138,7 @@ class CreditTransaction(Base):
     __tablename__ = "credit_transactions"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[str] = mapped_column(String(100), nullable=False, default="default")
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     amount: Mapped[int] = mapped_column(Integer, nullable=False)  # positive = add, negative = deduct
     type: Mapped[str] = mapped_column(String(50), nullable=False)  # "purchase", "scan_usage", "admin_grant", "signup_bonus"
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
