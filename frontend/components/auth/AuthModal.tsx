@@ -249,13 +249,13 @@ async function createPasskeyCredential(
 
   return {
     id: credential.id,
-    raw_id: bufferToBase64url(pkCredential.rawId),
+    rawId: bufferToBase64url(pkCredential.rawId),
     type: credential.type,
     response: {
-      client_data_json: bufferToBase64url(pkCredential.response.clientDataJSON),
-      attestation_object: bufferToBase64url(pkCredential.response.attestationObject),
+      clientDataJSON: bufferToBase64url(pkCredential.response.clientDataJSON),
+      attestationObject: bufferToBase64url(pkCredential.response.attestationObject),
     },
-    authenticator_attachment: pkCredential.authenticatorAttachment,
+    authenticatorAttachment: pkCredential.authenticatorAttachment,
     user_id: userId,
   };
 }
@@ -282,11 +282,11 @@ async function getPasskeyCredential(
 
   return {
     id: assertion.id,
-    raw_id: bufferToBase64url(pkAssertion.rawId),
+    rawId: bufferToBase64url(pkAssertion.rawId),
     type: assertion.type,
     response: {
-      client_data_json: bufferToBase64url(pkAssertion.response.clientDataJSON),
-      authenticator_data: bufferToBase64url(pkAssertion.response.authenticatorData),
+      clientDataJSON: bufferToBase64url(pkAssertion.response.clientDataJSON),
+      authenticatorData: bufferToBase64url(pkAssertion.response.authenticatorData),
       signature: bufferToBase64url(pkAssertion.response.signature),
     },
   };
