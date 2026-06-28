@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { authLogout } from "@/lib/api";
 import { AuthModal } from "./AuthModal";
 import type { CreditBalance } from "@/lib/api";
 
@@ -11,7 +13,8 @@ interface AuthButtonProps {
 }
 
 export function AuthButton({ credits, onBuyClick }: AuthButtonProps) {
-  const { user, logout } = useAuth();
+  const { user, setUser } = useAuth();
+  const router = useRouter();
   const [showModal, setShowModal] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -99,7 +102,12 @@ export function AuthButton({ credits, onBuyClick }: AuthButtonProps) {
           )}
 
           <button
-            onClick={() => { setShowMenu(false); logout(); }}
+            onClick={async () => {
+              setShowMenu(false);
+              try { await authLogout(); } catch {}
+              setUser(null);
+              router.push("/");
+            }}
             style={{
               width: "100%",
               padding: "6px 8px",
