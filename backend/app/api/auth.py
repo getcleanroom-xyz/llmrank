@@ -166,6 +166,7 @@ async def register_start(body: RegisterStartRequest, request: Request, response:
 
     try:
         import webauthn
+        from webauthn.helpers import bytes_to_base64url
 
         options = webauthn.generate_registration_options(
             rp_id=settings.RP_ID,
@@ -175,7 +176,7 @@ async def register_start(body: RegisterStartRequest, request: Request, response:
             user_display_name=user.display_name,
         )
 
-        challenge_b64 = webauthn.helpers.bytes_to_base64url(options.challenge)
+        challenge_b64 = bytes_to_base64url(options.challenge)
         response.set_cookie(
             key="challenge",
             value=_sign_data(challenge_b64),
@@ -185,7 +186,7 @@ async def register_start(body: RegisterStartRequest, request: Request, response:
             max_age=300,  # 5 minutes
         )
 
-        return RegisterStartResponse(challenge=options.challenge.hex(), rp_id=settings.RP_ID, user_id=str(user.id))
+        return RegisterStartResponse(challenge=challenge_b64, rp_id=settings.RP_ID, user_id=str(user.id))
 
     except ImportError:
         raise HTTPException(500, "WebAuthn library not installed. Run: pip install webauthn")
@@ -276,6 +277,7 @@ async def login_start(body: LoginStartRequest, request: Request, response: Respo
 
     try:
         import webauthn
+        from webauthn.helpers import bytes_to_base64url
 
         allow_credentials = []
         for pk in passkeys:
@@ -286,7 +288,7 @@ async def login_start(body: LoginStartRequest, request: Request, response: Respo
             allow_credentials=allow_credentials,
         )
 
-        challenge_b64 = webauthn.helpers.bytes_to_base64url(options.challenge)
+        challenge_b64 = bytes_to_base64url(options.challenge)
         response.set_cookie(
             key="challenge",
             value=_sign_data(challenge_b64),
@@ -296,7 +298,7 @@ async def login_start(body: LoginStartRequest, request: Request, response: Respo
             max_age=300,
         )
 
-        return LoginStartResponse(challenge=options.challenge.hex(), rp_id=settings.RP_ID)
+        return LoginStartResponse(challenge=challenge_b64, rp_id=settings.RP_ID)
 
     except ImportError:
         raise HTTPException(500, "WebAuthn library not installed")
