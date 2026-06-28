@@ -13,11 +13,13 @@ export function AppHeader({ before, after }: { before?: React.ReactNode; after?:
   const [showBuy, setShowBuy] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      getCredits().then(setCredits).catch(() => {});
-    } else {
+    if (!user) {
       setCredits(null);
+      return;
     }
+    getCredits()
+      .then(setCredits)
+      .catch(() => setCredits(null));
   }, [user]);
 
   return (
