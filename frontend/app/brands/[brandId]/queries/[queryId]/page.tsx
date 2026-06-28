@@ -6,6 +6,7 @@ import Link from "next/link";
 import { getQueryDrilldown, triggerScan } from "@/lib/api";
 import type { QueryDrilldown } from "@/types";
 import { InsightRow } from "@/components/ui";
+import { Sidebar } from "@/components/ui/Sidebar";
 import { LLMResponseCard } from "@/components/drilldown/LLMResponseCard";
 
 export default function QueryDrilldownPage() {
@@ -48,7 +49,9 @@ export default function QueryDrilldownPage() {
   const notMentioned = data.results.filter((r) => !r.mentioned);
 
   return (
-    <div className="page">
+    <div className="page" style={{ display: "flex" }}>
+      <Sidebar />
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
       <div style={{ background: "var(--surface)", borderBottom: "2px solid var(--border)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "10px var(--page-px)", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <Link href="/" style={{ fontSize: 12, color: "var(--text-muted)", textDecoration: "none", fontWeight: 700 }}>brands</Link>
@@ -115,6 +118,7 @@ export default function QueryDrilldownPage() {
             {data.insights.map((ins, i) => <div key={i} style={i === data.insights.length - 1 ? { borderBottom: "none" } : {}}><InsightRow type={ins.type as "tip" | "warning"} text={ins.text} /></div>)}
           </div>
         )}
+      </div>
       </div>
     </div>
   );

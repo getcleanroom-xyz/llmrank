@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { getDashboard, getQueries } from "@/lib/api";
 import type { DashboardData, MonitoredQuery } from "@/types";
 import { KpiCard, ScoreRing, InsightRow } from "@/components/ui";
+import { Sidebar } from "@/components/ui/Sidebar";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { LLMBreakdownTable } from "@/components/dashboard/LLMBreakdownTable";
 import { CompetitorShare } from "@/components/dashboard/CompetitorShare";
@@ -66,9 +67,11 @@ export default function BrandDashboardPage() {
   if (score_history.length < 3) insights.push({ type: "tip", text: "<strong>Run scans weekly</strong> to track changes over time." });
 
   return (
-    <div className="page" style={{ display: "flex", flexDirection: "column" }}>
-      <DashboardHeader brand={brand} latestScan={active_scan ?? latest_scan} onScanTriggered={loadDashboard} onRefresh={loadDashboard} />
-      <div style={{ flex: 1, padding: "var(--gap) var(--page-px)", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
+    <div className="page" style={{ display: "flex" }}>
+      <Sidebar />
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+        <DashboardHeader brand={brand} latestScan={active_scan ?? latest_scan} onScanTriggered={loadDashboard} onRefresh={loadDashboard} />
+        <div style={{ flex: 1, padding: "var(--gap) var(--page-px)", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
         {error && data && <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "8px 12px", marginBottom: 12, fontSize: 13, color: "#991B1B", fontWeight: 600 }}>{error}</div>}
 
         <div role="tablist" style={{ display: "flex", gap: 4, marginBottom: 16 }}>
@@ -133,6 +136,7 @@ export default function BrandDashboardPage() {
             <ScanHistory brandId={brandId} />
           </div>
         )}
+      </div>
       </div>
     </div>
   );
