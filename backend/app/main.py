@@ -19,61 +19,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-async def ensure_default_wallet():
-    """Ensure default wallet exists with 500 credits on every startup."""
-    from app.core.database import AsyncSessionLocal
-    from app.models.models import CreditWallet, CreditTransaction, User
-    from app.services.credit_service import DEFAULT_USER_ID
-    from sqlalchemy import select
-    import uuid
-
-    await asyncio.sleep(1)
-    try:
-        async with AsyncSessionLocal() as db:
-            # Ensure default user exists
-            user_result = await db.execute(select(User).where(User.id == DEFAULT_USER_ID))
-            user = user_result.scalar_one_or_none()
-            if not user:
-                user = User(
-                    id=DEFAULT_USER_ID,
-                    email="default@llmrank.local",
-                    display_name="Default User",
-                )
-                db.add(user)
-                await db.flush()
-
-            # Ensure default wallet exists
-            result = await db.execute(select(CreditWallet).where(CreditWallet.user_id == DEFAULT_USER_ID))
-            wallet = result.scalar_one_or_none()
-            if not wallet:
-                wallet = CreditWallet(
-                    id=uuid.uuid4(), user_id=DEFAULT_USER_ID,
-                    balance=500, total_purchased=0, total_used=0,
-                )
-                db.add(wallet)
-                db.add(CreditTransaction(
-                    id=uuid.uuid4(), user_id=DEFAULT_USER_ID,
-                    amount=500, type="signup_bonus",
-                    description="Welcome — 500 free credits",
-                    balance_after=500,
-                ))
-                await db.commit()
-                logger.info("Created default wallet with 500 credits")
-            elif wallet.balance < 500:
-                old = wallet.balance
-                wallet.balance = 500
-                db.add(CreditTransaction(
-                    id=uuid.uuid4(), user_id=DEFAULT_USER_ID,
-                    amount=500 - old, type="admin_grant",
-                    description="Startup seed — wallet topped up to 500",
-                    balance_after=500,
-                ))
-                await db.commit()
-                logger.info("Topped up wallet from %d to 500 credits", old)
-    except Exception as e:
-        logger.warning("Could not ensure wallet: %s", e)
-
-
 async def recover_pending_scans():
     """On startup, find scans stuck in pending/running (from a crash/restart)
     and re-queue them as background tasks."""
@@ -131,9 +76,6 @@ async def lifespan(app: FastAPI):
 
     # Recover orphaned scans from previous session
     asyncio.create_task(recover_pending_scans())
-
-    # Ensure default wallet exists with 500 credits
-    asyncio.create_task(ensure_default_wallet())
 
     logger.info("LLMRank API started (CORS: %s)", settings.cors_origins_list)
     yield

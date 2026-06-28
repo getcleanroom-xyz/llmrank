@@ -13,7 +13,7 @@ from sqlalchemy import select, desc, func
 from app.core.database import get_db
 from app.core.config import settings
 from app.core.rate_limit import limiter
-from app.models.models import Brand, MonitoredQuery, Scan, QueryResult, ScanStatus
+from app.models.models import User, Brand, MonitoredQuery, Scan, QueryResult, ScanStatus
 from app.schemas.schemas import (
     BrandCreate, BrandOut,
     QueryCreate, QueryOut, QuerySuggestRequest, QuerySuggestResponse,
@@ -24,7 +24,8 @@ from app.schemas.schemas import (
 )
 from app.services.scan_orchestrator import run_scan, generate_query_suggestions
 from app.services.insight_engine import generate_insights_for_query, generate_dashboard_insights
-from app.services.credit_service import get_or_create_wallet, check_credits, deduct_credits, grant_credits, get_credit_history, calculate_scan_cost, CREDIT_COSTS, CREDITS_PER_DOLLAR, verify_bmc_signature, DEFAULT_USER_ID
+from app.services.credit_service import get_or_create_wallet, check_credits, deduct_credits, grant_credits, get_credit_history, calculate_scan_cost, CREDIT_COSTS, CREDITS_PER_DOLLAR, verify_bmc_signature
+from app.api.auth import get_current_user, get_optional_user
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -39,8 +40,8 @@ def _utcnow() -> datetime:
 
 @router.post("/brands", response_model=BrandOut, status_code=201, tags=["Brands"])
 @limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")
-async def create_brand(request: Request, body: BrandCreate, db: AsyncSession = Depends(get_db)):
-    brand = Brand(id=uuid.uuid4(), name=body.name, domain=body.domain)
+async def create_brand(request: Request, body: BrandCreate, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    brand = Brand(id=uuid.uuid4(), name=body.name, domain=body.domain, owner_id=user.id)
     db.add(brand)
     await db.commit()
     await db.refresh(brand)
@@ -48,8 +49,10 @@ async def create_brand(request: Request, body: BrandCreate, db: AsyncSession = D
 
 
 @router.get("/brands", response_model=list[BrandOut], tags=["Brands"])
-async def list_brands(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Brand).order_by(desc(Brand.created_at)))
+async def list_brands(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    result = await db.execute(
+        select(Brand).where(Brand.owner_id == user.id).order_by(desc(Brand.created_at))
+    )
     return result.scalars().all()
 
 
@@ -139,6 +142,7 @@ async def trigger_scan(
     body: ScanCreate,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     brand_result = await db.execute(select(Brand).where(Brand.id == brand_id))
     brand = brand_result.scalar_one_or_none()
@@ -186,7 +190,7 @@ async def trigger_scan(
             raise HTTPException(400, "Could not generate queries automatically. Please add queries manually.")
 
     # Check credits before proceeding
-    has_enough, cost, balance = await check_credits(db, body.llms, len(active_queries), DEFAULT_USER_ID)
+    has_enough, cost, balance = await check_credits(db, body.llms, len(active_queries), user.id)
     if not has_enough:
         raise HTTPException(
             402,
@@ -195,7 +199,7 @@ async def trigger_scan(
         )
 
     # Deduct credits
-    await deduct_credits(db, cost, f"Scan: {len(active_queries)} queries × {len(body.llms)} LLMs", DEFAULT_USER_ID)
+    await deduct_credits(db, cost, f"Scan: {len(active_queries)} queries × {len(body.llms)} LLMs", user.id)
 
     # Create pending scan immediately to return to client
     scan = Scan(
@@ -538,8 +542,8 @@ async def get_query_drilldown(
 # ─── Credits ──────────────────────────────────────────────────────────────────
 
 @router.get("/credits", response_model=CreditBalanceOut, tags=["Credits"])
-async def get_credits(db: AsyncSession = Depends(get_db)):
-    wallet = await get_or_create_wallet(db, DEFAULT_USER_ID)
+async def get_credits(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    wallet = await get_or_create_wallet(db, user.id)
     return CreditBalanceOut(
         balance=wallet.balance,
         total_purchased=wallet.total_purchased,
@@ -549,8 +553,8 @@ async def get_credits(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/credits/grant", response_model=CreditBalanceOut, tags=["Credits"])
-async def admin_grant_credits(body: CreditGrantRequest, db: AsyncSession = Depends(get_db)):
-    wallet = await grant_credits(db, body.amount, body.description, "admin_grant", DEFAULT_USER_ID)
+async def admin_grant_credits(body: CreditGrantRequest, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    wallet = await grant_credits(db, body.amount, body.description, "admin_grant", user.id)
     await db.commit()
     return CreditBalanceOut(
         balance=wallet.balance,
@@ -561,8 +565,8 @@ async def admin_grant_credits(body: CreditGrantRequest, db: AsyncSession = Depen
 
 
 @router.get("/credits/history", response_model=list[CreditTransactionOut], tags=["Credits"])
-async def credit_history(db: AsyncSession = Depends(get_db)):
-    transactions = await get_credit_history(db, DEFAULT_USER_ID)
+async def credit_history(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    transactions = await get_credit_history(db, user.id)
     return transactions
 
 
@@ -570,7 +574,6 @@ async def credit_history(db: AsyncSession = Depends(get_db)):
 async def bmc_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     """Buy Me a Coffee webhook — converts donations to credits."""
     from fastapi.responses import JSONResponse
-    from app.services.credit_service import DEFAULT_USER_ID
     body = await request.body()
     signature = request.headers.get("X-BMC-Signature", "")
 
@@ -588,13 +591,21 @@ async def bmc_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         return JSONResponse({"status": "ignored", "type": event_type})
 
     donation = data.get("data", {})
+    user_id_hex = donation.get("user_id", "")
+    if not user_id_hex:
+        logger.warning("BMC webhook missing user_id in donation data")
+        return JSONResponse({"status": "error", "detail": "user_id required"})
+    try:
+        user_id = uuid.UUID(user_id_hex)
+    except ValueError:
+        return JSONResponse({"status": "error", "detail": "invalid user_id"})
+
     amount = donation.get("amount", 0)
     donor_name = donation.get("donor_name", "Anonymous")
 
     if amount <= 0:
         return JSONResponse({"status": "ignored", "amount": amount})
 
-    # Convert dollars to credits (1 dollar = 1000 credits)
     credits = amount * CREDITS_PER_DOLLAR
 
     await grant_credits(
@@ -602,9 +613,9 @@ async def bmc_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         amount=credits,
         description=f"Donation: ${amount} from {donor_name} → {credits} credits",
         tx_type="donation",
-        user_id=DEFAULT_USER_ID,
+        user_id=user_id,
     )
     await db.commit()
 
-    logger.info("BMC donation: $%d from %s → %d credits", amount, donor_name, credits)
+    logger.info("BMC donation: $%d from %s → %d credits for user %s", amount, donor_name, credits, user_id)
     return JSONResponse({"status": "ok", "credits_granted": credits})
