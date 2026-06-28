@@ -1,56 +1,98 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { Suspense, useEffect, useState, useRef, useCallback, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getBrands, createBrand, deleteBrand } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Sidebar } from "@/components/ui/Sidebar";
 import type { Brand } from "@/types";
 
-export default function BrandsPage() {
+const PAGE_SIZE = 10;
+
+function BrandsPageInner() {
   const { user } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const search = searchParams.get("search") ?? "";
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [showNew, setShowNew] = useState(false);
+  const [searchInput, setSearchInput] = useState(search);
+
+  const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState("");
   const [domain, setDomain] = useState("");
   const [creating, setCreating] = useState(false);
   const [nameError, setNameError] = useState("");
   const [domainError, setDomainError] = useState("");
-  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  const navigate = useCallback((p: Record<string, string>) => {
+    const sp = new URLSearchParams(searchParams.toString());
+    for (const [k, v] of Object.entries(p)) {
+      if (v) sp.set(k, v);
+      else sp.delete(k);
+    }
+    if (!("page" in p)) sp.delete("page");
+    router.replace(`/brands${sp.toString() ? `?${sp.toString()}` : ""}`);
+  }, [searchParams, router]);
 
   const load = useCallback(async () => {
     abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
+    const c = new AbortController();
+    abortRef.current = c;
     try {
       setError(null);
       const data = await getBrands();
-      if (!controller.signal.aborted) setBrands(data);
+      if (!c.signal.aborted) setBrands(data);
     } catch (err) {
-      if (!controller.signal.aborted) setError(err instanceof Error ? err.message : "Failed to load");
+      if (!c.signal.aborted) setError(err instanceof Error ? err.message : "Failed to load brands");
     } finally {
-      if (!controller.signal.aborted) setLoading(false);
+      if (!c.signal.aborted) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    const controller = new AbortController();
-    abortRef.current = controller;
-    getBrands()
-      .then((data) => { if (!controller.signal.aborted) { setBrands(data); setLoading(false); } })
-      .catch((err) => { if (!controller.signal.aborted) { setError(err instanceof Error ? err.message : "Failed to load"); setLoading(false); } });
-    return () => controller.abort();
-  }, []);
+    load();
+    return () => abortRef.current?.abort();
+  }, [load]);
 
-  useEffect(() => { if (showNew) setTimeout(() => nameInputRef.current?.focus(), 50); }, [showNew]);
+  useEffect(() => { setSearchInput(search); }, [search]);
 
-  useEffect(() => { if (!success) return; const t = setTimeout(() => setSuccess(null), 3000); return () => clearTimeout(t); }, [success]);
+  useEffect(() => {
+    if (showModal) setTimeout(() => nameInputRef.current?.focus(), 50);
+  }, [showModal]);
+
+  useEffect(() => {
+    if (!success) return;
+    const t = setTimeout(() => setSuccess(null), 3000);
+    return () => clearTimeout(t);
+  }, [success]);
+
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(null), 5000);
+    return () => clearTimeout(t);
+  }, [error]);
+
+  const filtered = useMemo(() => {
+    if (!search) return brands;
+    const q = search.toLowerCase();
+    return brands.filter((b) => b.name.toLowerCase().includes(q) || b.domain.toLowerCase().includes(q));
+  }, [brands, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const validate = useCallback(() => {
     let valid = true;
@@ -66,11 +108,11 @@ export default function BrandsPage() {
     setCreating(true);
     try {
       await createBrand(name.trim(), domain.trim());
-      setName(""); setDomain(""); setShowNew(false);
+      setName(""); setDomain(""); setShowModal(false);
       setSuccess(`${name.trim()} created`);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create");
+      setError(err instanceof Error ? err.message : "Failed to create brand");
     } finally {
       setCreating(false);
     }
@@ -80,80 +122,111 @@ export default function BrandsPage() {
     setDeleting(true);
     try {
       await deleteBrand(id);
-      setPendingDelete(null);
-      setSuccess("Deleted");
+      setDeleteConfirm(null);
+      setSuccess("Brand deleted");
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete");
+      setError(err instanceof Error ? err.message : "Failed to delete brand");
     } finally {
       setDeleting(false);
     }
   };
 
   return (
-    <div className="page" style={{ display: "flex" }}>
-      <Sidebar />
-      <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        <header style={{ background: "var(--surface)", borderBottom: "2px solid var(--border)", padding: "0 var(--page-px)" }}>
-          <div style={{ maxWidth: 900, margin: "0 auto", height: 48, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Link href="/" style={{ fontSize: 14, fontWeight: 800, color: "var(--text)", textDecoration: "none" }}>
-                llm<span style={{ background: "var(--primary)", padding: "0 4px", border: "2px solid var(--border)" }}>rank</span>
-              </Link>
-              <span style={{ color: "var(--text-muted)", fontSize: 12, fontWeight: 600 }}>/ brands</span>
-            </div>
-            {user && !showNew && (
-              <button onClick={() => setShowNew(true)} className="btn btn-primary btn-sm">+ New brand</button>
+    <div className="page" style={{ display: "flex", flexDirection: "column" }}>
+      <header style={{ background: "var(--surface)", borderBottom: "2px solid var(--border)", padding: "0 var(--page-px)" }}>
+        <div style={{ maxWidth: 900, margin: "0 auto", height: 48, display: "flex", alignItems: "center", gap: 8 }}>
+          <Link href="/" style={{ fontSize: 14, fontWeight: 800, color: "var(--text)", textDecoration: "none", flexShrink: 0 }}>
+            llm<span style={{ background: "var(--primary)", padding: "0 4px", border: "2px solid var(--border)" }}>rank</span>
+          </Link>
+          <span style={{ color: "var(--text-muted)", fontSize: 12, fontWeight: 600 }}>/</span>
+          <span style={{ color: "var(--text-secondary)", fontSize: 12, fontWeight: 600 }}>brands</span>
+          <div style={{ flex: 1 }} />
+          {user && (
+            <button onClick={() => setShowModal(true)} className="btn btn-primary btn-sm" style={{ flexShrink: 0 }}>
+              + New brand
+            </button>
+          )}
+        </div>
+      </header>
+
+      <div style={{ flex: 1, maxWidth: 700, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
+        {/* Search bar */}
+        {user && (
+          <div style={{ marginBottom: 16, display: "flex", gap: 8 }}>
+            <input
+              ref={searchInputRef}
+              className="input"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  navigate({ search: searchInput.trim(), page: "1" });
+                }
+              }}
+              placeholder="Search brands..."
+              style={{ flex: 1, minWidth: 0 }}
+            />
+            <button
+              onClick={() => navigate({ search: searchInput.trim(), page: "1" })}
+              className="btn btn-primary btn-sm"
+              style={{ flexShrink: 0 }}
+            >
+              Search
+            </button>
+            {search && (
+              <button
+                onClick={() => { setSearchInput(""); navigate({ search: "" }); }}
+                className="btn btn-ghost btn-sm"
+                style={{ flexShrink: 0 }}
+              >
+                Clear
+              </button>
             )}
           </div>
-        </header>
+        )}
 
-        <div style={{ flex: 1, maxWidth: 600, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
-          {error && (
-            <div className="card" style={{ background: "#FEE2E2", borderColor: "var(--red)", padding: "10px 14px", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 13, color: "#991B1B", fontWeight: 600 }}>{error}</span>
-              <button onClick={() => setError(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#991B1B" }}>x</button>
+        {/* Flash messages */}
+        {error && (
+          <div className="card" style={{ background: "#FEE2E2", borderColor: "var(--red)", padding: "10px 14px", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 13, color: "#991B1B", fontWeight: 600 }}>{error}</span>
+            <button onClick={() => setError(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#991B1B" }}>x</button>
+          </div>
+        )}
+        {success && (
+          <div className="card" style={{ background: "#DCFCE7", borderColor: "var(--green)", padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#166534", fontWeight: 600 }}>{success}</div>
+        )}
+
+        {/* Content states */}
+        {loading ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {[1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 56 }} />)}
+          </div>
+        ) : !user ? (
+          <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
+            <div style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 14, fontWeight: 600 }}>Sign in to manage your brands.</div>
+            <button data-auth-trigger className="btn btn-primary">Sign in</button>
+          </div>
+        ) : filtered.length === 0 && !search ? (
+          <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
+            <div style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 14, fontWeight: 600 }}>You haven&apos;t added any brands yet.</div>
+            <button onClick={() => setShowModal(true)} className="btn btn-primary">Add your first brand</button>
+          </div>
+        ) : filtered.length === 0 && search ? (
+          <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
+            <div style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 14, fontWeight: 600 }}>No brands match &quot;{search}&quot;</div>
+            <button onClick={() => { setSearchInput(""); navigate({ search: "" }); }} className="btn btn-ghost">Clear search</button>
+          </div>
+        ) : (
+          <>
+            <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600, marginBottom: 10 }}>
+              {filtered.length} brand{filtered.length !== 1 ? "s" : ""}{search && <> matching &quot;{search}&quot;</>}
             </div>
-          )}
-          {success && (
-            <div className="card" style={{ background: "#DCFCE7", borderColor: "var(--green)", padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#166534", fontWeight: 600 }}>{success}</div>
-          )}
 
-          {showNew && (
-            <div className="card" style={{ marginBottom: 16 }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
-                <div>
-                  <label htmlFor="brand-name" style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Brand name</label>
-                  <input ref={nameInputRef} id="brand-name" className="input" value={name} onChange={(e) => { setName(e.target.value); setNameError(""); }} onKeyDown={(e) => e.key === "Enter" && handleCreate()} placeholder="e.g. Notion" />
-                  {nameError && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4, fontWeight: 600 }}>{nameError}</div>}
-                </div>
-                <div>
-                  <label htmlFor="brand-domain" style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Domain</label>
-                  <input id="brand-domain" className="input" value={domain} onChange={(e) => { setDomain(e.target.value); setDomainError(""); }} onKeyDown={(e) => e.key === "Enter" && handleCreate()} placeholder="notion.so" />
-                  {domainError && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4, fontWeight: 600 }}>{domainError}</div>}
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={handleCreate} disabled={creating} className="btn btn-primary">{creating ? "Creating..." : "Create"}</button>
-                <button onClick={() => { setShowNew(false); setName(""); setDomain(""); }} className="btn btn-ghost">Cancel</button>
-              </div>
-            </div>
-          )}
-
-          {loading ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {[1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 52 }} />)}
-            </div>
-          ) : brands.length === 0 && !showNew ? (
-            <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
-              <div style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 14, fontWeight: 600 }}>You haven&apos;t added any brands yet.</div>
-              <button onClick={() => setShowNew(true)} className="btn btn-primary">Add your first brand</button>
-            </div>
-          ) : brands.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {brands.map((b) => (
+              {paginated.map((b) => (
                 <div key={b.id} className="card" style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: "var(--radius)", background: "var(--primary)", border: "1.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0, boxShadow: "var(--shadow-sm)" }}>
+                  <div style={{ width: 36, height: 36, borderRadius: "var(--radius)", background: "var(--primary)", border: "1.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0, boxShadow: "var(--shadow-sm)" }}>
                     {b.name.slice(0, 2).toUpperCase()}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -161,24 +234,97 @@ export default function BrandsPage() {
                     <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{b.domain}</div>
                   </div>
                   <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
-                    {pendingDelete === b.id ? (
+                    {deleteConfirm === b.id ? (
                       <>
                         <button onClick={() => handleDelete(b.id)} disabled={deleting} className="btn btn-danger btn-sm">{deleting ? "..." : "Yes"}</button>
-                        <button onClick={() => setPendingDelete(null)} className="btn btn-sm btn-ghost">No</button>
+                        <button onClick={() => setDeleteConfirm(null)} className="btn btn-sm btn-ghost">No</button>
                       </>
                     ) : (
                       <>
                         <Link href={`/brands/${b.id}`} className="btn btn-primary btn-sm" style={{ textDecoration: "none" }}>Open</Link>
-                        <button onClick={() => setPendingDelete(b.id)} className="btn btn-sm btn-ghost" style={{ color: "var(--red)" }}>Del</button>
+                        <button onClick={() => setDeleteConfirm(b.id)} className="btn btn-sm btn-ghost" style={{ color: "var(--red)" }}>Del</button>
                       </>
                     )}
                   </div>
                 </div>
               ))}
             </div>
-          ) : null}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6, marginTop: 16, flexWrap: "wrap" }}>
+                <button
+                  onClick={() => navigate({ page: String(currentPage - 1) })}
+                  disabled={currentPage <= 1}
+                  className="btn btn-sm btn-ghost"
+                >
+                  Prev
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => navigate({ page: String(p) })}
+                    className={`btn btn-sm ${p === currentPage ? "btn-primary" : "btn-ghost"}`}
+                    style={{ minWidth: 32 }}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  onClick={() => navigate({ page: String(currentPage + 1) })}
+                  disabled={currentPage >= totalPages}
+                  className="btn btn-sm btn-ghost"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Create brand modal */}
+      {showModal && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 100,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "rgba(0,0,0,0.4)", padding: "var(--page-px)",
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
+        >
+          <div className="card" style={{ width: "100%", maxWidth: 420, padding: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div className="section-label">New brand</div>
+              <button onClick={() => setShowModal(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, fontWeight: 700, color: "var(--text-muted)" }}>x</button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
+              <div>
+                <label htmlFor="modal-brand-name" style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Brand name</label>
+                <input ref={nameInputRef} id="modal-brand-name" className="input" value={name} onChange={(e) => { setName(e.target.value); setNameError(""); }} onKeyDown={(e) => e.key === "Enter" && handleCreate()} placeholder="e.g. Notion" autoComplete="off" />
+                {nameError && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4, fontWeight: 600 }}>{nameError}</div>}
+              </div>
+              <div>
+                <label htmlFor="modal-brand-domain" style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Domain</label>
+                <input id="modal-brand-domain" className="input" value={domain} onChange={(e) => { setDomain(e.target.value); setDomainError(""); }} onKeyDown={(e) => e.key === "Enter" && handleCreate()} placeholder="notion.so" autoComplete="off" />
+                {domainError && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4, fontWeight: 600 }}>{domainError}</div>}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={handleCreate} disabled={creating} className="btn btn-primary" style={{ flex: 1 }}>{creating ? "Creating..." : "Create brand"}</button>
+              <button onClick={() => setShowModal(false)} className="btn btn-ghost">Cancel</button>
+            </div>
+          </div>
         </div>
-      </main>
+      )}
     </div>
+  );
+}
+
+export default function BrandsPage() {
+  return (
+    <Suspense fallback={<div className="page" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "var(--text-muted)", minHeight: "100vh" }}>Loading...</div>}>
+      <BrandsPageInner />
+    </Suspense>
   );
 }

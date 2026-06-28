@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
-import { useParams } from "next/navigation";
+import { Suspense, useEffect, useState, useCallback, useRef } from "react";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { getDashboard, getQueries } from "@/lib/api";
 import type { DashboardData, MonitoredQuery } from "@/types";
 import { KpiCard, ScoreRing, InsightRow } from "@/components/ui";
-import { Sidebar } from "@/components/ui/Sidebar";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { LLMBreakdownTable } from "@/components/dashboard/LLMBreakdownTable";
 import { CompetitorShare } from "@/components/dashboard/CompetitorShare";
@@ -16,14 +15,32 @@ import { ScanHistory } from "@/components/dashboard/ScanHistory";
 
 type Tab = "overview" | "queries" | "scans";
 
-export default function BrandDashboardPage() {
+function BrandDashboardPageInner() {
   const { brandId } = useParams<{ brandId: string }>();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const tab = (searchParams.get("tab") as Tab) ?? "overview";
+  const manage = searchParams.get("manage") === "true";
+
   const [data, setData] = useState<DashboardData | null>(null);
   const [queries, setQueries] = useState<MonitoredQuery[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("overview");
   const abortRef = useRef<AbortController | null>(null);
+
+  const setTab = useCallback((t: Tab, extras?: Record<string, string>) => {
+    const p = new URLSearchParams(searchParams.toString());
+    p.set("tab", t);
+    if (extras) {
+      for (const [k, v] of Object.entries(extras)) {
+        if (v) p.set(k, v);
+        else p.delete(k);
+      }
+    } else {
+      p.delete("manage");
+    }
+    router.replace(`/brands/${brandId}?${p.toString()}`);
+  }, [brandId, searchParams, router]);
 
   const loadDashboard = useCallback(async () => {
     abortRef.current?.abort();
@@ -40,7 +57,6 @@ export default function BrandDashboardPage() {
     }
   }, [brandId]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadDashboard(); return () => abortRef.current?.abort(); }, [loadDashboard]);
 
   useEffect(() => {
@@ -67,17 +83,18 @@ export default function BrandDashboardPage() {
   if (score_history.length < 3) insights.push({ type: "tip", text: "<strong>Run scans weekly</strong> to track changes over time." });
 
   return (
-    <div className="page" style={{ display: "flex" }}>
-      <Sidebar />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-        <DashboardHeader brand={brand} latestScan={active_scan ?? latest_scan} onScanTriggered={loadDashboard} onRefresh={loadDashboard} />
-        <div style={{ flex: 1, padding: "var(--gap) var(--page-px)", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
+    <div className="page" style={{ display: "flex", flexDirection: "column" }}>
+      <DashboardHeader brand={brand} latestScan={active_scan ?? latest_scan} onScanTriggered={loadDashboard} onRefresh={loadDashboard} />
+      <div style={{ flex: 1, padding: "var(--gap) var(--page-px)", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
         {error && data && <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "8px 12px", marginBottom: 12, fontSize: 13, color: "#991B1B", fontWeight: 600 }}>{error}</div>}
 
-        <div role="tablist" style={{ display: "flex", gap: 4, marginBottom: 16 }}>
-          {(["overview", "queries", "scans"] as Tab[]).map((t) => (
-            <button key={t} role="tab" aria-selected={t === tab} onClick={() => setTab(t)} className={`tab ${t === tab ? "tab-active" : ""}`}>{t}</button>
-          ))}
+        {/* Tabs with horizontal scroll on mobile */}
+        <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", marginBottom: 16 }}>
+          <div role="tablist" style={{ display: "flex", gap: 4, minWidth: "max-content" }}>
+            {(["overview", "queries", "scans"] as Tab[]).map((t) => (
+              <button key={t} role="tab" aria-selected={t === tab} onClick={() => setTab(t)} className={`tab ${t === tab ? "tab-active" : ""}`}>{t}</button>
+            ))}
+          </div>
         </div>
 
         {tab === "overview" && (
@@ -103,21 +120,15 @@ export default function BrandDashboardPage() {
               <div className="card"><div className="section-label" style={{ marginBottom: 10 }}>Competitor share</div><CompetitorShare items={competitor_share} brandName={brand.name} brandScore={mention_rate} /></div>
             </div>
 
-            {/* Queries + Score History + Insights — asymmetric 2-column */}
             <div className="dashboard-bottom-grid" style={{ marginBottom: "var(--gap)" }}>
-              {/* Queries — spans full left column */}
               <div className="card dashboard-bottom-queries">
                 <div className="section-label" style={{ marginBottom: 10 }}>Queries</div>
                 <QueryChipsPanel queries={query_summaries} brandId={brandId} onManageQueries={() => setTab("queries")} />
               </div>
-
-              {/* Score History — top right */}
               <div className="card">
                 <div className="section-label" style={{ marginBottom: 10 }}>Score history</div>
                 <ScoreHistoryChart data={score_history} />
               </div>
-
-              {/* Insights — bottom right */}
               {insights.length > 0 && (
                 <div className="card" style={{ borderColor: "var(--primary)" }}>
                   <div className="section-label" style={{ marginBottom: 10 }}>Insights</div>
@@ -128,7 +139,29 @@ export default function BrandDashboardPage() {
           </>
         )}
 
-        {tab === "queries" && <div className="card" style={{ maxWidth: 640 }}><div className="section-label" style={{ marginBottom: 14 }}>Manage queries</div><QueryManager brandId={brandId} brandName={brand.name} domain={brand.domain} queries={queries} onUpdate={loadDashboard} /></div>}
+        {tab === "queries" && (
+          <div style={{ maxWidth: 640 }}>
+            {manage ? (
+              <div className="card">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                  <div className="section-label">Manage queries</div>
+                  <button onClick={() => setTab("queries")} className="btn btn-ghost btn-sm">Done</button>
+                </div>
+                <QueryManager brandId={brandId} brandName={brand.name} domain={brand.domain} queries={queries} onUpdate={loadDashboard} />
+              </div>
+            ) : (
+              <>
+                <div className="card" style={{ marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div className="section-label">Monitored queries</div>
+                    <button onClick={() => setTab("queries", { manage: "true" })} className="btn btn-primary btn-sm">Manage</button>
+                  </div>
+                  <QueryChipsPanel queries={query_summaries} brandId={brandId} onManageQueries={() => setTab("queries", { manage: "true" })} />
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {tab === "scans" && (
           <div>
@@ -137,7 +170,14 @@ export default function BrandDashboardPage() {
           </div>
         )}
       </div>
-      </div>
     </div>
+  );
+}
+
+export default function BrandDashboardPage() {
+  return (
+    <Suspense fallback={<div className="page" style={{ display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "var(--text-muted)", minHeight: "100vh" }}>Loading...</div>}>
+      <BrandDashboardPageInner />
+    </Suspense>
   );
 }

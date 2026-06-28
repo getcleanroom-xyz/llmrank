@@ -6,7 +6,6 @@ import Link from "next/link";
 import { getQueryDrilldown, triggerScan } from "@/lib/api";
 import type { QueryDrilldown } from "@/types";
 import { InsightRow } from "@/components/ui";
-import { Sidebar } from "@/components/ui/Sidebar";
 import { LLMResponseCard } from "@/components/drilldown/LLMResponseCard";
 
 export default function QueryDrilldownPage() {
@@ -49,16 +48,14 @@ export default function QueryDrilldownPage() {
   const notMentioned = data.results.filter((r) => !r.mentioned);
 
   return (
-    <div className="page" style={{ display: "flex" }}>
-      <Sidebar />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+    <div className="page" style={{ display: "flex", flexDirection: "column" }}>
       <div style={{ background: "var(--surface)", borderBottom: "2px solid var(--border)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "10px var(--page-px)", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <Link href="/" style={{ fontSize: 12, color: "var(--text-muted)", textDecoration: "none", fontWeight: 700 }}>brands</Link>
-          <span style={{ color: "var(--text-muted)" }}>/</span>
-          <Link href={`/brands/${brandId}`} style={{ fontSize: 12, color: "var(--text-muted)", textDecoration: "none", fontWeight: 700 }}>dashboard</Link>
-          <span style={{ color: "var(--text-muted)" }}>/</span>
-          <span style={{ fontSize: 13, fontWeight: 600, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{data.query_text}</span>
+          <Link href="/brands" style={{ fontSize: 12, color: "var(--text-muted)", textDecoration: "none", fontWeight: 700, flexShrink: 0 }}>brands</Link>
+          <span style={{ color: "var(--text-muted)", flexShrink: 0 }}>/</span>
+          <Link href={`/brands/${brandId}`} style={{ fontSize: 12, color: "var(--text-muted)", textDecoration: "none", fontWeight: 700, flexShrink: 0 }}>dashboard</Link>
+          <span style={{ color: "var(--text-muted)", flexShrink: 0 }}>/</span>
+          <span style={{ fontSize: 13, fontWeight: 600, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{data.query_text}</span>
           <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
             <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>{new Date(data.scanned_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
             <button onClick={handleRescan} disabled={rescanning} className="btn btn-ghost btn-sm">{rescanning ? "Starting..." : "Re-scan"}</button>
@@ -66,7 +63,7 @@ export default function QueryDrilldownPage() {
         </div>
       </div>
 
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "var(--gap) var(--page-px)" }}>
+      <div style={{ flex: 1, maxWidth: 1100, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
         <div className="grid-4" style={{ marginBottom: 16 }}>
           <div className="card" style={{ padding: "12px 14px" }}>
             <div className="section-label" style={{ marginBottom: 4 }}>Position</div>
@@ -92,7 +89,7 @@ export default function QueryDrilldownPage() {
 
         <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
           <span className="section-label">Responses</span>
-          <div style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
+          <div style={{ display: "flex", gap: 6, marginLeft: "auto", flexWrap: "wrap" }}>
             <span className="span-brand" style={{ fontSize: 10, padding: "1px 5px" }}>Brand</span>
             <span className="span-competitor" style={{ fontSize: 10, padding: "1px 5px" }}>Competitor</span>
             <span className="span-qualifier" style={{ fontSize: 10, padding: "1px 5px" }}>Caveat</span>
@@ -118,7 +115,6 @@ export default function QueryDrilldownPage() {
             {data.insights.map((ins, i) => <div key={i} style={i === data.insights.length - 1 ? { borderBottom: "none" } : {}}><InsightRow type={ins.type as "tip" | "warning"} text={ins.text} /></div>)}
           </div>
         )}
-      </div>
       </div>
     </div>
   );
