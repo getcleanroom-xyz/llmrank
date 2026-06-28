@@ -37,6 +37,8 @@ export function AppHeader({ before, after }: { before?: React.ReactNode; after?:
             </div>
           )}
 
+          <div style={{ flex: 1 }} />
+
           {after && (
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
               {after}
