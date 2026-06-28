@@ -1,0 +1,113 @@
+import uuid
+from datetime import datetime, timezone
+from sqlalchemy import String, Text, Float, Integer, DateTime, ForeignKey, Enum, JSON
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.dialects.postgresql import UUID
+import enum
+
+from app.core.database import Base
+
+
+def _utcnow() -> datetime:
+    """Return naive UTC datetime compatible with TIMESTAMP WITHOUT TIME ZONE columns."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+class ScanStatus(str, enum.Enum):
+    pending = "pending"
+    running = "running"
+    completed = "completed"
+    failed = "failed"
+
+
+class Sentiment(str, enum.Enum):
+    positive = "positive"
+    neutral = "neutral"
+    negative = "negative"
+    not_mentioned = "not_mentioned"
+
+
+class Brand(Base):
+    __tablename__ = "brands"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    domain: Mapped[str] = mapped_column(String(200), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+    queries: Mapped[list["MonitoredQuery"]] = relationship("MonitoredQuery", back_populates="brand", cascade="all, delete-orphan")
+    scans: Mapped[list["Scan"]] = relationship("Scan", back_populates="brand", cascade="all, delete-orphan")
+
+
+class MonitoredQuery(Base):
+    __tablename__ = "monitored_queries"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    brand_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("brands.id"), nullable=False)
+    query_text: Mapped[str] = mapped_column(Text, nullable=False)
+    is_active: Mapped[bool] = mapped_column(default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+    brand: Mapped["Brand"] = relationship("Brand", back_populates="queries")
+    results: Mapped[list["QueryResult"]] = relationship("QueryResult", back_populates="query", cascade="all, delete-orphan")
+
+
+class Scan(Base):
+    __tablename__ = "scans"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    brand_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("brands.id"), nullable=False)
+    status: Mapped[ScanStatus] = mapped_column(Enum(ScanStatus), default=ScanStatus.pending)
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    visibility_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    mention_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    brand: Mapped["Brand"] = relationship("Brand", back_populates="scans")
+    results: Mapped[list["QueryResult"]] = relationship("QueryResult", back_populates="scan", cascade="all, delete-orphan")
+
+
+class QueryResult(Base):
+    __tablename__ = "query_results"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    scan_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("scans.id"), nullable=False)
+    query_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("monitored_queries.id"), nullable=False)
+    llm_name: Mapped[str] = mapped_column(String(50), nullable=False)
+    raw_response: Mapped[str] = mapped_column(Text, nullable=False)
+    mentioned: Mapped[bool] = mapped_column(default=False)
+    position: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    sentiment: Mapped[Sentiment] = mapped_column(Enum(Sentiment), default=Sentiment.not_mentioned)
+    competitors_mentioned: Mapped[list] = mapped_column(JSON, default=list)
+    annotated_response: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+    scan: Mapped["Scan"] = relationship("Scan", back_populates="results")
+    query: Mapped["MonitoredQuery"] = relationship("MonitoredQuery", back_populates="results")
+
+
+class CreditWallet(Base):
+    """User credit balance. Credits are used to pay for paid model scans."""
+    __tablename__ = "credit_wallets"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, default="default")
+    balance: Mapped[int] = mapped_column(Integer, default=500)
+    total_purchased: Mapped[int] = mapped_column(Integer, default=0)
+    total_used: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+
+class CreditTransaction(Base):
+    """Audit log for all credit changes."""
+    __tablename__ = "credit_transactions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[str] = mapped_column(String(100), nullable=False, default="default")
+    amount: Mapped[int] = mapped_column(Integer, nullable=False)  # positive = add, negative = deduct
+    type: Mapped[str] = mapped_column(String(50), nullable=False)  # "purchase", "scan_usage", "admin_grant", "signup_bonus"
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    balance_after: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)

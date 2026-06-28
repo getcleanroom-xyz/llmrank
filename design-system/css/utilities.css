@@ -1,0 +1,136 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   brutalist-ui — Utility Classes
+   Layout, spacing, typography, and display utilities.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Display ─── */
+.bu-hidden { display: none; }
+.bu-block { display: block; }
+.bu-flex { display: flex; }
+.bu-flex-col { display: flex; flex-direction: column; }
+.bu-grid { display: grid; }
+.bu-inline-flex { display: inline-flex; }
+.bu-inline-block { display: inline-block; }
+
+/* ─── Flex ─── */
+.bu-items-center { align-items: center; }
+.bu-items-start { align-items: flex-start; }
+.bu-items-end { align-items: flex-end; }
+.bu-justify-center { justify-content: center; }
+.bu-justify-between { justify-content: space-between; }
+.bu-justify-end { justify-content: flex-end; }
+.bu-flex-wrap { flex-wrap: wrap; }
+.bu-flex-1 { flex: 1; }
+.bu-flex-shrink-0 { flex-shrink: 0; }
+.bu-gap-1 { gap: var(--bu-space-1); }
+.bu-gap-2 { gap: var(--bu-space-2); }
+.bu-gap-3 { gap: var(--bu-space-3); }
+.bu-gap-4 { gap: var(--bu-space-4); }
+.bu-gap-6 { gap: var(--bu-space-6); }
+.bu-gap-8 { gap: var(--bu-space-8); }
+
+/* ─── Grid ─── */
+.bu-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--bu-space-4); }
+.bu-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--bu-space-4); }
+.bu-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--bu-space-4); }
+@media (max-width: 768px) {
+  .bu-grid-2, .bu-grid-3, .bu-grid-4 { grid-template-columns: 1fr; }
+}
+@media (min-width: 769px) and (max-width: 1024px) {
+  .bu-grid-3, .bu-grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ─── Width ─── */
+.bu-w-full { width: 100%; }
+.bu-w-auto { width: auto; }
+.bu-max-w-sm { max-width: 480px; }
+.bu-max-w-md { max-width: 640px; }
+.bu-max-w-lg { max-width: 768px; }
+.bu-max-w-xl { max-width: 1024px; }
+.bu-max-w-2xl { max-width: 1200px; }
+.bu-mx-auto { margin-left: auto; margin-right: auto; }
+
+/* ─── Spacing ─── */
+.bu-m-0 { margin: 0; }
+.bu-mt-1 { margin-top: var(--bu-space-1); }
+.bu-mt-2 { margin-top: var(--bu-space-2); }
+.bu-mt-4 { margin-top: var(--bu-space-4); }
+.bu-mt-6 { margin-top: var(--bu-space-6); }
+.bu-mb-1 { margin-bottom: var(--bu-space-1); }
+.bu-mb-2 { margin-bottom: var(--bu-space-2); }
+.bu-mb-4 { margin-bottom: var(--bu-space-4); }
+.bu-mb-6 { margin-bottom: var(--bu-space-6); }
+.bu-ml-2 { margin-left: var(--bu-space-2); }
+.bu-mr-2 { margin-right: var(--bu-space-2); }
+.bu-p-0 { padding: 0; }
+.bu-p-2 { padding: var(--bu-space-2); }
+.bu-p-3 { padding: var(--bu-space-3); }
+.bu-p-4 { padding: var(--bu-space-4); }
+.bu-p-6 { padding: var(--bu-space-6); }
+.bu-px-2 { padding-left: var(--bu-space-2); padding-right: var(--bu-space-2); }
+.bu-px-4 { padding-left: var(--bu-space-4); padding-right: var(--bu-space-4); }
+.bu-py-1 { padding-top: var(--bu-space-1); padding-bottom: var(--bu-space-1); }
+.bu-py-2 { padding-top: var(--bu-space-2); padding-bottom: var(--bu-space-2); }
+
+/* ─── Typography ─── */
+.bu-text-xs { font-size: var(--bu-text-xs); }
+.bu-text-sm { font-size: var(--bu-text-sm); }
+.bu-text-base { font-size: var(--bu-text-base); }
+.bu-text-md { font-size: var(--bu-text-md); }
+.bu-text-lg { font-size: var(--bu-text-lg); }
+.bu-text-xl { font-size: var(--bu-text-xl); }
+.bu-text-2xl { font-size: var(--bu-text-2xl); }
+.bu-text-3xl { font-size: var(--bu-text-3xl); }
+.bu-font-normal { font-weight: var(--bu-weight-normal); }
+.bu-font-medium { font-weight: var(--bu-weight-medium); }
+.bu-font-semibold { font-weight: var(--bu-weight-semibold); }
+.bu-font-bold { font-weight: var(--bu-weight-bold); }
+.bu-font-extrabold { font-weight: var(--bu-weight-extrabold); }
+.bu-text-center { text-align: center; }
+.bu-text-left { text-align: left; }
+.bu-text-right { text-align: right; }
+.bu-uppercase { text-transform: uppercase; }
+.bu-lowercase { text-transform: lowercase; }
+.bu-capitalize { text-transform: capitalize; }
+.bu-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bu-whitespace-nowrap { white-space: nowrap; }
+
+/* ─── Colors ─── */
+.bu-text-primary { color: var(--bu-text); }
+.bu-text-secondary { color: var(--bu-text-secondary); }
+.bu-text-muted { color: var(--bu-text-muted); }
+.bu-text-success { color: var(--bu-success-text); }
+.bu-text-danger { color: var(--bu-danger-text); }
+.bu-text-warning { color: var(--bu-warning-text); }
+
+/* ─── Border ─── */
+.bu-border { border: var(--bu-border-width) solid var(--bu-border); }
+.bu-border-t { border-top: var(--bu-border-width) solid var(--bu-border); }
+.bu-border-b { border-bottom: var(--bu-border-width) solid var(--bu-border); }
+.bu-rounded { border-radius: var(--bu-radius); }
+.bu-rounded-lg { border-radius: var(--bu-radius-lg); }
+.bu-rounded-full { border-radius: var(--bu-radius-full); }
+
+/* ─── Overflow ─── */
+.bu-overflow-hidden { overflow: hidden; }
+.bu-overflow-auto { overflow: auto; }
+.bu-overflow-scroll { overflow: scroll; }
+
+/* ─── Position ─── */
+.bu-relative { position: relative; }
+.bu-absolute { position: absolute; }
+.bu-fixed { position: fixed; }
+.bu-sticky { position: sticky; }
+
+/* ─── Shadows ─── */
+.bu-shadow-none { box-shadow: none; }
+.bu-shadow-xs { box-shadow: var(--bu-shadow-xs); }
+.bu-shadow-sm { box-shadow: var(--bu-shadow-sm); }
+.bu-shadow { box-shadow: var(--bu-shadow); }
+.bu-shadow-md { box-shadow: var(--bu-shadow-md); }
+.bu-shadow-lg { box-shadow: var(--bu-shadow-lg); }
+
+/* ─── Pointer ─── */
+.bu-cursor-pointer { cursor: pointer; }
+.bu-cursor-not-allowed { cursor: not-allowed; }
+.bu-select-none { user-select: none; }

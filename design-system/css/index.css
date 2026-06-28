@@ -1,0 +1,13 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   brutalist-ui — Main Entry Point
+   
+   Import this single file to get the entire design system:
+   
+   In CSS:    @import "brutalist-ui/css/index.css";
+   In JS:     import "brutalist-ui/css/index.css";
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@import "./tokens.css";
+@import "./reset.css";
+@import "./components.css";
+@import "./utilities.css";

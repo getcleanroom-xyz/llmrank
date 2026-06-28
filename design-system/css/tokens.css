@@ -1,0 +1,153 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   brutalist-ui — Design Tokens
+   A neobrutalist design system with hard borders, bold shadows, and raw energy.
+   
+   Usage: Import this file first, then import component styles.
+   Theming: Override CSS custom properties on :root or a parent element.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ─── Color Palette ─── */
+  --bu-black:         #1A1A1A;
+  --bu-white:         #FFFFFF;
+  --bu-bg:            #F5F5F0;
+  --bu-bg-dark:       #E8E8E3;
+  --bu-surface:       #FFFFFF;
+
+  /* Accent Colors */
+  --bu-primary:       #FFD600;
+  --bu-primary-hover: #E6C000;
+  --bu-blue:          #3B82F6;
+  --bu-green:         #22C55E;
+  --bu-red:           #EF4444;
+  --bu-orange:        #F97316;
+  --bu-purple:        #A855F7;
+  --bu-cyan:          #06B6D4;
+
+  /* Semantic Colors */
+  --bu-success:       #22C55E;
+  --bu-success-bg:    #DCFCE7;
+  --bu-success-border:#166534;
+  --bu-success-text:  #166534;
+
+  --bu-danger:        #EF4444;
+  --bu-danger-bg:     #FEE2E2;
+  --bu-danger-border: #991B1B;
+  --bu-danger-text:   #991B1B;
+
+  --bu-warning:       #F97316;
+  --bu-warning-bg:    #FEF3C7;
+  --bu-warning-border:#92400E;
+  --bu-warning-text:  #92400E;
+
+  --bu-info:          #3B82F6;
+  --bu-info-bg:       #DBEAFE;
+  --bu-info-border:   #1E40AF;
+  --bu-info-text:     #1E40AF;
+
+  /* Text Colors */
+  --bu-text:          #1A1A1A;
+  --bu-text-secondary:#555555;
+  --bu-text-muted:    #999999;
+  --bu-text-inverse:  #FFFFFF;
+
+  /* Border */
+  --bu-border:        #1A1A1A;
+
+  /* ─── Spacing Scale ─── */
+  --bu-space-0:  0;
+  --bu-space-1:  4px;
+  --bu-space-2:  8px;
+  --bu-space-3:  12px;
+  --bu-space-4:  16px;
+  --bu-space-5:  20px;
+  --bu-space-6:  24px;
+  --bu-space-8:  32px;
+  --bu-space-10: 40px;
+  --bu-space-12: 48px;
+  --bu-space-16: 64px;
+
+  /* ─── Typography Scale ─── */
+  --bu-font-sans:  "Inter", system-ui, -apple-system, sans-serif;
+  --bu-font-mono:  "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+
+  --bu-text-xs:    0.75rem;    /* 12px */
+  --bu-text-sm:    0.8125rem;  /* 13px */
+  --bu-text-base:  0.875rem;   /* 14px */
+  --bu-text-md:    1rem;       /* 16px */
+  --bu-text-lg:    1.125rem;   /* 18px */
+  --bu-text-xl:    1.25rem;    /* 20px */
+  --bu-text-2xl:   1.5rem;     /* 24px */
+  --bu-text-3xl:   2rem;       /* 32px */
+
+  --bu-leading-tight:  1.2;
+  --bu-leading-normal: 1.5;
+  --bu-leading-relaxed:1.7;
+
+  --bu-weight-normal: 400;
+  --bu-weight-medium: 500;
+  --bu-weight-semibold:600;
+  --bu-weight-bold:   700;
+  --bu-weight-extrabold:800;
+
+  /* ─── Border Radius ─── */
+  --bu-radius-none: 0;
+  --bu-radius-sm:   2px;
+  --bu-radius:      4px;
+  --bu-radius-md:   6px;
+  --bu-radius-lg:   8px;
+  --bu-radius-xl:   12px;
+  --bu-radius-full: 9999px;
+
+  /* ─── Border Width ─── */
+  --bu-border-width:      2px;
+  --bu-border-width-sm:   1.5px;
+  --bu-border-width-xs:   1px;
+
+  /* ─── Shadows (Hard offset, no blur) ─── */
+  --bu-shadow-none: none;
+  --bu-shadow-xs:   1px 1px 0px var(--bu-black);
+  --bu-shadow-sm:   2px 2px 0px var(--bu-black);
+  --bu-shadow:      3px 3px 0px var(--bu-black);
+  --bu-shadow-md:   4px 4px 0px var(--bu-black);
+  --bu-shadow-lg:   6px 6px 0px var(--bu-black);
+
+  /* ─── Transitions ─── */
+  --bu-transition-fast:   0.1s ease;
+  --bu-transition-normal: 0.2s ease;
+  --bu-transition-slow:   0.3s ease;
+
+  /* ─── Z-Index Scale ─── */
+  --bu-z-base:    0;
+  --bu-z-above:   10;
+  --bu-z-dropdown:50;
+  --bu-z-sticky:  100;
+  --bu-z-modal:   200;
+  --bu-z-toast:   300;
+  --bu-z-tooltip: 400;
+
+  /* ─── Breakpoints (for reference) ─── */
+  /* sm: 640px, md: 768px, lg: 1024px, xl: 1280px */
+}
+
+/* ─── Dark Mode ─── */
+[data-theme="dark"] {
+  --bu-black:         #F0F0F0;
+  --bu-white:         #1A1A1A;
+  --bu-bg:            #0F0F0F;
+  --bu-bg-dark:       #1A1A1A;
+  --bu-surface:       #252525;
+
+  --bu-text:          #F0F0F0;
+  --bu-text-secondary:#AAAAAA;
+  --bu-text-muted:    #666666;
+  --bu-text-inverse:  #1A1A1A;
+
+  --bu-border:        #F0F0F0;
+
+  --bu-shadow-xs:   1px 1px 0px var(--bu-black);
+  --bu-shadow-sm:   2px 2px 0px var(--bu-black);
+  --bu-shadow:      3px 3px 0px var(--bu-black);
+  --bu-shadow-md:   4px 4px 0px var(--bu-black);
+  --bu-shadow-lg:   6px 6px 0px var(--bu-black);
+}

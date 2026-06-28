@@ -1,0 +1,21 @@
+from pydantic_settings import BaseSettings
+
+
+class Settings(BaseSettings):
+    DATABASE_URL: str = "postgresql+asyncpg://user:password@localhost:5432/llmrank"
+    OPENROUTER_API_KEY: str = ""
+    SECRET_KEY: str = "dev-secret-change-in-production"
+    CORS_ORIGINS: str = "http://localhost:3000"
+    RATE_LIMIT_PER_MINUTE: int = 10
+    BMC_WEBHOOK_SECRET: str = ""  # Buy Me a Coffee webhook secret
+    BMC_USERNAME: str = "llmrank"  # Buy Me a Coffee username for links
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+
+    class Config:
+        env_file = ".env"
+
+
+settings = Settings()
