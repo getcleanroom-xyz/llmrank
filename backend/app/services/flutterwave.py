@@ -79,20 +79,27 @@ async def create_flutterwave_charge(
             logger.error("Flutterwave charge failed: %s", data)
             raise ValueError(data.get("message", "Payment initialization failed"))
 
+        checkout_url = data.get("data", {}).get("link")
+        if not checkout_url:
+            logger.error("Flutterwave response missing link: %s", data)
+            raise ValueError("Payment provider returned unexpected response format")
+
+        logger.info("Flutterwave checkout created: ref=%s, url=%s", reference, checkout_url)
+
         return {
-            "charge_id": str(data["data"]["id"]),
+            "charge_id": reference,
             "reference": reference,
-            "checkout_url": data["data"].get("link"),
+            "checkout_url": checkout_url,
             "amount": package["amount_usd"],
             "currency": currency,
         }
 
 
-async def verify_flutterwave_charge(charge_id: str) -> dict:
-    """Verify a Flutterwave charge status."""
+async def verify_flutterwave_charge(transaction_id: str) -> dict:
+    """Verify a Flutterwave transaction by its transaction ID."""
     async with httpx.AsyncClient(timeout=30) as client:
         response = await client.get(
-            f"{settings.FLW_BASE_URL}/charges/{charge_id}",
+            f"{settings.FLW_BASE_URL}/transactions/{transaction_id}/verify",
             headers={
                 "Authorization": f"Bearer {settings.FLW_SECRET_KEY}",
                 "Content-Type": "application/json",
@@ -110,8 +117,9 @@ async def verify_flutterwave_charge(charge_id: str) -> dict:
             "status": charge["status"],
             "amount": charge["amount"],
             "currency": charge["currency"],
-            "reference": charge.get("reference"),
+            "tx_ref": charge.get("tx_ref"),
             "charge_id": charge["id"],
+            "meta": charge.get("meta", {}),
         }
 
 

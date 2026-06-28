@@ -189,3 +189,6 @@ export const createCheckout = (packageKey: string, currency: string = "USD") =>
     method: "POST",
     body: JSON.stringify({ package_key: packageKey, currency }),
   });
+
+export const verifyPayment = (transactionId: string) =>
+  apiFetch<Record<string, unknown>>(`/payments/verify/${transactionId}`);

@@ -141,14 +141,15 @@ async def flutterwave_webhook(request: Request, db: AsyncSession = Depends(get_d
         raise HTTPException(500, "Failed to process payment")
 
 
-@router.get("/verify/{charge_id}")
+@router.get("/verify/{transaction_id}")
 async def verify_payment(
-    charge_id: str,
+    transaction_id: str,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Manually verify a payment (backup for webhook failures)."""
-    result = await verify_flutterwave_charge(charge_id)
+    """Verify a Flutterwave transaction by ID (call this after redirect).
+    Grants credits if the payment succeeded and hasn't been processed yet."""
+    result = await verify_flutterwave_charge(transaction_id)
 
     if not result["verified"]:
         raise HTTPException(400, "Payment verification failed")
@@ -159,10 +160,28 @@ async def verify_payment(
         existing = await db.execute(
             select(CreditTransaction).where(
                 CreditTransaction.user_id == user.id,
-                CreditTransaction.description.contains(charge_id),
+                CreditTransaction.description.contains(transaction_id),
             )
         )
         if existing.scalar_one_or_none():
             return {"status": "already_credited", "message": "Credits already granted"}
+
+        # Grant credits (fallback in case webhook hasn't fired yet)
+        meta = result.get("meta", {})
+        package_key = meta.get("package_key")
+        if package_key and package_key in CREDIT_PACKAGES:
+            await grant_credits_from_payment(
+                db=db,
+                user_id=user.id,
+                amount=result["amount"],
+                package_key=package_key,
+                reference=result.get("tx_ref", ""),
+                charge_id=str(transaction_id),
+            )
+            await db.commit()
+            return {
+                "status": "successful",
+                "credits_granted": CREDIT_PACKAGES[package_key]["credits"],
+            }
 
     return result
