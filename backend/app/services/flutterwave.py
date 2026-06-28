@@ -53,9 +53,9 @@ async def create_flutterwave_charge(
                 "X-Trace-Id": str(uuid.uuid4()),
             },
             json={
+                "tx_ref": reference,
                 "amount": package["amount_usd"],
                 "currency": currency,
-                "reference": reference,
                 "redirect_url": f"{settings.RP_ORIGIN}/credits/success",
                 "meta": {
                     "user_id": str(user.id),
