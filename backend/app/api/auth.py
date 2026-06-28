@@ -145,6 +145,7 @@ async def register_start(body: RegisterStartRequest, request: Request, db: Async
         display_name=body.display_name,
     )
     db.add(user)
+    await db.flush()  # Flush user first so foreign key constraints are satisfied
 
     # Create wallet with 500 free credits
     wallet = CreditWallet(
