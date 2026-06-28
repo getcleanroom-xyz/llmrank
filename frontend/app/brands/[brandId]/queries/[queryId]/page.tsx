@@ -9,7 +9,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { InsightRow } from "@/components/ui";
 import { LLMResponseCard } from "@/components/drilldown/LLMResponseCard";
 
-export default function QueryDrilldownPage() {
+function QueryDrilldownInner() {
   const { brandId, queryId } = useParams<{ brandId: string; queryId: string }>();
   const [data, setData] = useState<QueryDrilldown | null>(null);
   const [loading, setLoading] = useState(true);
@@ -21,7 +21,6 @@ export default function QueryDrilldownPage() {
     abortRef.current?.abort();
     const c = new AbortController();
     abortRef.current = c;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setError(null);
     getQueryDrilldown(brandId, queryId)
@@ -123,4 +122,8 @@ export default function QueryDrilldownPage() {
       </div>
     </div>
   );
+}
+
+export default function QueryDrilldownPage() {
+  return <QueryDrilldownInner />;
 }

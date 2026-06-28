@@ -264,3 +264,21 @@ body {
 @keyframes progress-slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
 .scan-progress { height: 4px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 2px; overflow: hidden; }
 .scan-progress-fill { height: 100%; background: var(--primary); width: 40%; animation: progress-slide 1.2s ease-in-out infinite; }
+
+/* ─── App Header ─── */
+.app-header {
+  background: var(--surface);
+  border-bottom: 2px solid var(--border);
+}
+.app-header-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 8px var(--page-px);
+  width: 100%;
+}
+.app-header-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}

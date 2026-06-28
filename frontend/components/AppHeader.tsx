@@ -21,9 +21,9 @@ export function AppHeader({ before, after }: { before?: React.ReactNode; after?:
   }, [user]);
 
   return (
-    <header style={{ background: "var(--surface)", borderBottom: "2px solid var(--border)" }}>
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "8px var(--page-px)", width: "100%" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+    <header className="app-header">
+      <div className="app-header-inner">
+        <div className="app-header-content">
           <Link
             href={user ? "/brands" : "/"}
             style={{ fontSize: 14, fontWeight: 800, color: "var(--text)", textDecoration: "none", flexShrink: 0, lineHeight: 1 }}
