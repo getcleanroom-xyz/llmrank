@@ -250,22 +250,61 @@ async def generate_query_suggestions(brand_name: str, domain: str, keywords: lis
 
     keyword_block = f"\n\nContext keywords: {', '.join(keywords)}" if keywords else ""
     has_useful_content = len(combined) >= 300
-    thin_signal = f"Brand name: {brand_name} | Domain: {domain}"
 
-    # Extract meta description for thin-content fallback
-    if not has_useful_content:
+    # Web search for thin-content / SPA sites to get more context about the brand
+    async def _web_search_context(query: str, max_results: int = 5) -> list[str]:
+        snippets: list[str] = []
         try:
-            import httpx as _httpx2
-            async with _httpx2.AsyncClient(timeout=5, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0"}) as c:
-                r = await c.get(BASE_URL)
-                m = re.search(r'<meta\s+name=["\']description["\']\s+content=["\']([^"\']+)["\']', r.text, re.IGNORECASE)
-                if m:
-                    thin_signal += f" | Tagline: {m.group(1)}"
-        except Exception:
-            pass
+            _httpx_client = _httpx.AsyncClient(timeout=10, follow_redirects=False)
+            async with _httpx_client as client:
+                resp = await client.post(
+                    "https://html.duckduckgo.com/html/",
+                    data={"q": query},
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "Accept": "text/html",
+                    },
+                )
+                if resp.status_code == 200:
+                    # Extract result snippets from DuckDuckGo HTML response
+                    snippets = re.findall(
+                        r'<a[^>]*class="result__snippet"[^>]*>(.*?)</a>',
+                        resp.text,
+                        re.DOTALL | re.IGNORECASE,
+                    )
+                    if not snippets:
+                        snippets = re.findall(
+                            r'class="result__snippet"[^>]*>(.*?)</(?:a|span|div)>',
+                            resp.text,
+                            re.DOTALL | re.IGNORECASE,
+                        )
+                    snippets = [re.sub(r"<[^>]+>", "", s).strip() for s in snippets]
+                    snippets = [s for s in snippets if len(s) > 15][:max_results]
+        except Exception as e:
+            logger.warning("Web search failed for '%s': %s", query, e)
+        return snippets
 
-    content_signal = combined if has_useful_content else thin_signal
-    content_label = "crawled website content" if has_useful_content else "brand signals (name, domain, tagline)"
+    web_context = ""
+    if not has_useful_content:
+        # Try web search for brand context
+        search_results = await _web_search_context(f"{brand_name} {domain}")
+        if search_results:
+            web_context = "Web search context:\n" + "\n".join(f"- {s}" for s in search_results)
+            logger.info("Got %d web search snippets for %s", len(search_results), domain)
+        else:
+            # Fallback: extract meta description
+            try:
+                async with _httpx.AsyncClient(timeout=5, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0"}) as c:
+                    r = await c.get(BASE_URL)
+                    m = re.search(r'<meta\s+name=["\']description["\']\s+content=["\']([^"\']+)["\']', r.text, re.IGNORECASE)
+                    if m:
+                        web_context = f"Tagline: {m.group(1)}"
+            except Exception:
+                pass
+
+    content_signal = combined if has_useful_content else f"Brand name: {brand_name} | Domain: {domain}\n\n{web_context}".strip()
+    content_label = "crawled website content" if has_useful_content else ("brand signals + web search results" if web_context else "brand signals (name, domain)")
 
     prompt = f"""You are an SEO expert. Based on the following {content_label}, generate 12 realistic search queries that potential customers would ask an AI assistant (like ChatGPT or Google Gemini) when looking for the products, services, or tools this company offers.
 
