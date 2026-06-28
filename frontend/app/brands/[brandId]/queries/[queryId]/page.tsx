@@ -8,6 +8,18 @@ import type { QueryDrilldown } from "@/types";
 import { InsightRow } from "@/components/ui";
 import { LLMResponseCard } from "@/components/drilldown/LLMResponseCard";
 
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    setMatches(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setMatches(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, [query]);
+  return matches;
+}
+
 export default function QueryDrilldownPage() {
   const { brandId, queryId } = useParams<{ brandId: string; queryId: string }>();
   const [data, setData] = useState<QueryDrilldown | null>(null);
@@ -47,20 +59,42 @@ export default function QueryDrilldownPage() {
   const mentioned = data.results.filter((r) => r.mentioned);
   const notMentioned = data.results.filter((r) => !r.mentioned);
 
+  const isMobile = useMediaQuery("(max-width: 639px)");
+
   return (
     <div className="page" style={{ display: "flex", flexDirection: "column" }}>
       <div style={{ background: "var(--surface)", borderBottom: "2px solid var(--border)" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "10px var(--page-px)", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <Link href="/brands" style={{ fontSize: 12, color: "var(--text-muted)", textDecoration: "none", fontWeight: 700, flexShrink: 0 }}>brands</Link>
-          <span style={{ color: "var(--text-muted)", flexShrink: 0 }}>/</span>
-          <Link href={`/brands/${brandId}`} style={{ fontSize: 12, color: "var(--text-muted)", textDecoration: "none", fontWeight: 700, flexShrink: 0 }}>dashboard</Link>
-          <span style={{ color: "var(--text-muted)", flexShrink: 0 }}>/</span>
-          <span style={{ fontSize: 13, fontWeight: 600, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{data.query_text}</span>
-          <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
-            <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>{new Date(data.scanned_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-            <button onClick={handleRescan} disabled={rescanning} className="btn btn-ghost btn-sm">{rescanning ? "Starting..." : "Re-scan"}</button>
+        {isMobile ? (
+          <div style={{ maxWidth: 1100, margin: "0 auto", padding: "8px var(--page-px)", width: "100%" }}>
+            <div style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, marginBottom: 4 }}>
+              <Link href="/brands" style={{ color: "var(--text-muted)", textDecoration: "none" }}>brands</Link>
+              <span style={{ margin: "0 4px" }}>/</span>
+              <Link href={`/brands/${brandId}`} style={{ color: "var(--text-muted)", textDecoration: "none" }}>dashboard</Link>
+              <span style={{ margin: "0 4px" }}>/</span>
+              <span style={{ color: "var(--text-secondary)" }}>{data.query_text.length > 28 ? data.query_text.slice(0, 28) + "..." : data.query_text}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 500 }}>
+                {new Date(data.scanned_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+              </span>
+              <button onClick={handleRescan} disabled={rescanning} className="btn btn-ghost btn-sm" style={{ fontSize: 11, padding: "4px 10px" }}>
+                {rescanning ? "..." : "Re-scan"}
+              </button>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div style={{ maxWidth: 1100, margin: "0 auto", padding: "10px var(--page-px)", display: "flex", alignItems: "center", gap: 8 }}>
+            <Link href="/brands" style={{ fontSize: 12, color: "var(--text-muted)", textDecoration: "none", fontWeight: 700, flexShrink: 0 }}>brands</Link>
+            <span style={{ color: "var(--text-muted)", flexShrink: 0 }}>/</span>
+            <Link href={`/brands/${brandId}`} style={{ fontSize: 12, color: "var(--text-muted)", textDecoration: "none", fontWeight: 700, flexShrink: 0 }}>dashboard</Link>
+            <span style={{ color: "var(--text-muted)", flexShrink: 0 }}>/</span>
+            <span style={{ fontSize: 13, fontWeight: 600, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{data.query_text}</span>
+            <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+              <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>{new Date(data.scanned_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+              <button onClick={handleRescan} disabled={rescanning} className="btn btn-ghost btn-sm">{rescanning ? "Starting..." : "Re-scan"}</button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div style={{ flex: 1, maxWidth: 1100, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
