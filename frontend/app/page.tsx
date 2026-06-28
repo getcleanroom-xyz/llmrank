@@ -1,5 +1,17 @@
 import { LandingHeader, LandingCTA } from "@/components/landing/LandingHeader";
 
+export const dynamic = "force-static";
+
+export const metadata = {
+  title: "LLMRank - AI SEO Visibility Tracking",
+  description: "Track how your brand appears in ChatGPT, Gemini, Claude, and other AI models. Free to start.",
+  openGraph: {
+    title: "LLMRank - AI SEO Visibility Tracking",
+    description: "Track how your brand appears in ChatGPT, Gemini, Claude, and other AI models.",
+    type: "website",
+  },
+};
+
 const SUPPORTED_LLMS = ["ChatGPT", "Gemini", "Claude", "Llama", "DeepSeek", "Mistral", "Qwen"];
 
 const HOW_IT_WORKS = [

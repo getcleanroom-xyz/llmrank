@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useCallback, useRef } from "react";
+import { Suspense, useEffect, useState, useCallback, useRef, lazy } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { getDashboard, getQueries, getCredits, type CreditBalance } from "@/lib/api";
@@ -12,8 +12,9 @@ import { LLMBreakdownTable } from "@/components/dashboard/LLMBreakdownTable";
 import { CompetitorShare } from "@/components/dashboard/CompetitorShare";
 import { QueryChipsPanel } from "@/components/dashboard/QueryChipsPanel";
 import { QueryManager } from "@/components/dashboard/QueryManager";
-import { ScoreHistoryChart } from "@/components/dashboard/ScoreHistoryChart";
-import { ScanHistory } from "@/components/dashboard/ScanHistory";
+
+const ScoreHistoryChart = lazy(() => import("@/components/dashboard/ScoreHistoryChart").then(m => ({ default: m.ScoreHistoryChart })));
+const ScanHistory = lazy(() => import("@/components/dashboard/ScanHistory").then(m => ({ default: m.ScanHistory })));
 
 type Tab = "overview" | "queries" | "scans";
 
@@ -144,7 +145,9 @@ function BrandDashboardPageInner() {
               </div>
               <div className="card">
                 <div className="section-label" style={{ marginBottom: 10 }}>Score history</div>
-                <ScoreHistoryChart data={score_history} />
+                <Suspense fallback={<div className="skeleton" style={{ height: 150 }} />}>
+                  <ScoreHistoryChart data={score_history} />
+                </Suspense>
               </div>
               {insights.length > 0 && (
                 <div className="card" style={{ borderColor: "var(--primary)" }}>
@@ -183,7 +186,9 @@ function BrandDashboardPageInner() {
         {tab === "scans" && (
           <div>
             <div className="section-label" style={{ marginBottom: 12 }}>Scan history</div>
-            <ScanHistory brandId={brandId} />
+            <Suspense fallback={<div className="skeleton" style={{ height: 200 }} />}>
+              <ScanHistory brandId={brandId} />
+            </Suspense>
           </div>
         )}
       </div>

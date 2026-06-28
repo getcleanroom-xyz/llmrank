@@ -32,15 +32,13 @@ export function AppHeader({ before, after }: { before?: React.ReactNode; after?:
           </Link>
 
           {before && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, marginLeft: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
               {before}
             </div>
           )}
 
-          <div style={{ flex: 1, minWidth: 0 }} />
-
           {after && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0, marginRight: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
               {after}
             </div>
           )}
