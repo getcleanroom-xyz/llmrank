@@ -24,7 +24,7 @@ from app.schemas.schemas import (
 )
 from app.services.scan_orchestrator import run_scan, generate_query_suggestions
 from app.services.insight_engine import generate_insights_for_query, generate_dashboard_insights
-from app.services.credit_service import get_or_create_wallet, check_credits, deduct_credits, grant_credits, get_credit_history, calculate_scan_cost, CREDIT_COSTS, CREDITS_PER_DOLLAR, verify_bmc_signature
+from app.services.credit_service import get_or_create_wallet, check_credits, deduct_credits, grant_credits, get_credit_history, calculate_scan_cost, CREDIT_COSTS, CREDITS_PER_DOLLAR, verify_bmc_signature, DEFAULT_USER_ID
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -186,7 +186,7 @@ async def trigger_scan(
             raise HTTPException(400, "Could not generate queries automatically. Please add queries manually.")
 
     # Check credits before proceeding
-    has_enough, cost, balance = await check_credits(db, body.llms, len(active_queries))
+    has_enough, cost, balance = await check_credits(db, body.llms, len(active_queries), DEFAULT_USER_ID)
     if not has_enough:
         raise HTTPException(
             402,
@@ -195,7 +195,7 @@ async def trigger_scan(
         )
 
     # Deduct credits
-    await deduct_credits(db, cost, f"Scan: {len(active_queries)} queries × {len(body.llms)} LLMs")
+    await deduct_credits(db, cost, f"Scan: {len(active_queries)} queries × {len(body.llms)} LLMs", DEFAULT_USER_ID)
 
     # Create pending scan immediately to return to client
     scan = Scan(
@@ -539,7 +539,7 @@ async def get_query_drilldown(
 
 @router.get("/credits", response_model=CreditBalanceOut, tags=["Credits"])
 async def get_credits(db: AsyncSession = Depends(get_db)):
-    wallet = await get_or_create_wallet(db)
+    wallet = await get_or_create_wallet(db, DEFAULT_USER_ID)
     return CreditBalanceOut(
         balance=wallet.balance,
         total_purchased=wallet.total_purchased,
@@ -550,7 +550,7 @@ async def get_credits(db: AsyncSession = Depends(get_db)):
 
 @router.post("/credits/grant", response_model=CreditBalanceOut, tags=["Credits"])
 async def admin_grant_credits(body: CreditGrantRequest, db: AsyncSession = Depends(get_db)):
-    wallet = await grant_credits(db, body.amount, body.description)
+    wallet = await grant_credits(db, body.amount, body.description, "admin_grant", DEFAULT_USER_ID)
     await db.commit()
     return CreditBalanceOut(
         balance=wallet.balance,
@@ -562,7 +562,7 @@ async def admin_grant_credits(body: CreditGrantRequest, db: AsyncSession = Depen
 
 @router.get("/credits/history", response_model=list[CreditTransactionOut], tags=["Credits"])
 async def credit_history(db: AsyncSession = Depends(get_db)):
-    transactions = await get_credit_history(db)
+    transactions = await get_credit_history(db, DEFAULT_USER_ID)
     return transactions
 
 
@@ -570,6 +570,7 @@ async def credit_history(db: AsyncSession = Depends(get_db)):
 async def bmc_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     """Buy Me a Coffee webhook — converts donations to credits."""
     from fastapi.responses import JSONResponse
+    from app.services.credit_service import DEFAULT_USER_ID
     body = await request.body()
     signature = request.headers.get("X-BMC-Signature", "")
 
@@ -589,7 +590,6 @@ async def bmc_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     donation = data.get("data", {})
     amount = donation.get("amount", 0)
     donor_name = donation.get("donor_name", "Anonymous")
-    email = donation.get("email", "")
 
     if amount <= 0:
         return JSONResponse({"status": "ignored", "amount": amount})
@@ -597,15 +597,12 @@ async def bmc_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     # Convert dollars to credits (1 dollar = 1000 credits)
     credits = amount * CREDITS_PER_DOLLAR
 
-    # Use email as user_id if available, otherwise default
-    user_id = email if email else "default"
-
     await grant_credits(
         db,
         amount=credits,
         description=f"Donation: ${amount} from {donor_name} → {credits} credits",
         tx_type="donation",
-        user_id=user_id,
+        user_id=DEFAULT_USER_ID,
     )
     await db.commit()
 
