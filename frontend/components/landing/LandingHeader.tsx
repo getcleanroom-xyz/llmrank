@@ -56,10 +56,17 @@ export function LandingHeader() {
           <div style={{ flex: 1, minWidth: 0 }} />
 
           <div className="app-header-actions">
-            {user && (
-              <Link href="/brands" className="btn btn-ghost btn-sm">
+            {user ? (
+              <Link href="/brands" className="btn btn-primary btn-sm" style={{ textDecoration: "none" }}>
                 Dashboard
               </Link>
+            ) : (
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={() => document.querySelector<HTMLButtonElement>("[data-auth-trigger]")?.click()}
+              >
+                Sign in
+              </button>
             )}
           </div>
         </div>
