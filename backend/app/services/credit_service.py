@@ -6,13 +6,8 @@ Pricing:
 
 Free models (GPT-4o-mini, Llama 3.3, DeepSeek) cost 0 credits.
 Paid models cost credits based on OpenRouter pricing.
-
-Donations via Buy Me a Coffee:
-  $3 = 3000 credits, $5 = 5000 credits, $10 = 10000 credits
 """
 import uuid
-import hashlib
-import hmac
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -43,14 +38,6 @@ CREDIT_COSTS: dict[str, int] = {
 }
 
 FREE_MODELS = {k for k, v in MODEL_REGISTRY.items() if v.get("free")}
-
-# Buy Me a Coffee amounts → credits mapping
-BMC_CREDITS_MAP: dict[int, int] = {
-    3: 3000,    # $3 → 3000 credits
-    5: 5000,    # $5 → 5000 credits
-    10: 10000,  # $10 → 10000 credits
-    25: 25000,  # $25 → 25000 credits
-}
 
 def calculate_scan_cost(llm_names: list[str], num_queries: int) -> int:
     """Calculate total credits needed for a scan."""
@@ -147,11 +134,3 @@ async def get_credit_history(db: AsyncSession, user_id: uuid.UUID, limit: int = 
         .limit(limit)
     )
     return result.scalars().all()
-
-
-def verify_bmc_signature(payload: bytes, signature: str, secret: str) -> bool:
-    """Verify Buy Me a Coffee webhook signature."""
-    if not secret:
-        return True  # Skip verification if no secret configured
-    expected = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
-    return hmac.compare_digest(expected, signature)

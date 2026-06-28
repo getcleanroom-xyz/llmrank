@@ -24,7 +24,7 @@ from app.schemas.schemas import (
 )
 from app.services.scan_orchestrator import run_scan, generate_query_suggestions
 from app.services.insight_engine import generate_insights_for_query, generate_dashboard_insights
-from app.services.credit_service import get_or_create_wallet, check_credits, deduct_credits, grant_credits, get_credit_history, calculate_scan_cost, CREDIT_COSTS, CREDITS_PER_DOLLAR, verify_bmc_signature
+from app.services.credit_service import get_or_create_wallet, check_credits, deduct_credits, grant_credits, get_credit_history, calculate_scan_cost, CREDIT_COSTS, CREDITS_PER_DOLLAR
 from app.api.auth import get_current_user, get_optional_user
 
 router = APIRouter()
@@ -568,54 +568,3 @@ async def admin_grant_credits(body: CreditGrantRequest, db: AsyncSession = Depen
 async def credit_history(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     transactions = await get_credit_history(db, user.id)
     return transactions
-
-
-@router.post("/webhooks/bmc", tags=["Webhooks"])
-async def bmc_webhook(request: Request, db: AsyncSession = Depends(get_db)):
-    """Buy Me a Coffee webhook — converts donations to credits."""
-    from fastapi.responses import JSONResponse
-    body = await request.body()
-    signature = request.headers.get("X-BMC-Signature", "")
-
-    if not verify_bmc_signature(body, signature, settings.BMC_WEBHOOK_SECRET):
-        logger.warning("BMC webhook signature verification failed")
-        raise HTTPException(401, "Invalid signature")
-
-    try:
-        data = json.loads(body)
-    except json.JSONDecodeError:
-        raise HTTPException(400, "Invalid JSON")
-
-    event_type = data.get("type")
-    if event_type != "donation.completed":
-        return JSONResponse({"status": "ignored", "type": event_type})
-
-    donation = data.get("data", {})
-    user_id_hex = donation.get("user_id", "")
-    if not user_id_hex:
-        logger.warning("BMC webhook missing user_id in donation data")
-        return JSONResponse({"status": "error", "detail": "user_id required"})
-    try:
-        user_id = uuid.UUID(user_id_hex)
-    except ValueError:
-        return JSONResponse({"status": "error", "detail": "invalid user_id"})
-
-    amount = donation.get("amount", 0)
-    donor_name = donation.get("donor_name", "Anonymous")
-
-    if amount <= 0:
-        return JSONResponse({"status": "ignored", "amount": amount})
-
-    credits = amount * CREDITS_PER_DOLLAR
-
-    await grant_credits(
-        db,
-        amount=credits,
-        description=f"Donation: ${amount} from {donor_name} → {credits} credits",
-        tx_type="donation",
-        user_id=user_id,
-    )
-    await db.commit()
-
-    logger.info("BMC donation: $%d from %s → %d credits for user %s", amount, donor_name, credits, user_id)
-    return JSONResponse({"status": "ok", "credits_granted": credits})

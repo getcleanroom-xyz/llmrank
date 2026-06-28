@@ -15,6 +15,7 @@ async function apiFetch<T>(path: string, init?: RequestInit, timeoutMs = DEFAULT
 
   try {
     const res = await fetch(`${BASE_URL}${path}`, {
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       ...init,
       signal: controller.signal,
