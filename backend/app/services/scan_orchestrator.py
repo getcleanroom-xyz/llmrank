@@ -263,21 +263,21 @@ Requirements:
 
 Example: ["best project management tool for startups", "how to organize team tasks efficiently", ...]"""
 
-    # Try LLMs — Gemini (free) → Groq (free) → OpenAI (paid, more reliable)
-    from app.services.llm_adapters import GeminiAdapter, GroqAdapter, OpenAIAdapter
+    # Generate via OpenRouter
+    from app.services.llm_adapters import OpenRouterAdapter
 
-    for adapter_cls in [GeminiAdapter, GroqAdapter, OpenAIAdapter]:
+    for model_key in ["llama", "chatgpt", "gemini"]:
         try:
-            adapter = adapter_cls()
+            adapter = OpenRouterAdapter(model_key)
             response = await adapter.query(prompt)
             match = re.search(r"\[.*?\]", response, re.DOTALL)
             if match:
                 queries = json.loads(match.group())
                 results = [q for q in queries if isinstance(q, str)][:12]
                 if results:
-                    logger.info("Generated %d domain-aware queries for %s via %s", len(results), domain, adapter.name)
+                    logger.info("Generated %d domain-aware queries for %s via %s", len(results), domain, model_key)
                     return results
         except Exception as e:
-            logger.warning("Query generation failed with %s: %s", adapter_cls.__name__, e)
+            logger.warning("Query generation failed with %s: %s", model_key, e)
 
     return []
