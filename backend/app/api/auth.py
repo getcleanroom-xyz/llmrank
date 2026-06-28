@@ -181,7 +181,7 @@ async def register_start(body: RegisterStartRequest, request: Request, response:
             value=_sign_data(challenge_b64),
             httponly=True,
             secure=settings.RP_ORIGIN.startswith("https"),
-            samesite="lax",
+            samesite="none" if settings.RP_ORIGIN.startswith("https") else "lax",
             max_age=300,  # 5 minutes
         )
 
@@ -242,7 +242,7 @@ async def register_finish(body: RegisterFinishRequest, request: Request, respons
             value=token,
             httponly=True,
             secure=settings.RP_ORIGIN.startswith("https"),
-            samesite="lax",
+            samesite="none" if settings.RP_ORIGIN.startswith("https") else "lax",
             max_age=settings.SESSION_EXPIRE_HOURS * 3600,
         )
 
@@ -292,7 +292,7 @@ async def login_start(body: LoginStartRequest, request: Request, response: Respo
             value=_sign_data(challenge_b64),
             httponly=True,
             secure=settings.RP_ORIGIN.startswith("https"),
-            samesite="lax",
+            samesite="none" if settings.RP_ORIGIN.startswith("https") else "lax",
             max_age=300,
         )
 
@@ -349,7 +349,7 @@ async def login_finish(body: LoginFinishRequest, request: Request, response: Res
             value=token,
             httponly=True,
             secure=settings.RP_ORIGIN.startswith("https"),
-            samesite="lax",
+            samesite="none" if settings.RP_ORIGIN.startswith("https") else "lax",
             max_age=settings.SESSION_EXPIRE_HOURS * 3600,
         )
 
