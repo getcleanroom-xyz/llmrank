@@ -131,7 +131,7 @@ export default function HomePage() {
         <header style={{ paddingTop: "clamp(40px, 10vh, 80px)", paddingBottom: 32 }}>
           <div className="section-label" style={{ marginBottom: 8 }}>AI SEO Visibility Tracking</div>
           <h1 style={{ fontSize: "clamp(28px, 6vw, 48px)", fontWeight: 800, color: "var(--text)", margin: "0 0 12px", lineHeight: 1.1, letterSpacing: "-0.03em" }}>
-            How dey see your brand
+            How dem see your brand
             <br />
             for inside <span style={{ background: "var(--primary)", padding: "0 4px", border: "2px solid var(--border)", display: "inline-block" }}>ChatGPT?</span>
           </h1>

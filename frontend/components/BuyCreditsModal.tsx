@@ -53,74 +53,67 @@ export function BuyCreditsModal({ open, onClose }: BuyCreditsModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center" }}>
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" }} onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative bg-[#141414] border-2 border-[#222] rounded-xl p-8 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
+      <div className="card" style={{ position: "relative", width: "100%", maxWidth: 480, margin: "0 16px", padding: 24, zIndex: 10, maxHeight: "90vh", overflowY: "auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <div>
-            <h2 className="text-2xl font-bold text-white">Buy Credits</h2>
-            <p className="text-gray-400 text-sm mt-1">1 credit = $0.001</p>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>Buy Credits</div>
+            <div style={{ fontSize: 12, color: "var(--text-muted)" }}>1 credit = $0.001</div>
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-white transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <button onClick={onClose} className="btn btn-ghost btn-sm">x</button>
         </div>
 
         {error && (
-          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg mb-6 text-red-400 text-sm">
+          <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "8px 12px", marginBottom: 12, fontSize: 12, color: "#991B1B", fontWeight: 600 }}>
             {error}
           </div>
         )}
 
         {loading ? (
-          <div className="grid grid-cols-2 gap-4">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-32 bg-[#1A1A1A] rounded-xl animate-pulse" />
+              <div key={i} className="skeleton" style={{ height: 100 }} />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             {packages.map((pkg) => (
               <button
                 key={pkg.key}
                 onClick={() => handlePurchase(pkg.key)}
                 disabled={purchasing !== null}
-                className={`p-6 rounded-xl text-left transition-all ${
-                  pkg.key === "popular"
-                    ? "bg-[#FFD600]/10 border-2 border-[#FFD600] hover:bg-[#FFD600]/20"
-                    : "bg-[#1A1A1A] border-2 border-[#333] hover:border-[#555]"
-                } ${purchasing === pkg.key ? "opacity-50" : ""}`}
+                className="card"
+                style={{
+                  padding: 16,
+                  textAlign: "left",
+                  cursor: purchasing ? "not-allowed" : "pointer",
+                  opacity: purchasing === pkg.key ? 0.5 : 1,
+                  borderColor: pkg.key === "popular" ? "var(--primary)" : undefined,
+                }}
               >
                 {pkg.key === "popular" && (
-                  <span className="text-xs font-bold text-[#FFD600] uppercase">Most Popular</span>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--primary)", marginBottom: 4 }}>POPULAR</div>
                 )}
-                <div className="text-2xl font-bold text-white mt-1">
-                  {pkg.credits.toLocaleString()} credits
+                <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 4 }}>
+                  {pkg.credits.toLocaleString()}
                 </div>
-                <div className="text-gray-400 text-sm mt-1">
+                <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
                   ${pkg.amount_usd.toFixed(2)}
                 </div>
-                <div className="text-xs text-gray-500 mt-2">
-                  ${(pkg.amount_usd / pkg.credits * 1000).toFixed(2)} per 1K credits
-                </div>
                 {purchasing === pkg.key && (
-                  <div className="text-sm text-[#FFD600] mt-2">Processing...</div>
+                  <div style={{ fontSize: 11, color: "var(--primary)", marginTop: 4 }}>Processing...</div>
                 )}
               </button>
             ))}
           </div>
         )}
 
-        <p className="text-center text-xs text-gray-500 mt-6">
-          Payments processed securely via Flutterwave. Credits are added instantly after payment.
+        <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 12, textAlign: "center" }}>
+          Payments processed securely via Flutterwave.
         </p>
       </div>
     </div>
