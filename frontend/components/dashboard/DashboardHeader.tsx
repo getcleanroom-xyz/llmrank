@@ -62,7 +62,14 @@ export function ScanControls({ brandId, latestScan, credits, onScanTriggered }: 
     <>
       <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
         {isRunning && <span className="pill pill-gold" style={{ fontSize: 10, lineHeight: "20px" }}>...</span>}
-        <button onClick={onScanTriggered} className="btn btn-ghost btn-sm" style={{ fontSize: 11, padding: "3px 8px", lineHeight: "20px" }}>Rfsh</button>
+        <button onClick={onScanTriggered} className="btn btn-ghost btn-sm" style={{ fontSize: 11, padding: "3px 6px", lineHeight: "20px" }} title="Refresh">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+            <path d="M16 16h5v5" />
+          </svg>
+        </button>
         <div style={{ position: "relative" }} ref={configRef}>
           <button onClick={() => setShowConfig((s) => !s)} className="btn btn-ghost btn-sm" style={{ fontSize: 11, padding: "3px 8px", lineHeight: "20px" }}>
             {selectedLLMs.length}m
