@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { getQueryDrilldown, triggerScan } from "@/lib/api";
 import type { QueryDrilldown } from "@/types";
-import { AppHeader } from "@/components/AppHeader";
+import { AppHeader, PageHeader } from "@/components/AppHeader";
 import { InsightRow } from "@/components/ui";
 import { LLMResponseCard } from "@/components/drilldown/LLMResponseCard";
 
@@ -50,7 +50,7 @@ function QueryDrilldownInner() {
   return (
     <div className="page" style={{ display: "flex", flexDirection: "column" }}>
       <AppHeader
-        before={
+        breadcrumb={
           <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
             <Link href="/brands" style={{ fontSize: 12, color: "var(--text-muted)", textDecoration: "none", fontWeight: 700, flexShrink: 0 }}>brands</Link>
             <span style={{ color: "var(--text-muted)", flexShrink: 0, fontSize: 11 }}>/</span>
@@ -59,13 +59,13 @@ function QueryDrilldownInner() {
             <span style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{data.query_text}</span>
           </div>
         }
-        after={
-          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-            <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500, whiteSpace: "nowrap" }}>{new Date(data.scanned_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
-            <button onClick={handleRescan} disabled={rescanning} className="btn btn-ghost btn-sm" style={{ fontSize: 11, padding: "3px 8px" }}>{rescanning ? "..." : "Re-scan"}</button>
-          </div>
-        }
       />
+      <PageHeader>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", marginLeft: "auto" }}>
+          <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500, whiteSpace: "nowrap" }}>{new Date(data.scanned_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+          <button onClick={handleRescan} disabled={rescanning} className="btn btn-ghost btn-sm">{rescanning ? "..." : "Re-scan"}</button>
+        </div>
+      </PageHeader>
 
       <div style={{ flex: 1, maxWidth: 1100, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
         <div className="grid-4" style={{ marginBottom: 16 }}>

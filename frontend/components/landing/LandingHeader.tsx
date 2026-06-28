@@ -55,11 +55,13 @@ export function LandingHeader() {
 
           <div style={{ flex: 1, minWidth: 0 }} />
 
-          {user && (
-            <Link href="/brands" className="btn btn-ghost btn-sm" style={{ fontSize: 11, padding: "2px 8px", lineHeight: "20px" }}>
-              Dashboard
-            </Link>
-          )}
+          <div className="app-header-actions">
+            {user && (
+              <Link href="/brands" className="btn btn-ghost btn-sm">
+                Dashboard
+              </Link>
+            )}
+          </div>
         </div>
       </div>
     </header>

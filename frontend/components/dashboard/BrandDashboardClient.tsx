@@ -6,7 +6,7 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { getDashboard, getQueries, getCredits, type CreditBalance } from "@/lib/api";
 import type { DashboardData, MonitoredQuery } from "@/types";
 import { KpiCard, ScoreRing, InsightRow } from "@/components/ui";
-import { AppHeader } from "@/components/AppHeader";
+import { AppHeader, PageHeader } from "@/components/AppHeader";
 import { ScanControls } from "@/components/dashboard/DashboardHeader";
 import { LLMBreakdownTable } from "@/components/dashboard/LLMBreakdownTable";
 import { CompetitorShare } from "@/components/dashboard/CompetitorShare";
@@ -89,21 +89,24 @@ function BrandDashboardPageInner() {
   return (
     <div className="page" style={{ display: "flex", flexDirection: "column" }}>
       <AppHeader
-        before={
+        breadcrumb={
           <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
             <Link href="/brands" style={{ fontSize: 12, color: "var(--text-muted)", textDecoration: "none", fontWeight: 700, flexShrink: 0 }}>brands</Link>
             <span style={{ color: "var(--text-muted)", flexShrink: 0, fontSize: 11 }}>/</span>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{brand.name}</div>
-              <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {brand.domain}
-                {(active_scan ?? latest_scan)?.completed_at && <span style={{ marginLeft: 4 }}>{new Date((active_scan ?? latest_scan)!.completed_at!).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>}
-              </div>
-            </div>
+            <span style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{brand.name}</span>
           </div>
         }
-        after={<ScanControls brandId={brandId} latestScan={active_scan ?? latest_scan} credits={credits} onScanTriggered={loadDashboard} />}
       />
+      <PageHeader>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto" }}>
+          {(active_scan ?? latest_scan)?.completed_at && (
+            <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>
+              {new Date((active_scan ?? latest_scan)!.completed_at!).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+            </span>
+          )}
+          <ScanControls brandId={brandId} latestScan={active_scan ?? latest_scan} credits={credits} onScanTriggered={loadDashboard} />
+        </div>
+      </PageHeader>
       <div style={{ flex: 1, padding: "var(--gap) var(--page-px)", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
         {error && data && <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "8px 12px", marginBottom: 12, fontSize: 13, color: "#991B1B", fontWeight: 600 }}>{error}</div>}
 

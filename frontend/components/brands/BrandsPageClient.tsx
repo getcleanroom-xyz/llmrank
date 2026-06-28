@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getBrands, createBrand, deleteBrand } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { AppHeader } from "@/components/AppHeader";
+import { AppHeader, PageHeader } from "@/components/AppHeader";
 import type { Brand } from "@/types";
 
 const PAGE_SIZE = 10;
@@ -136,9 +136,15 @@ function BrandsPageInner() {
   return (
     <div className="page" style={{ display: "flex", flexDirection: "column" }}>
       <AppHeader
-        before={<><span style={{ color: "var(--text-muted)", fontSize: 12, fontWeight: 600, flexShrink: 0 }}>/</span><span style={{ color: "var(--text-secondary)", fontSize: 12, fontWeight: 600 }}>brands</span></>}
-        after={user ? <button onClick={() => setShowModal(true)} className="btn btn-primary btn-sm" style={{ fontSize: 11, padding: "3px 8px", lineHeight: "20px" }}>+ New brand</button> : undefined}
+        breadcrumb={
+          <span style={{ fontSize: 13, fontWeight: 600 }}>brands</span>
+        }
       />
+      <PageHeader>
+        {user && (
+          <button onClick={() => setShowModal(true)} className="btn btn-primary btn-sm" style={{ marginLeft: "auto" }}>+ New brand</button>
+        )}
+      </PageHeader>
 
       <div style={{ flex: 1, maxWidth: 700, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
         {user && (
