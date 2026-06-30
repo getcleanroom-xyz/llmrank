@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { useAdminCampaigns, useAdminStats, useAdminDeleteCampaign, useAdminCancelCampaign, useAdminCloneCampaign } from "@/lib/hooks";
 import { AppHeader, PageHeader } from "@/components/AppHeader";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
+import { Select } from "@/components/admin/Select";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Draft",
@@ -175,23 +176,16 @@ export function AdminDashboard() {
                   outline: "none",
                 }}
               />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                style={{
-                  fontSize: 11,
-                  padding: "4px 6px",
-                  border: "1.5px solid var(--border)",
-                  borderRadius: "var(--radius)",
-                  background: "var(--surface)",
-                  outline: "none",
-                }}
-              >
-                <option value="">All status</option>
-                {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
-                ))}
-              </select>
+              <div style={{ width: 120 }}>
+                <Select
+                  value={statusFilter}
+                  onChange={setStatusFilter}
+                  options={[
+                    { value: "", label: "All status" },
+                    ...Object.entries(STATUS_LABELS).map(([k, v]) => ({ value: k, label: v })),
+                  ]}
+                />
+              </div>
               <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
                 {filtered.length} / {campaigns.length}
               </span>

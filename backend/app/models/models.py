@@ -150,6 +150,7 @@ class AudienceType(str, enum.Enum):
     all_users = "all_users"
     segment = "segment"
     upload = "upload"
+    selected = "selected"
 
 
 class CampaignStatus(str, enum.Enum):

@@ -357,6 +357,13 @@ async def build_campaign_audience(campaign_id: uuid.UUID, admin: User = Depends(
         for email in emails:
             db.add(CampaignRecipient(id=uuid.uuid4(), campaign_id=campaign.id, email=email))
 
+    elif campaign.audience_type == AudienceType.selected:
+        user_ids = (campaign.audience_config or {}).get("user_ids", [])
+        if user_ids:
+            users_result = await db.execute(select(User).where(User.id.in_([uuid.UUID(uid) for uid in user_ids])))
+            for u in users_result.scalars().all():
+                db.add(CampaignRecipient(id=uuid.uuid4(), campaign_id=campaign.id, email=u.email, user_id=u.id))
+
     # Count total
     count_result = await db.execute(
         select(func.count(CampaignRecipient.id)).where(CampaignRecipient.campaign_id == campaign.id)

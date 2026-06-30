@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEditor, EditorContent } from "@tiptap/react";
@@ -10,15 +10,14 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { useAuth } from "@/lib/auth";
 import { AppHeader, PageHeader } from "@/components/AppHeader";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
+import { MultiUserSelect } from "@/components/admin/MultiUserSelect";
 import {
   useAdminCreateCampaign,
   useAdminUpdateCampaign,
   useAdminScheduleCampaign,
   useAdminPreviewCampaign,
   useAdminBuildAudience,
-  useAdminUploadCsv,
   useAdminUsers,
-  useAdminCampaign,
 } from "@/lib/hooks";
 import type { AdminCampaignDetail, TemplateVar } from "@/lib/api";
 
@@ -29,7 +28,7 @@ interface CampaignEditorProps {
 const AUDIENCE_OPTIONS = [
   { value: "all_users", label: "All registered users" },
   { value: "segment", label: "Segment by sign-up date" },
-  { value: "upload", label: "CSV upload" },
+  { value: "selected", label: "Select specific users" },
 ] as const;
 
 const SCHEDULE_OPTIONS = [
@@ -353,8 +352,7 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
   const scheduleCampaign = useAdminScheduleCampaign();
   const previewCampaign = useAdminPreviewCampaign();
   const buildAudience = useAdminBuildAudience();
-  const uploadCsv = useAdminUploadCsv();
-  const { data: users = [] } = useAdminUsers();
+  const { data: users = [] } = useAdminUsers("");
 
   const [name, setName] = useState(existing?.name || "");
   const [subject, setSubject] = useState(existing?.subject || "");
@@ -368,15 +366,13 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
   const [templateVars, setTemplateVars] = useState<TemplateVar[]>(existing?.template_vars || []);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [showUserPicker, setShowUserPicker] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [showSource, setShowSource] = useState(false);
   const [sourceHtml, setSourceHtml] = useState(existing?.html_body || "");
   const [showPreview, setShowPreview] = useState(false);
   const [previewHtml, setPreviewHtml] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
   const [campaignId, setCampaignId] = useState<string | null>(existing?.id || null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const saving = createCampaign.isPending || updateCampaign.isPending || scheduleCampaign.isPending || buildAudience.isPending;
 
@@ -401,16 +397,22 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
   }, [showSource, sourceHtml, editor]);
 
   const buildPayload = useCallback(() => {
+    let audience_config: Record<string, unknown> | undefined;
+    if (audienceType === "segment") {
+      audience_config = { signed_up_after: signedUpAfter || undefined, signed_up_before: signedUpBefore || undefined };
+    } else if (audienceType === "selected") {
+      audience_config = { user_ids: selectedUserIds };
+    }
     return {
       name,
       subject,
       html_body: getHtmlBody(),
       from_email: fromEmail || undefined,
       audience_type: audienceType,
-      audience_config: audienceType === "segment" ? { signed_up_after: signedUpAfter || undefined, signed_up_before: signedUpBefore || undefined } : undefined,
+      audience_config,
       template_vars: templateVars.length > 0 ? templateVars : undefined,
     };
-  }, [name, subject, getHtmlBody, fromEmail, audienceType, signedUpAfter, signedUpBefore, templateVars]);
+  }, [name, subject, getHtmlBody, fromEmail, audienceType, signedUpAfter, signedUpBefore, selectedUserIds, templateVars]);
 
   const saveDraft = async () => {
     setError("");
@@ -442,6 +444,9 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
         await updateCampaign.mutateAsync({ id, data: buildPayload() as any });
       }
 
+      // Build audience first (needs draft status), then schedule
+      await buildAudience.mutateAsync(id);
+
       await scheduleCampaign.mutateAsync({
         id,
         data: {
@@ -450,10 +455,6 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
           scheduled_at: scheduleType === "once" ? scheduledAt : undefined,
         },
       });
-
-      if (audienceType !== "upload") {
-        await buildAudience.mutateAsync(id);
-      }
 
       router.push("/admin");
     } catch (err) {
@@ -495,20 +496,6 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
     }
     setPreviewHtml(rendered);
     setShowPreview(true);
-  };
-
-  const handleCsvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !existing && !campaignId) return;
-    const id = campaignId || existing?.id;
-    if (!id) return;
-    try {
-      await uploadCsv.mutateAsync({ id, file });
-      setSuccess("CSV uploaded — audience built");
-      e.target.value = "";
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
-    }
   };
 
   const insertVariable = (key: string) => {
@@ -812,14 +799,12 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
                 </div>
               )}
 
-              {audienceType === "upload" && (existing || campaignId) && (
+              {audienceType === "selected" && (
                 <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1.5px solid var(--bg-dark)" }}>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".csv"
-                    onChange={handleCsvUpload}
-                    style={{ fontSize: 11, width: "100%" }}
+                  <MultiUserSelect
+                    users={users}
+                    selectedIds={selectedUserIds}
+                    onChange={setSelectedUserIds}
                     disabled={!editable}
                   />
                 </div>
