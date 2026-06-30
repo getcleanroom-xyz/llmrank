@@ -1,6 +1,5 @@
-import asyncio
 import logging
-from datetime import datetime, timezone
+from urllib.parse import urlencode, parse_qs, urlparse, urlunparse
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
@@ -33,9 +32,18 @@ async def init_scheduler():
     from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
     from sqlalchemy import create_engine
 
-    sync_url = settings.DATABASE_URL.replace("+asyncpg", "+psycopg2").replace("postgresql+psycopg2", "postgresql")
-    sync_url = sync_url.replace("+asyncpg", "+psycopg2")
-    sync_url = sync_url.replace("postgresql+psycopg2", "postgresql")
+    # Convert asyncpg URL to psycopg2-compatible URL
+    sync_url = settings.DATABASE_URL
+    sync_url = sync_url.replace("+asyncpg", "")
+    if sync_url.startswith("postgresql://"):
+        sync_url = "postgresql+psycopg2://" + sync_url[len("postgresql://"):]
+
+    parsed = urlparse(sync_url)
+    qs = parse_qs(parsed.query, keep_blank_values=True)
+    if "ssl" in qs:
+        qs["sslmode"] = qs.pop("ssl")
+    parsed = parsed._replace(query=urlencode(qs, doseq=True))
+    sync_url = urlunparse(parsed)
 
     sync_engine = create_engine(sync_url, pool_pre_ping=True)
     jobstore = SQLAlchemyJobStore(engine=sync_engine)
