@@ -1,8 +1,8 @@
 import asyncio
 from logging.config import fileConfig
 from sqlalchemy import pool
-from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config
+from sqlalchemy.engine import Connection, make_url
+from sqlalchemy.ext.asyncio import create_async_engine
 from alembic import context
 import sys
 import os
@@ -14,7 +14,6 @@ from app.core.database import Base
 from app.models import models  # noqa: ensure models are imported
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -35,10 +34,22 @@ def do_run_migrations(connection: Connection) -> None:
         context.run_migrations()
 
 
+def _clean_asyncpg_url(url: str):
+    """Remove query params that asyncpg doesn't understand. Returns a URL object."""
+    parsed = make_url(url)
+    known = {"host", "port", "database", "user", "password", "ssl"}
+    query = {}
+    for k, v in parsed.query.items():
+        if k in known:
+            query[k] = v
+        elif k == "sslmode":
+            query["ssl"] = v
+    return parsed.set(query=query)
+
+
 async def run_async_migrations() -> None:
-    connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
+    connectable = create_async_engine(
+        _clean_asyncpg_url(settings.DATABASE_URL),
         poolclass=pool.NullPool,
     )
     async with connectable.connect() as connection:
