@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useAdminCampaigns, useAdminStats, useAdminDeleteCampaign, useAdminCancelCampaign, useAdminCloneCampaign } from "@/lib/hooks";
 import { AppHeader, PageHeader } from "@/components/AppHeader";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Draft",
@@ -24,6 +25,11 @@ const STATUS_PILL: Record<string, string> = {
 
 const ACCENT_COLORS = ["var(--primary)", "var(--blue)", "var(--green)", "var(--orange)"];
 
+type ConfirmAction =
+  | { type: "delete"; id: string; name: string }
+  | { type: "cancel"; id: string; name: string }
+  | null;
+
 export function AdminDashboard() {
   const { user } = useAuth();
   const { data: campaigns = [], isLoading, error: loadError, refetch } = useAdminCampaigns();
@@ -34,24 +40,28 @@ export function AdminDashboard() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
 
   const error = loadError ? (loadError instanceof Error ? loadError.message : "Failed to load") : null;
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this campaign? This cannot be undone.")) return;
+  const handleDeleteConfirm = async () => {
+    if (!confirmAction || confirmAction.type !== "delete") return;
     try {
-      await deleteCampaign.mutateAsync(id);
+      await deleteCampaign.mutateAsync(confirmAction.id);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Delete failed");
     }
+    setConfirmAction(null);
   };
 
-  const handleCancel = async (id: string) => {
+  const handleCancelConfirm = async () => {
+    if (!confirmAction || confirmAction.type !== "cancel") return;
     try {
-      await cancelCampaign.mutateAsync(id);
+      await cancelCampaign.mutateAsync(confirmAction.id);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Cancel failed");
     }
+    setConfirmAction(null);
   };
 
   const handleClone = async (id: string) => {
@@ -301,12 +311,20 @@ export function AdminDashboard() {
                     Clone
                   </button>
                   {(c.status === "scheduled" || c.status === "sending") && (
-                    <button onClick={() => handleCancel(c.id)} className="btn btn-sm btn-ghost" style={{ color: "var(--orange)" }}>
+                    <button
+                      onClick={() => setConfirmAction({ type: "cancel", id: c.id, name: c.name })}
+                      className="btn btn-sm btn-ghost"
+                      style={{ color: "var(--orange)" }}
+                    >
                       Cancel
                     </button>
                   )}
                   {(c.status === "draft" || c.status === "cancelled") && (
-                    <button onClick={() => handleDelete(c.id)} className="btn btn-sm btn-ghost" style={{ color: "var(--red)" }}>
+                    <button
+                      onClick={() => setConfirmAction({ type: "delete", id: c.id, name: c.name })}
+                      className="btn btn-sm btn-ghost"
+                      style={{ color: "var(--red)" }}
+                    >
                       Delete
                     </button>
                   )}
@@ -316,6 +334,40 @@ export function AdminDashboard() {
           })}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmAction?.type === "delete"}
+        title="Delete Campaign"
+        confirmLabel="Delete"
+        destructive
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setConfirmAction(null)}
+        loading={deleteCampaign.isPending}
+      >
+        <p>
+          Are you sure you want to delete <strong>{confirmAction?.name}</strong>?
+        </p>
+        <p style={{ marginTop: 8, color: "var(--red)", fontWeight: 600 }}>
+          This action cannot be undone.
+        </p>
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        open={confirmAction?.type === "cancel"}
+        title="Cancel Campaign"
+        confirmLabel="Cancel Campaign"
+        destructive
+        onConfirm={handleCancelConfirm}
+        onCancel={() => setConfirmAction(null)}
+        loading={cancelCampaign.isPending}
+      >
+        <p>
+          Are you sure you want to cancel <strong>{confirmAction?.name}</strong>?
+        </p>
+        <p style={{ marginTop: 8 }}>
+          Scheduled sends will be stopped and the campaign will be marked as cancelled.
+        </p>
+      </ConfirmDialog>
     </div>
   );
 }

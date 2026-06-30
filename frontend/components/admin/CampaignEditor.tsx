@@ -9,6 +9,7 @@ import LinkExtension from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useAuth } from "@/lib/auth";
 import { AppHeader, PageHeader } from "@/components/AppHeader";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import {
   useAdminCreateCampaign,
   useAdminUpdateCampaign,
@@ -289,70 +290,6 @@ function TemplateVarManager({
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// ─── ConfirmModal ───────────────────────────────────────────────────────────
-
-function ConfirmModal({
-  open,
-  title,
-  children,
-  confirmLabel,
-  onConfirm,
-  onCancel,
-  loading,
-}: {
-  open: boolean;
-  title: string;
-  children: React.ReactNode;
-  confirmLabel: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-  loading?: boolean;
-}) {
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCancel();
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [open, onCancel]);
-
-  if (!open) return null;
-
-  return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 200,
-        background: "rgba(0,0,0,0.3)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 16,
-      }}
-      onClick={onCancel}
-    >
-      <div
-        className="card"
-        style={{ maxWidth: 420, width: "100%" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>{title}</div>
-        <div style={{ fontSize: 13, lineHeight: 1.6, color: "var(--text-secondary)", marginBottom: 16 }}>
-          {children}
-        </div>
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button onClick={onCancel} className="btn btn-sm btn-ghost" disabled={loading}>Cancel</button>
-          <button onClick={onConfirm} className="btn btn-sm btn-primary" disabled={loading}>
-            {loading ? "Sending..." : confirmLabel}
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
@@ -967,7 +904,7 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
         </div>
       </div>
 
-      <ConfirmModal
+      <ConfirmDialog
         open={showConfirm}
         title="Schedule & Send Campaign"
         confirmLabel={scheduleType === "now" ? "Send Now" : "Schedule"}
@@ -987,7 +924,7 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
             <div><strong>Template vars:</strong> {templateVars.map((v) => `{{${v.key}}}`).join(", ")}</div>
           )}
         </div>
-      </ConfirmModal>
+      </ConfirmDialog>
 
       {showPreview && (
         <RenderPreview html={previewHtml} onClose={() => setShowPreview(false)} />
