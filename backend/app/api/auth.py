@@ -114,6 +114,7 @@ class LoginStartRequest(BaseModel):
 class LoginStartResponse(BaseModel):
     challenge: str
     rp_id: str
+    allow_credentials: list[str]
 
 class LoginFinishRequest(BaseModel):
     credential: dict
@@ -279,13 +280,13 @@ async def login_start(body: LoginStartRequest, request: Request, response: Respo
         import webauthn
         from webauthn.helpers import bytes_to_base64url
 
-        allow_credentials = []
+        allow_credentials_bytes = []
         for pk in passkeys:
-            allow_credentials.append(_b64url_decode(pk.credential_id))
+            allow_credentials_bytes.append(_b64url_decode(pk.credential_id))
 
         options = webauthn.generate_authentication_options(
             rp_id=settings.RP_ID,
-            allow_credentials=allow_credentials,
+            allow_credentials=allow_credentials_bytes,
         )
 
         challenge_b64 = bytes_to_base64url(options.challenge)
@@ -298,7 +299,8 @@ async def login_start(body: LoginStartRequest, request: Request, response: Respo
             max_age=300,
         )
 
-        return LoginStartResponse(challenge=challenge_b64, rp_id=settings.RP_ID)
+        allow_credentials_b64 = [pk.credential_id for pk in passkeys]
+        return LoginStartResponse(challenge=challenge_b64, rp_id=settings.RP_ID, allow_credentials=allow_credentials_b64)
 
     except ImportError:
         raise HTTPException(500, "WebAuthn library not installed")

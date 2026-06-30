@@ -54,8 +54,8 @@ export function AuthModal() {
     setLoading(true);
 
     try {
-      const { challenge, rp_id } = await authLoginStart(email);
-      const credential = await getPasskeyCredential(challenge, rp_id);
+      const { challenge, rp_id, allow_credentials } = await authLoginStart(email);
+      const credential = await getPasskeyCredential(challenge, rp_id, allow_credentials);
       const result = await authLoginFinish(credential);
       setUser(result.user);
       closeAuthModal();
@@ -233,6 +233,7 @@ async function createPasskeyCredential(
       authenticatorSelection: {
         authenticatorAttachment: "platform",
         userVerification: "required",
+        residentKey: "required",
       },
       timeout: 60000,
     },
@@ -261,16 +262,24 @@ async function createPasskeyCredential(
 
 async function getPasskeyCredential(
   challenge: string,
-  rpId: string
+  rpId: string,
+  allowCredentials?: string[]
 ): Promise<Record<string, unknown>> {
-  const assertion = await navigator.credentials.get({
-    publicKey: {
-      challenge: base64urlToBuffer(challenge),
-      rpId: rpId,
-      userVerification: "required",
-      timeout: 60000,
-    },
-  });
+  const publicKey: PublicKeyCredentialRequestOptions = {
+    challenge: base64urlToBuffer(challenge),
+    rpId: rpId,
+    userVerification: "required",
+    timeout: 60000,
+  };
+
+  if (allowCredentials && allowCredentials.length > 0) {
+    publicKey.allowCredentials = allowCredentials.map((id) => ({
+      id: base64urlToBuffer(id),
+      type: "public-key",
+    }));
+  }
+
+  const assertion = await navigator.credentials.get({ publicKey });
 
   if (!assertion) throw new Error("Passkey authentication cancelled");
 

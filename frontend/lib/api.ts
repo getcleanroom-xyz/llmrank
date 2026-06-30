@@ -144,7 +144,7 @@ export const authRegisterFinish = (credential: Record<string, unknown>, device_n
   });
 
 export const authLoginStart = (email: string) =>
-  apiFetch<{ challenge: string; rp_id: string }>("/auth/login/start", {
+  apiFetch<{ challenge: string; rp_id: string; allow_credentials: string[] }>("/auth/login/start", {
     method: "POST",
     body: JSON.stringify({ email }),
   });
