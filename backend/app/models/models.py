@@ -182,6 +182,7 @@ class Campaign(Base):
     subject: Mapped[str] = mapped_column(Text, nullable=False)
     html_body: Mapped[str] = mapped_column(Text, nullable=False)
     from_email: Mapped[str] = mapped_column(String(255), nullable=False)
+    template_vars: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     audience_type: Mapped[AudienceType] = mapped_column(Enum(AudienceType), nullable=False)
     audience_config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     status: Mapped[CampaignStatus] = mapped_column(Enum(CampaignStatus), default=CampaignStatus.draft)

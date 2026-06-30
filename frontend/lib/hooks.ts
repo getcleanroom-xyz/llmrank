@@ -250,3 +250,11 @@ export function useAdminStats() {
     queryFn: api.adminGetStats,
   });
 }
+
+export function useAdminCloneCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.adminCloneCampaign(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.campaigns }),
+  });
+}

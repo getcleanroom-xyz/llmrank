@@ -216,10 +216,17 @@ export interface AdminCampaign {
   updated_at: string;
 }
 
+export interface TemplateVar {
+  key: string;
+  label: string;
+  default_value?: string;
+}
+
 export interface AdminCampaignDetail extends AdminCampaign {
   html_body: string;
   from_email: string;
   audience_config: Record<string, unknown> | null;
+  template_vars: TemplateVar[] | null;
 }
 
 export interface AdminUser {
@@ -250,6 +257,7 @@ export const adminCreateCampaign = (data: {
   from_email?: string;
   audience_type?: string;
   audience_config?: Record<string, unknown>;
+  template_vars?: TemplateVar[];
 }) =>
   apiFetch<AdminCampaign>("/admin/campaigns", {
     method: "POST",
@@ -298,3 +306,6 @@ export const adminListUsers = (search?: string) =>
 
 export const adminGetStats = () =>
   apiFetch<AdminStats>("/admin/stats");
+
+export const adminCloneCampaign = (id: string) =>
+  apiFetch<AdminCampaign>(`/admin/campaigns/${id}/clone`, { method: "POST" });

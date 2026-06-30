@@ -7,13 +7,14 @@ from urllib.parse import urlparse
 from sqlalchemy import select, func, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.models import Campaign, CampaignRecipient, CampaignLink
+from app.models.models import Campaign, CampaignRecipient, CampaignLink, User
 from app.models.models import CampaignStatus, ScheduleType, RecipientStatus
 from app.services.email_service import send_email, prepare_tracked_html
 
 logger = logging.getLogger(__name__)
 
 _URL_RE = re.compile(r'https?://[^\s"\'<>]+')
+_TEMPLATE_RE = re.compile(r'\{\{(\s*[a-zA-Z_][a-zA-Z0-9_]*\s*)\}\}')
 
 
 def _utcnow() -> datetime:
@@ -67,9 +68,21 @@ async def dispatch_campaign(db: AsyncSession, campaign_id: uuid.UUID, base_url: 
     )
     recipients = rec_result.scalars().all()
 
+    # Pre-load users for template variable substitution
+    user_ids = {r.user_id for r in recipients if r.user_id}
+    users_map: dict[uuid.UUID, User] = {}
+    if user_ids:
+        users_result = await db.execute(select(User).where(User.id.in_(user_ids)))
+        users_map = {u.id: u for u in users_result.scalars().all()}
+
+    template_vars = campaign.template_vars
+
     sent = 0
     for recipient in recipients:
-        tracked_html = prepare_tracked_html(campaign.html_body, str(campaign.id), str(recipient.id), links_data, base_url)
+        user = users_map.get(recipient.user_id) if recipient.user_id else None
+        ctx = _build_recipient_vars(user, recipient.email, template_vars)
+        personalized_body = _apply_template_vars(campaign.html_body, ctx)
+        tracked_html = prepare_tracked_html(personalized_body, str(campaign.id), str(recipient.id), links_data, base_url)
         ok, err = send_email(recipient.email, campaign.subject, tracked_html, campaign.from_email)
         if ok:
             recipient.status = RecipientStatus.sent
@@ -153,3 +166,27 @@ import string
 
 def _generate_path() -> str:
     return ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
+
+
+# ─── Template variable helpers ────────────────────────────────────────────────
+
+def _build_recipient_vars(user: User | None, email: str, template_vars: list[dict] | None) -> dict[str, str]:
+    name = user.display_name if user else email.split("@")[0]
+    ctx: dict[str, str] = {
+        "display_name": name,
+        "email": email,
+        "name": name,
+    }
+    if template_vars:
+        for v in template_vars:
+            key = v.get("key", "").strip()
+            if key and key not in ctx:
+                ctx[key] = v.get("default_value", v.get("default", ""))
+    return ctx
+
+
+def _apply_template_vars(html_body: str, ctx: dict[str, str]) -> str:
+    def _replacer(m: re.Match) -> str:
+        key = m.group(1).strip()
+        return ctx.get(key, "")
+    return _TEMPLATE_RE.sub(_replacer, html_body)

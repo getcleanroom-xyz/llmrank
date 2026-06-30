@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import LinkExtension from "@tiptap/extension-link";
@@ -18,7 +19,7 @@ import {
   useAdminUsers,
   useAdminCampaign,
 } from "@/lib/hooks";
-import type { AdminCampaignDetail } from "@/lib/api";
+import type { AdminCampaignDetail, TemplateVar } from "@/lib/api";
 
 interface CampaignEditorProps {
   existing?: AdminCampaignDetail;
@@ -35,6 +36,8 @@ const SCHEDULE_OPTIONS = [
   { value: "once", label: "Schedule for later" },
   { value: "recurring", label: "Recurring (cron)" },
 ] as const;
+
+// ─── RadioGroup ─────────────────────────────────────────────────────────────
 
 function RadioGroup<T extends string>({
   options,
@@ -97,6 +100,313 @@ function RadioGroup<T extends string>({
   );
 }
 
+// ─── TemplateVarManager ─────────────────────────────────────────────────────
+
+function TemplateVarManager({
+  vars,
+  onChange,
+  disabled,
+  onInsert,
+}: {
+  vars: TemplateVar[];
+  onChange: (v: TemplateVar[]) => void;
+  disabled: boolean;
+  onInsert: (key: string) => void;
+}) {
+  const [editing, setEditing] = useState<TemplateVar | null>(null);
+  const [key, setKey] = useState("");
+  const [label, setLabel] = useState("");
+  const [defaultVal, setDefaultVal] = useState("");
+
+  const startAdd = () => {
+    setEditing({ key: "", label: "", default_value: "" });
+    setKey("");
+    setLabel("");
+    setDefaultVal("");
+  };
+
+  const startEdit = (v: TemplateVar) => {
+    setEditing(v);
+    setKey(v.key);
+    setLabel(v.label);
+    setDefaultVal(v.default_value || "");
+  };
+
+  const cancelEdit = () => {
+    setEditing(null);
+    setKey("");
+    setLabel("");
+    setDefaultVal("");
+  };
+
+  const saveVar = () => {
+    const trimmedKey = key.trim();
+    if (!trimmedKey || !label.trim()) return;
+    const updated: TemplateVar = { key: trimmedKey, label: label.trim(), default_value: defaultVal.trim() || undefined };
+    if (editing && vars.find((v) => v.key === editing.key)) {
+      onChange(vars.map((v) => (v.key === editing.key ? updated : v)));
+    } else {
+      onChange([...vars, updated]);
+    }
+    cancelEdit();
+  };
+
+  const removeVar = (k: string) => {
+    onChange(vars.filter((v) => v.key !== k));
+    if (editing?.key === k) cancelEdit();
+  };
+
+  const editingNow = editing !== null;
+  const canSave = key.trim().length > 0 && label.trim().length > 0;
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <div className="section-label">Template Variables</div>
+        {!disabled && !editingNow && (
+          <button onClick={startAdd} className="btn btn-sm btn-ghost" type="button" style={{ fontSize: 11 }}>
+            + Add
+          </button>
+        )}
+      </div>
+
+      {vars.length === 0 && !editingNow && (
+        <div style={{ fontSize: 11, color: "var(--text-muted)", padding: "4px 0" }}>
+          No variables defined yet. Add variables like <code style={{ background: "var(--bg-dark)", padding: "0 3px" }}>{`{{name}}`}</code> to personalize emails.
+        </div>
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {vars.map((v) => (
+          <div
+            key={v.key}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "6px 8px",
+              background: "var(--bg-dark)",
+              borderRadius: "var(--radius)",
+              border: editing?.key === v.key ? "2px solid var(--primary)" : "1.5px solid transparent",
+              fontSize: 12,
+            }}
+          >
+            <code style={{ fontWeight: 700, fontSize: 11, minWidth: 60 }}>{`{{${v.key}}}`}</code>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 600 }}>{v.label}</div>
+              {v.default_value && <div style={{ fontSize: 10, color: "var(--text-muted)" }}>default: {v.default_value}</div>}
+            </div>
+            {!disabled && (
+              <div style={{ display: "flex", gap: 2 }}>
+                <button
+                  onClick={() => onInsert(v.key)}
+                  className="btn btn-sm btn-ghost"
+                  type="button"
+                  title="Insert into body"
+                  style={{ fontSize: 10, padding: "2px 5px" }}
+                >
+                  Insert
+                </button>
+                <button
+                  onClick={() => startEdit(v)}
+                  className="btn btn-sm btn-ghost"
+                  type="button"
+                  title="Edit"
+                  style={{ fontSize: 10, padding: "2px 5px" }}
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => removeVar(v.key)}
+                  className="btn btn-sm btn-ghost"
+                  type="button"
+                  title="Remove"
+                  style={{ fontSize: 10, padding: "2px 5px", color: "var(--red)" }}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {editingNow && (
+        <div
+          style={{
+            marginTop: 8,
+            padding: 10,
+            border: "2px solid var(--border)",
+            borderRadius: "var(--radius)",
+            background: "var(--surface)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 2 }}>Variable key</div>
+            <input
+              type="text"
+              value={key}
+              onChange={(e) => setKey(e.target.value.replace(/[^a-zA-Z0-9_]/g, ""))}
+              className="input"
+              placeholder="e.g. name"
+              style={{ fontSize: 12, padding: "5px 8px" }}
+              autoFocus
+            />
+            <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>
+              Use <code>{`{{${key || "key"}}}`}</code> in your email body
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 2 }}>Label</div>
+            <input
+              type="text"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              className="input"
+              placeholder="e.g. User Name"
+              style={{ fontSize: 12, padding: "5px 8px" }}
+            />
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 2 }}>Default value (fallback if no data)</div>
+            <input
+              type="text"
+              value={defaultVal}
+              onChange={(e) => setDefaultVal(e.target.value)}
+              className="input"
+              placeholder="e.g. there"
+              style={{ fontSize: 12, padding: "5px 8px" }}
+            />
+          </div>
+          <div style={{ display: "flex", gap: 4, justifyContent: "flex-end", marginTop: 2 }}>
+            <button onClick={cancelEdit} className="btn btn-sm btn-ghost" type="button">Cancel</button>
+            <button onClick={saveVar} disabled={!canSave} className="btn btn-sm btn-primary" type="button">
+              {editing?.key && vars.find((v) => v.key === editing.key) ? "Update" : "Add"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── ConfirmModal ───────────────────────────────────────────────────────────
+
+function ConfirmModal({
+  open,
+  title,
+  children,
+  confirmLabel,
+  onConfirm,
+  onCancel,
+  loading,
+}: {
+  open: boolean;
+  title: string;
+  children: React.ReactNode;
+  confirmLabel: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading?: boolean;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open, onCancel]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 200,
+        background: "rgba(0,0,0,0.3)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+      }}
+      onClick={onCancel}
+    >
+      <div
+        className="card"
+        style={{ maxWidth: 420, width: "100%" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>{title}</div>
+        <div style={{ fontSize: 13, lineHeight: 1.6, color: "var(--text-secondary)", marginBottom: 16 }}>
+          {children}
+        </div>
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button onClick={onCancel} className="btn btn-sm btn-ghost" disabled={loading}>Cancel</button>
+          <button onClick={onConfirm} className="btn btn-sm btn-primary" disabled={loading}>
+            {loading ? "Sending..." : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── RenderPreview ──────────────────────────────────────────────────────────
+
+function RenderPreview({
+  html,
+  onClose,
+}: {
+  html: string;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 200,
+        background: "rgba(0,0,0,0.3)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+      }}
+      onClick={onClose}
+    >
+      <div
+        className="card"
+        style={{ maxWidth: 600, width: "100%", maxHeight: "90vh", display: "flex", flexDirection: "column", padding: 0 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "2px solid var(--border)" }}>
+          <div className="section-label">Preview</div>
+          <button onClick={onClose} className="btn btn-sm btn-ghost" style={{ fontSize: 14 }}>✕</button>
+        </div>
+        <div style={{ flex: 1, overflow: "auto", padding: 16, background: "#fff" }}>
+          <div dangerouslySetInnerHTML={{ __html: html }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ─────────────────────────────────────────────────────────
+
 export function CampaignEditor({ existing }: CampaignEditorProps) {
   const { user } = useAuth();
   const router = useRouter();
@@ -118,9 +428,17 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
   const [scheduleType, setScheduleType] = useState("now");
   const [cronExpr, setCronExpr] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
+  const [templateVars, setTemplateVars] = useState<TemplateVar[]>(existing?.template_vars || []);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [showUserPicker, setShowUserPicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showSource, setShowSource] = useState(false);
+  const [sourceHtml, setSourceHtml] = useState(existing?.html_body || "");
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState("");
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [campaignId, setCampaignId] = useState<string | null>(existing?.id || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const saving = createCampaign.isPending || updateCampaign.isPending || scheduleCampaign.isPending || buildAudience.isPending;
@@ -140,29 +458,55 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
     },
   });
 
-  const handleSave = async () => {
-    if (!editor) return;
+  const getHtmlBody = useCallback(() => {
+    if (showSource) return sourceHtml;
+    return editor?.getHTML() || "";
+  }, [showSource, sourceHtml, editor]);
+
+  const buildPayload = useCallback(() => {
+    return {
+      name,
+      subject,
+      html_body: getHtmlBody(),
+      from_email: fromEmail || undefined,
+      audience_type: audienceType,
+      audience_config: audienceType === "segment" ? { signed_up_after: signedUpAfter || undefined, signed_up_before: signedUpBefore || undefined } : undefined,
+      template_vars: templateVars.length > 0 ? templateVars : undefined,
+    };
+  }, [name, subject, getHtmlBody, fromEmail, audienceType, signedUpAfter, signedUpBefore, templateVars]);
+
+  const saveDraft = async () => {
     setError("");
-
+    setSuccess("");
     try {
-      const payload: Record<string, unknown> = {
-        name,
-        subject,
-        html_body: editor.getHTML(),
-        from_email: fromEmail || undefined,
-        audience_type: audienceType,
-        audience_config: audienceType === "segment" ? { signed_up_after: signedUpAfter || undefined, signed_up_before: signedUpBefore || undefined } : undefined,
-      };
-
-      let campaign;
-      if (existing) {
-        campaign = await updateCampaign.mutateAsync({ id: existing.id, data: payload });
+      const payload = buildPayload();
+      if (campaignId) {
+        await updateCampaign.mutateAsync({ id: campaignId, data: payload as any });
+        setSuccess("Campaign saved as draft");
       } else {
-        campaign = await createCampaign.mutateAsync(payload as any);
+        const c = await createCampaign.mutateAsync(payload as any);
+        setCampaignId(c.id);
+        setSuccess("Campaign saved as draft");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed");
+    }
+  };
+
+  const scheduleAndSend = async () => {
+    setError("");
+    try {
+      let id = campaignId;
+      if (!id) {
+        const c = await createCampaign.mutateAsync(buildPayload() as any);
+        id = c.id;
+        setCampaignId(id);
+      } else {
+        await updateCampaign.mutateAsync({ id, data: buildPayload() as any });
       }
 
       await scheduleCampaign.mutateAsync({
-        id: campaign.id,
+        id,
         data: {
           schedule_type: scheduleType,
           cron_expr: scheduleType === "recurring" ? cronExpr : undefined,
@@ -171,35 +515,75 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
       });
 
       if (audienceType !== "upload") {
-        await buildAudience.mutateAsync(campaign.id);
+        await buildAudience.mutateAsync(id);
       }
 
       router.push("/admin");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      setError(err instanceof Error ? err.message : "Schedule failed");
+      setShowConfirm(false);
     }
   };
 
   const handlePreview = async () => {
-    if (!existing) return;
-    try {
-      const result = await previewCampaign.mutateAsync(existing.id);
-      alert(result.message);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Preview failed");
+    if (!existing && !campaignId) {
+      setError("Save the campaign as draft first before sending a preview");
+      return;
     }
+    const id = campaignId || existing?.id;
+    if (!id) return;
+    try {
+      const result = await previewCampaign.mutateAsync(id);
+      setSuccess(result.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Preview failed");
+    }
+  };
+
+  const handleLivePreview = () => {
+    const html = getHtmlBody();
+    const sampleVars: Record<string, string> = {
+      display_name: user?.display_name || "Jane Doe",
+      email: user?.email || "jane@example.com",
+      name: user?.display_name || "Jane Doe",
+    };
+    for (const v of templateVars) {
+      if (!sampleVars[v.key]) {
+        sampleVars[v.key] = v.default_value || `[${v.label}]`;
+      }
+    }
+    let rendered = html;
+    for (const [key, val] of Object.entries(sampleVars)) {
+      rendered = rendered.replace(new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, "g"), val);
+    }
+    setPreviewHtml(rendered);
+    setShowPreview(true);
   };
 
   const handleCsvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !existing) return;
+    if (!file || !existing && !campaignId) return;
+    const id = campaignId || existing?.id;
+    if (!id) return;
     try {
-      await uploadCsv.mutateAsync({ id: existing.id, file });
-      alert("CSV uploaded — audience built");
+      await uploadCsv.mutateAsync({ id, file });
+      setSuccess("CSV uploaded — audience built");
       e.target.value = "";
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Upload failed");
+      setError(err instanceof Error ? err.message : "Upload failed");
     }
+  };
+
+  const insertVariable = (key: string) => {
+    if (!editor || showSource) return;
+    editor.chain().focus().insertContent(`{{ ${key} }}`).run();
+  };
+
+  const toggleSource = () => {
+    if (!showSource) {
+      setSourceHtml(editor?.getHTML() || "");
+    }
+    setShowSource(!showSource);
   };
 
   const editable = !existing || existing.status === "draft" || existing.status === "scheduled";
@@ -209,119 +593,265 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
 
   return (
     <div className="page">
-      <AppHeader breadcrumb={<span style={{ fontWeight: 600 }}>{isNew ? "New Campaign" : "Edit Campaign"}</span>} />
+      <AppHeader
+        breadcrumb={
+          <span style={{ fontWeight: 600 }}>
+            <Link href="/admin" style={{ color: "var(--text-secondary)", textDecoration: "none", fontWeight: 400 }}>
+              Admin
+            </Link>
+            <span style={{ margin: "0 6px", color: "var(--text-muted)" }}>/</span>
+            {isNew ? "New Campaign" : existing?.name || "Edit Campaign"}
+          </span>
+        }
+      />
       <PageHeader>
-        {existing && existing.status === "draft" && (
-          <button onClick={handlePreview} className="btn btn-sm">Send Preview</button>
-        )}
-        <button onClick={handleSave} disabled={saving || !editable} className="btn btn-primary btn-sm">
-          {saving ? "Saving..." : isNew ? "Create Campaign" : "Save Changes"}
+        <Link href="/admin" className="btn btn-sm btn-ghost" style={{ marginRight: "auto" }}>
+          ← Back
+        </Link>
+        <button onClick={saveDraft} disabled={saving || !editable} className="btn btn-sm">
+          {saving ? "Saving..." : "Save Draft"}
         </button>
-        <button onClick={() => router.push("/admin")} className="btn btn-sm btn-ghost">Cancel</button>
+        {campaignId && (existing?.status === "draft" || existing?.status === "scheduled" || existing === undefined) && (
+          <button onClick={handlePreview} disabled={saving} className="btn btn-sm">
+            Send Preview
+          </button>
+        )}
+        <button
+          onClick={() => setShowConfirm(true)}
+          disabled={saving || !editable || !name.trim() || !subject.trim()}
+          className="btn btn-sm btn-primary"
+        >
+          {saving ? "Saving..." : "Schedule & Send"}
+        </button>
       </PageHeader>
 
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
         {error && (
-          <div className="card" style={{ marginBottom: "var(--gap)", color: "var(--red)", fontSize: 12, fontWeight: 600 }}>
+          <div className="card" style={{ marginBottom: "var(--gap)", color: "var(--red)", fontSize: 12, fontWeight: 600, padding: "10px 14px" }}>
             {error}
+            <button onClick={() => setError("")} style={{ float: "right", background: "none", border: "none", cursor: "pointer", color: "var(--red)", fontSize: 14 }}>✕</button>
+          </div>
+        )}
+        {success && (
+          <div className="card" style={{ marginBottom: "var(--gap)", color: "var(--green)", fontSize: 12, fontWeight: 600, padding: "10px 14px" }}>
+            {success}
+            <button onClick={() => setSuccess("")} style={{ float: "right", background: "none", border: "none", cursor: "pointer", color: "var(--green)", fontSize: 14 }}>✕</button>
           </div>
         )}
 
         <div style={{ display: "grid", gap: "var(--gap)", gridTemplateColumns: "2fr 1fr" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap)" }}>
-            <div className="card">
-              <div className="section-label" style={{ marginBottom: 8 }}>Campaign Name</div>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="input"
-                placeholder="e.g. Weekly Newsletter"
-                disabled={!editable}
-              />
+            <div className="card" style={{ padding: "14px 16px" }}>
+              <div style={{ display: "flex", gap: "var(--gap)", flexDirection: "column" }}>
+                <div>
+                  <div className="section-label" style={{ marginBottom: 6 }}>Campaign Name</div>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="input"
+                    placeholder="e.g. Weekly Newsletter"
+                    disabled={!editable}
+                    style={{ fontSize: 13 }}
+                  />
+                </div>
+                <div>
+                  <div className="section-label" style={{ marginBottom: 6 }}>Email Subject</div>
+                  <input
+                    type="text"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    className="input"
+                    placeholder="Subject line"
+                    disabled={!editable}
+                    style={{ fontSize: 13 }}
+                  />
+                </div>
+                <div>
+                  <div className="section-label" style={{ marginBottom: 6 }}>From Email</div>
+                  <input
+                    type="email"
+                    value={fromEmail}
+                    onChange={(e) => setFromEmail(e.target.value)}
+                    className="input"
+                    placeholder="marketing@emails.getcleanroom.xyz"
+                    disabled={!editable}
+                    style={{ fontSize: 13 }}
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="card">
-              <div className="section-label" style={{ marginBottom: 8 }}>Email Subject</div>
-              <input
-                type="text"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                className="input"
-                placeholder="Subject line"
-                disabled={!editable}
-              />
-            </div>
-
-            <div className="card">
-              <div className="section-label" style={{ marginBottom: 8 }}>From Email</div>
-              <input
-                type="email"
-                value={fromEmail}
-                onChange={(e) => setFromEmail(e.target.value)}
-                className="input"
-                placeholder="marketing@emails.getcleanroom.xyz"
-                disabled={!editable}
-              />
-            </div>
-
-            <div className="card">
-              <div className="section-label" style={{ marginBottom: 8 }}>Email Body</div>
-              {editor && (
-                <div style={{ marginBottom: 8, display: "flex", gap: 4, flexWrap: "wrap" }}>
-                  <button
-                    onClick={() => editor.chain().focus().toggleBold().run()}
-                    className={`btn btn-sm ${editor.isActive("bold") ? "btn-primary" : "btn-ghost"}`}
-                    type="button"
-                  >
-                    B
+            <div className="card" style={{ padding: "14px 16px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <div className="section-label">Email Body</div>
+                <div style={{ display: "flex", gap: 4 }}>
+                  <button onClick={handleLivePreview} className="btn btn-sm btn-ghost" type="button" disabled={!getHtmlBody()}>
+                    Preview
                   </button>
-                  <button
-                    onClick={() => editor.chain().focus().toggleItalic().run()}
-                    className={`btn btn-sm ${editor.isActive("italic") ? "btn-primary" : "btn-ghost"}`}
-                    type="button"
-                  >
-                    I
-                  </button>
-                  <button
-                    onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-                    className={`btn btn-sm ${editor.isActive("heading", { level: 2 }) ? "btn-primary" : "btn-ghost"}`}
-                    type="button"
-                  >
-                    H2
-                  </button>
-                  <button
-                    onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-                    className={`btn btn-sm ${editor.isActive("heading", { level: 3 }) ? "btn-primary" : "btn-ghost"}`}
-                    type="button"
-                  >
-                    H3
-                  </button>
-                  <button
-                    onClick={() => editor.chain().focus().toggleBulletList().run()}
-                    className={`btn btn-sm ${editor.isActive("bulletList") ? "btn-primary" : "btn-ghost"}`}
-                    type="button"
-                  >
-                    List
-                  </button>
-                  <button
-                    onClick={() => {
-                      const url = prompt("Enter URL:");
-                      if (url) editor.chain().focus().setLink({ href: url }).run();
-                    }}
-                    className={`btn btn-sm ${editor.isActive("link") ? "btn-primary" : "btn-ghost"}`}
-                    type="button"
-                  >
-                    Link
+                  <button onClick={toggleSource} className="btn btn-sm btn-ghost" type="button">
+                    {showSource ? "Editor" : "Source"}
                   </button>
                 </div>
+              </div>
+
+              {!showSource ? (
+                <>
+                  {editor && (
+                    <div style={{ marginBottom: 8, display: "flex", gap: 4, flexWrap: "wrap" }}>
+                      <button
+                        onClick={() => editor.chain().focus().undo().run()}
+                        className="btn btn-sm btn-ghost"
+                        type="button"
+                        title="Undo"
+                        disabled={!editor.can().undo()}
+                      >
+                        ↩
+                      </button>
+                      <button
+                        onClick={() => editor.chain().focus().redo().run()}
+                        className="btn btn-sm btn-ghost"
+                        type="button"
+                        title="Redo"
+                        disabled={!editor.can().redo()}
+                      >
+                        ↪
+                      </button>
+                      <span style={{ width: 1, background: "var(--text-muted)", margin: "4px 2px" }} />
+                      <button
+                        onClick={() => editor.chain().focus().toggleBold().run()}
+                        className={`btn btn-sm ${editor.isActive("bold") ? "btn-primary" : "btn-ghost"}`}
+                        type="button"
+                      >
+                        B
+                      </button>
+                      <button
+                        onClick={() => editor.chain().focus().toggleItalic().run()}
+                        className={`btn btn-sm ${editor.isActive("italic") ? "btn-primary" : "btn-ghost"}`}
+                        type="button"
+                      >
+                        I
+                      </button>
+                      <span style={{ width: 1, background: "var(--text-muted)", margin: "4px 2px" }} />
+                      <button
+                        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+                        className={`btn btn-sm ${editor.isActive("heading", { level: 2 }) ? "btn-primary" : "btn-ghost"}`}
+                        type="button"
+                      >
+                        H2
+                      </button>
+                      <button
+                        onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+                        className={`btn btn-sm ${editor.isActive("heading", { level: 3 }) ? "btn-primary" : "btn-ghost"}`}
+                        type="button"
+                      >
+                        H3
+                      </button>
+                      <span style={{ width: 1, background: "var(--text-muted)", margin: "4px 2px" }} />
+                      <button
+                        onClick={() => editor.chain().focus().toggleBulletList().run()}
+                        className={`btn btn-sm ${editor.isActive("bulletList") ? "btn-primary" : "btn-ghost"}`}
+                        type="button"
+                      >
+                        List
+                      </button>
+                      <button
+                        onClick={() => editor.chain().focus().toggleBlockquote().run()}
+                        className={`btn btn-sm ${editor.isActive("blockquote") ? "btn-primary" : "btn-ghost"}`}
+                        type="button"
+                      >
+                        Quote
+                      </button>
+                      <button
+                        onClick={() => editor.chain().focus().setHorizontalRule().run()}
+                        className="btn btn-sm btn-ghost"
+                        type="button"
+                      >
+                        ―
+                      </button>
+                      <button
+                        onClick={() => {
+                          const url = prompt("Enter URL:");
+                          if (url) editor.chain().focus().setLink({ href: url }).run();
+                        }}
+                        className={`btn btn-sm ${editor.isActive("link") ? "btn-primary" : "btn-ghost"}`}
+                        type="button"
+                      >
+                        Link
+                      </button>
+                      {templateVars.length > 0 && (
+                        <>
+                          <span style={{ width: 1, background: "var(--text-muted)", margin: "4px 2px" }} />
+                          <div style={{ position: "relative", display: "inline-block" }}>
+                            <button
+                              className="btn btn-sm btn-ghost"
+                              type="button"
+                              style={{ color: "var(--blue)" }}
+                              onClick={(e) => {
+                                const menu = (e.currentTarget.parentElement?.querySelector(".var-menu")) as HTMLElement;
+                                if (menu) menu.style.display = menu.style.display === "none" ? "flex" : "none";
+                              }}
+                            >
+                              + Var
+                            </button>
+                            <div
+                              className="var-menu"
+                              style={{
+                                display: "none",
+                                position: "absolute",
+                                top: "100%",
+                                left: 0,
+                                zIndex: 50,
+                                background: "var(--surface)",
+                                border: "2px solid var(--border)",
+                                borderRadius: "var(--radius)",
+                                padding: 6,
+                                minWidth: 160,
+                                flexDirection: "column",
+                                gap: 2,
+                                boxShadow: "var(--shadow)",
+                              }}
+                            >
+                              <div style={{ fontSize: 10, color: "var(--text-muted)", padding: "4px 6px", marginBottom: 2 }}>Insert variable</div>
+                              {templateVars.map((v) => (
+                                <button
+                                  key={v.key}
+                                  onClick={() => {
+                                    insertVariable(v.key);
+                                    const menu = document.querySelector(".var-menu") as HTMLElement;
+                                    if (menu) menu.style.display = "none";
+                                  }}
+                                  className="btn btn-sm btn-ghost"
+                                  type="button"
+                                  style={{ fontSize: 11, justifyContent: "flex-start", padding: "4px 6px" }}
+                                >
+                                  <code style={{ fontWeight: 700 }}>{`{{${v.key}}}`}</code>
+                                  <span style={{ color: "var(--text-muted)", marginLeft: 4 }}>{v.label}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  <EditorContent editor={editor} disabled={!editable} />
+                </>
+              ) : (
+                <textarea
+                  className="input"
+                  value={sourceHtml}
+                  onChange={(e) => setSourceHtml(e.target.value)}
+                  style={{ minHeight: 300, fontSize: 12, fontFamily: "var(--font-mono)", lineHeight: 1.5, resize: "vertical" }}
+                  disabled={!editable}
+                  placeholder="<html>..."
+                />
               )}
-              <EditorContent editor={editor} disabled={!editable} />
             </div>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap)" }}>
-            <div className="card">
+            <div className="card" style={{ padding: "14px 16px" }}>
               <div className="section-label" style={{ marginBottom: 10 }}>Audience</div>
               <RadioGroup
                 options={AUDIENCE_OPTIONS}
@@ -343,7 +873,7 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
                 </div>
               )}
 
-              {audienceType === "upload" && existing && (
+              {audienceType === "upload" && (existing || campaignId) && (
                 <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1.5px solid var(--bg-dark)" }}>
                   <input
                     ref={fileInputRef}
@@ -357,7 +887,7 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
               )}
             </div>
 
-            <div className="card">
+            <div className="card" style={{ padding: "14px 16px" }}>
               <div className="section-label" style={{ marginBottom: 10 }}>Schedule</div>
               <RadioGroup
                 options={SCHEDULE_OPTIONS}
@@ -390,41 +920,100 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
               )}
             </div>
 
+            <div className="card" style={{ padding: "14px 16px" }}>
+              <TemplateVarManager
+                vars={templateVars}
+                onChange={setTemplateVars}
+                disabled={!editable}
+                onInsert={insertVariable}
+              />
+            </div>
+
             {existing && (
-              <div className="card">
-                <div
-                  className="section-label"
-                  style={{
-                    marginBottom: 10,
-                    paddingBottom: 8,
-                    borderBottom: "2px solid var(--border)",
-                  }}
-                >
+              <div className="card" style={{ padding: "14px 16px" }}>
+                <div className="section-label" style={{ marginBottom: 10, paddingBottom: 8, borderBottom: "2px solid var(--border)" }}>
                   Stats
                 </div>
                 <div style={{ fontSize: 12, display: "flex", flexDirection: "column", gap: 6 }}>
                   <StatRow label="Status" value={existing.status} />
                   <StatRow label="Recipients" value={String(existing.total_recipients)} />
                   <StatRow label="Sent" value={String(existing.sent_count)} />
-                  <StatRow label="Opened" value={String(existing.opened_count)} />
-                  <StatRow label="Clicked" value={String(existing.clicked_count)} />
+                  <StatRow
+                    label="Open rate"
+                    value={existing.sent_count > 0 ? `${Math.round((existing.opened_count / existing.sent_count) * 100)}%` : "—"}
+                    highlight={existing.sent_count > 0 ? "var(--green)" : undefined}
+                  />
+                  <StatRow
+                    label="Click rate"
+                    value={existing.opened_count > 0 ? `${Math.round((existing.clicked_count / existing.opened_count) * 100)}%` : "—"}
+                    highlight={existing.opened_count > 0 ? "var(--blue)" : undefined}
+                  />
                   {existing.scheduled_at && <StatRow label="Scheduled" value={new Date(existing.scheduled_at).toLocaleString()} />}
                   {existing.last_sent_at && <StatRow label="Last sent" value={new Date(existing.last_sent_at).toLocaleString()} />}
                 </div>
+
+                {existing.sent_count > 0 && (
+                  <div style={{ marginTop: 10 }}>
+                    <MiniBar label="Opened" value={existing.opened_count} max={existing.sent_count} color="var(--green)" />
+                    <div style={{ height: 4 }} />
+                    <MiniBar label="Clicked" value={existing.clicked_count} max={existing.sent_count} color="var(--blue)" />
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        open={showConfirm}
+        title="Schedule & Send Campaign"
+        confirmLabel={scheduleType === "now" ? "Send Now" : "Schedule"}
+        onConfirm={scheduleAndSend}
+        onCancel={() => setShowConfirm(false)}
+        loading={saving}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div><strong>Campaign:</strong> {name || "Untitled"}</div>
+          <div><strong>Subject:</strong> {subject || "No subject"}</div>
+          <div><strong>Audience:</strong> {AUDIENCE_OPTIONS.find((o) => o.value === audienceType)?.label}</div>
+          <div>
+            <strong>Schedule:</strong>{" "}
+            {scheduleType === "now" ? "Immediately" : scheduleType === "once" ? scheduledAt || "Not set" : `Recurring: ${cronExpr || "Not set"}`}
+          </div>
+          {templateVars.length > 0 && (
+            <div><strong>Template vars:</strong> {templateVars.map((v) => `{{${v.key}}}`).join(", ")}</div>
+          )}
+        </div>
+      </ConfirmModal>
+
+      {showPreview && (
+        <RenderPreview html={previewHtml} onClose={() => setShowPreview(false)} />
+      )}
     </div>
   );
 }
 
-function StatRow({ label, value }: { label: string; value: string }) {
+function StatRow({ label, value, highlight }: { label: string; value: string; highlight?: string }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0" }}>
       <span style={{ color: "var(--text-secondary)" }}>{label}</span>
-      <strong>{value}</strong>
+      <strong style={{ color: highlight || "var(--text)" }}>{value}</strong>
+    </div>
+  );
+}
+
+function MiniBar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
+  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--text-muted)", marginBottom: 2 }}>
+        <span>{label}</span>
+        <span style={{ fontWeight: 700, color }}>{value}/{max} ({pct}%)</span>
+      </div>
+      <div className="bar-track" style={{ height: 6 }}>
+        <div className="bar-fill" style={{ width: `${pct}%`, background: color, borderRadius: 1 }} />
+      </div>
     </div>
   );
 }

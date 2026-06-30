@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
-import { useAdminCampaigns, useAdminStats, useAdminDeleteCampaign, useAdminCancelCampaign } from "@/lib/hooks";
+import { useAdminCampaigns, useAdminStats, useAdminDeleteCampaign, useAdminCancelCampaign, useAdminCloneCampaign } from "@/lib/hooks";
 import { AppHeader, PageHeader } from "@/components/AppHeader";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -29,11 +30,15 @@ export function AdminDashboard() {
   const { data: stats } = useAdminStats();
   const deleteCampaign = useAdminDeleteCampaign();
   const cancelCampaign = useAdminCancelCampaign();
+  const cloneCampaign = useAdminCloneCampaign();
+
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
 
   const error = loadError ? (loadError instanceof Error ? loadError.message : "Failed to load") : null;
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this campaign?")) return;
+    if (!confirm("Delete this campaign? This cannot be undone.")) return;
     try {
       await deleteCampaign.mutateAsync(id);
     } catch (err) {
@@ -48,6 +53,21 @@ export function AdminDashboard() {
       alert(err instanceof Error ? err.message : "Cancel failed");
     }
   };
+
+  const handleClone = async (id: string) => {
+    try {
+      const cloned = await cloneCampaign.mutateAsync(id);
+      window.location.href = `/admin/campaigns/${cloned.id}`;
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Clone failed");
+    }
+  };
+
+  const filtered = campaigns.filter((c) => {
+    if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.subject.toLowerCase().includes(search.toLowerCase())) return false;
+    if (statusFilter && c.status !== statusFilter) return false;
+    return true;
+  });
 
   if (!user) {
     return null;
@@ -121,15 +141,51 @@ export function AdminDashboard() {
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              padding: "14px 16px",
+              padding: "12px 16px",
               borderBottom: "2px solid var(--border)",
               background: "var(--bg-dark)",
+              gap: 8,
+              flexWrap: "wrap",
             }}
           >
             <div className="section-label">Campaigns</div>
-            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-              {campaigns.length} total
-            </span>
+            <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search campaigns..."
+                style={{
+                  fontSize: 11,
+                  padding: "4px 8px",
+                  border: "1.5px solid var(--border)",
+                  borderRadius: "var(--radius)",
+                  background: "var(--surface)",
+                  width: 160,
+                  outline: "none",
+                }}
+              />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                style={{
+                  fontSize: 11,
+                  padding: "4px 6px",
+                  border: "1.5px solid var(--border)",
+                  borderRadius: "var(--radius)",
+                  background: "var(--surface)",
+                  outline: "none",
+                }}
+              >
+                <option value="">All status</option>
+                {Object.entries(STATUS_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+              <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                {filtered.length} / {campaigns.length}
+              </span>
+            </div>
           </div>
 
           {campaigns.length === 0 && !isLoading && (
@@ -170,65 +226,94 @@ export function AdminDashboard() {
             </div>
           )}
 
-          {campaigns.map((c) => (
-            <div
-              key={c.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                padding: "12px 16px",
-                borderBottom: "1.5px solid var(--bg-dark)",
-                flexWrap: "wrap",
-              }}
-            >
-              <div style={{ flex: 1, minWidth: 160 }}>
-                <Link
-                  href={`/admin/campaigns/${c.id}`}
-                  style={{ fontWeight: 700, color: "var(--text)", textDecoration: "none", fontSize: 14 }}
-                >
-                  {c.name}
-                </Link>
-                <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 300 }}>
-                  {c.subject}
+          {filtered.length === 0 && campaigns.length > 0 && (
+            <div style={{ textAlign: "center", padding: "32px 24px", fontSize: 13, color: "var(--text-muted)" }}>
+              No campaigns match your search or filter.
+            </div>
+          )}
+
+          {filtered.map((c) => {
+            const openRate = c.sent_count > 0 ? Math.round((c.opened_count / c.sent_count) * 100) : 0;
+            const clickRate = c.opened_count > 0 ? Math.round((c.clicked_count / c.opened_count) * 100) : 0;
+
+            return (
+              <div
+                key={c.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "12px 16px",
+                  borderBottom: "1.5px solid var(--bg-dark)",
+                  flexWrap: "wrap",
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 160 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <Link
+                      href={`/admin/campaigns/${c.id}`}
+                      style={{ fontWeight: 700, color: "var(--text)", textDecoration: "none", fontSize: 14 }}
+                    >
+                      {c.name}
+                    </Link>
+                    {c.last_sent_at && (
+                      <span style={{ fontSize: 10, color: "var(--text-muted)" }}>
+                        {new Date(c.last_sent_at).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 300 }}>
+                    {c.subject}
+                  </div>
                 </div>
-              </div>
 
-              <span className={STATUS_PILL[c.status] || "pill pill-neu"} style={{ fontSize: 10 }}>
-                {STATUS_LABELS[c.status] || c.status}
-              </span>
+                <span className={STATUS_PILL[c.status] || "pill pill-neu"} style={{ fontSize: 10 }}>
+                  {STATUS_LABELS[c.status] || c.status}
+                </span>
 
-              <div style={{ display: "flex", gap: 16, alignItems: "center", fontSize: 11, color: "var(--text-secondary)" }}>
-                <div style={{ textAlign: "right", minWidth: 60 }}>
-                  <div style={{ fontWeight: 600 }}>{c.sent_count} sent</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 4, justifyContent: "flex-end" }}>
-                    <span style={{ color: "var(--green)", fontWeight: 600 }}>{c.opened_count} opened</span>
+                <div style={{ display: "flex", gap: 16, alignItems: "center", fontSize: 11, color: "var(--text-secondary)" }}>
+                  <div style={{ textAlign: "right", minWidth: 80 }}>
+                    <div style={{ fontWeight: 600 }}>{c.sent_count} sent</div>
                     {c.sent_count > 0 && (
-                      <div style={{ width: 40, height: 4, background: "var(--bg-dark)", borderRadius: 2, overflow: "hidden", border: "1px solid var(--border)" }}>
-                        <div style={{ height: "100%", width: `${Math.round((c.opened_count / c.sent_count) * 100)}%`, background: "var(--green)", borderRadius: 1 }} />
+                      <div style={{ fontSize: 10, color: "var(--green)", fontWeight: 600 }}>
+                        {openRate}% opened
+                        {c.opened_count > 0 && <> · {clickRate}% clicked</>}
                       </div>
                     )}
                   </div>
+                  {c.sent_count > 0 && (
+                    <div style={{ width: 50, display: "flex", flexDirection: "column", gap: 2 }}>
+                      <div style={{ height: 4, background: "var(--bg-dark)", borderRadius: 2, overflow: "hidden", border: "1px solid var(--border)" }}>
+                        <div style={{ height: "100%", width: `${openRate}%`, background: "var(--green)", borderRadius: 1 }} />
+                      </div>
+                      <div style={{ height: 4, background: "var(--bg-dark)", borderRadius: 2, overflow: "hidden", border: "1px solid var(--border)" }}>
+                        <div style={{ height: "100%", width: `${clickRate}%`, background: "var(--blue)", borderRadius: 1 }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: "flex", gap: 4 }}>
+                  <Link href={`/admin/campaigns/${c.id}`} className="btn btn-sm btn-ghost">
+                    Edit
+                  </Link>
+                  <button onClick={() => handleClone(c.id)} className="btn btn-sm btn-ghost" style={{ fontSize: 11 }}>
+                    Clone
+                  </button>
+                  {(c.status === "scheduled" || c.status === "sending") && (
+                    <button onClick={() => handleCancel(c.id)} className="btn btn-sm btn-ghost" style={{ color: "var(--orange)" }}>
+                      Cancel
+                    </button>
+                  )}
+                  {(c.status === "draft" || c.status === "cancelled") && (
+                    <button onClick={() => handleDelete(c.id)} className="btn btn-sm btn-ghost" style={{ color: "var(--red)" }}>
+                      Delete
+                    </button>
+                  )}
                 </div>
               </div>
-
-              <div style={{ display: "flex", gap: 4 }}>
-                <Link href={`/admin/campaigns/${c.id}`} className="btn btn-sm btn-ghost">
-                  Edit
-                </Link>
-                {(c.status === "scheduled" || c.status === "sending") && (
-                  <button onClick={() => handleCancel(c.id)} className="btn btn-sm btn-ghost" style={{ color: "var(--orange)" }}>
-                    Cancel
-                  </button>
-                )}
-                {(c.status === "draft" || c.status === "cancelled") && (
-                  <button onClick={() => handleDelete(c.id)} className="btn btn-sm btn-ghost" style={{ color: "var(--red)" }}>
-                    Delete
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

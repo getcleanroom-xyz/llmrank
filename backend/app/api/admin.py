@@ -53,6 +53,7 @@ class CampaignCreate(BaseModel):
     from_email: str | None = None
     audience_type: AudienceType = AudienceType.all_users
     audience_config: dict | None = None
+    template_vars: list[dict] | None = None
 
 
 class CampaignUpdate(BaseModel):
@@ -62,6 +63,7 @@ class CampaignUpdate(BaseModel):
     from_email: str | None = None
     audience_type: AudienceType | None = None
     audience_config: dict | None = None
+    template_vars: list[dict] | None = None
 
 
 class ScheduleRequest(BaseModel):
@@ -94,6 +96,7 @@ class CampaignDetailResponse(CampaignResponse):
     html_body: str
     from_email: str
     audience_config: dict | None
+    template_vars: list[dict] | None = None
     recipients: list | None = None
 
 
@@ -133,6 +136,7 @@ async def create_campaign(body: CampaignCreate, admin: User = Depends(require_ad
         from_email=body.from_email or settings.CAMPAIGN_FROM_EMAIL,
         audience_type=body.audience_type,
         audience_config=body.audience_config,
+        template_vars=body.template_vars,
         status=CampaignStatus.draft,
         schedule_type=ScheduleType.now,
         created_by=admin.id,
@@ -153,6 +157,7 @@ async def get_campaign(campaign_id: uuid.UUID, admin: User = Depends(require_adm
     resp["html_body"] = campaign.html_body
     resp["from_email"] = campaign.from_email
     resp["audience_config"] = campaign.audience_config
+    resp["template_vars"] = campaign.template_vars
     return resp
 
 
@@ -177,6 +182,8 @@ async def update_campaign(campaign_id: uuid.UUID, body: CampaignUpdate, admin: U
         campaign.audience_type = body.audience_type
     if body.audience_config is not None:
         campaign.audience_config = body.audience_config
+    if body.template_vars is not None:
+        campaign.template_vars = body.template_vars
 
     await db.commit()
     await db.refresh(campaign)
@@ -250,7 +257,11 @@ async def preview_campaign(campaign_id: uuid.UUID, admin: User = Depends(require
     if not campaign:
         raise HTTPException(404, "Campaign not found")
 
-    ok, err = send_email(admin.email, campaign.subject, campaign.html_body, campaign.from_email)
+    # Render with sample data for preview
+    sample_vars = _build_sample_vars(admin, campaign.template_vars)
+    preview_html = _apply_template_vars(campaign.html_body, sample_vars)
+
+    ok, err = send_email(admin.email, campaign.subject, preview_html, campaign.from_email)
     if not ok:
         raise HTTPException(500, f"Failed to send preview: {err}")
     return {"status": "ok", "message": f"Preview sent to {admin.email}"}
@@ -356,6 +367,34 @@ async def build_campaign_audience(campaign_id: uuid.UUID, admin: User = Depends(
     return {"status": "ok", "recipients": campaign.total_recipients}
 
 
+# ─── Clone ─────────────────────────────────────────────────────────────────────
+
+@router.post("/campaigns/{campaign_id}/clone", response_model=CampaignResponse, status_code=201)
+async def clone_campaign(campaign_id: uuid.UUID, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Campaign).where(Campaign.id == campaign_id))
+    original = result.scalar_one_or_none()
+    if not original:
+        raise HTTPException(404, "Campaign not found")
+
+    clone = Campaign(
+        id=uuid.uuid4(),
+        name=f"{original.name} (copy)",
+        subject=original.subject,
+        html_body=original.html_body,
+        from_email=original.from_email,
+        audience_type=original.audience_type,
+        audience_config=original.audience_config,
+        template_vars=original.template_vars,
+        status=CampaignStatus.draft,
+        schedule_type=ScheduleType.now,
+        created_by=admin.id,
+    )
+    db.add(clone)
+    await db.commit()
+    await db.refresh(clone)
+    return _campaign_to_response(clone)
+
+
 # ─── Stats ────────────────────────────────────────────────────────────────────
 
 @router.get("/stats", response_model=StatsResponse)
@@ -397,4 +436,48 @@ def _campaign_to_response(c: Campaign) -> dict:
         "created_by": str(c.created_by),
         "created_at": c.created_at.isoformat() if c.created_at else "",
         "updated_at": c.updated_at.isoformat() if c.updated_at else "",
+        "template_vars": c.template_vars,
     }
+
+
+# ─── Template helpers ─────────────────────────────────────────────────────────
+
+_TEMPLATE_RE = re.compile(r'\{\{(\s*[a-zA-Z_][a-zA-Z0-9_]*\s*)\}}')
+
+
+def _build_sample_vars(admin: User, template_vars: list[dict] | None) -> dict[str, str]:
+    """Build a sample variable context for preview."""
+    ctx = {
+        "display_name": admin.display_name,
+        "email": admin.email,
+    }
+    if template_vars:
+        for v in template_vars:
+            key = v.get("key", "").strip()
+            if key and key not in ctx:
+                ctx[key] = v.get("default_value", v.get("default", f"[{v.get('label', key)}]"))
+    return ctx
+
+
+def _build_recipient_vars(user: User | None, email: str, template_vars: list[dict] | None) -> dict[str, str]:
+    """Build variable context for a given recipient."""
+    name = user.display_name if user else email.split("@")[0]
+    ctx = {
+        "display_name": name,
+        "email": email,
+        "name": name,
+    }
+    if template_vars:
+        for v in template_vars:
+            key = v.get("key", "").strip()
+            if key and key not in ctx:
+                ctx[key] = v.get("default_value", v.get("default", ""))
+    return ctx
+
+
+def _apply_template_vars(html_body: str, ctx: dict[str, str]) -> str:
+    """Replace all {{ key }} placeholders with values from ctx."""
+    def _replacer(m: re.Match) -> str:
+        key = m.group(1).strip()
+        return ctx.get(key, "")
+    return _TEMPLATE_RE.sub(_replacer, html_body)
