@@ -14,10 +14,17 @@ class Settings(BaseSettings):
     FLW_SECRET_HASH: str = ""  # Flutterwave webhook secret hash
     FLW_PUBLIC_KEY: str = ""  # Flutterwave public key (for frontend)
     FLW_BASE_URL: str = "https://api.flutterwave.com/v3"  # Production URL
+    RESEND_API_KEY: str = ""
+    ADMIN_EMAILS: str = ""
+    CAMPAIGN_FROM_EMAIL: str = "marketing@emails.getcleanroom.xyz"
 
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+
+    @property
+    def admin_emails_list(self) -> list[str]:
+        return [e.strip() for e in self.ADMIN_EMAILS.split(",") if e.strip()]
 
     class Config:
         env_file = ".env"

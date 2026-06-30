@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { authLogout } from "@/lib/api";
 import type { CreditBalance } from "@/lib/api";
@@ -72,6 +73,31 @@ export function AuthButton({ credits, onBuyClick }: AuthButtonProps) {
               <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Credits</span>
               <span style={{ fontSize: 12, fontWeight: 700 }}>{credits.balance}</span>
             </div>
+          )}
+
+          {user.is_admin && (
+            <Link
+              href="/admin"
+              style={{
+                display: "block",
+                width: "100%",
+                padding: "6px 8px",
+                fontSize: 12,
+                fontWeight: 600,
+                textAlign: "left",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                borderRadius: "var(--radius)",
+                color: "var(--text)",
+                textDecoration: "none",
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "var(--background)"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+              onClick={() => setShowMenu(false)}
+            >
+              Admin
+            </Link>
           )}
 
           {onBuyClick && (

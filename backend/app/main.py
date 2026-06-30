@@ -11,6 +11,8 @@ from app.core.rate_limit import limiter
 from app.api.routes import router
 from app.api.auth import router as auth_router
 from app.api.payments import router as payments_router
+from app.api.admin import router as admin_router
+from app.api.tracking import router as tracking_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -77,8 +79,14 @@ async def lifespan(app: FastAPI):
     # Recover orphaned scans from previous session
     asyncio.create_task(recover_pending_scans())
 
+    # Start campaign scheduler
+    from app.services.scheduler import init_scheduler, shutdown_scheduler
+    await init_scheduler()
+
     logger.info("LLMRank API started (CORS: %s)", settings.cors_origins_list)
     yield
+
+    await shutdown_scheduler()
     logger.info("LLMRank API shutting down")
 
 
@@ -111,6 +119,8 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(payments_router, prefix="/api/v1")
 app.include_router(router, prefix="/api/v1")
+app.include_router(admin_router, prefix="/api/v1")
+app.include_router(tracking_router, prefix="/api/v1")
 
 
 @app.get("/health")

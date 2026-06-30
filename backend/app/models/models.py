@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, Text, Float, Integer, DateTime, ForeignKey, Enum, JSON
+from sqlalchemy import String, Text, Float, Integer, DateTime, ForeignKey, Enum, JSON, Boolean, BigInteger
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 import enum
@@ -144,3 +144,90 @@ class CreditTransaction(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     balance_after: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+
+class AudienceType(str, enum.Enum):
+    all_users = "all_users"
+    segment = "segment"
+    upload = "upload"
+
+
+class CampaignStatus(str, enum.Enum):
+    draft = "draft"
+    scheduled = "scheduled"
+    sending = "sending"
+    sent = "sent"
+    cancelled = "cancelled"
+
+
+class ScheduleType(str, enum.Enum):
+    now = "now"
+    once = "once"
+    recurring = "recurring"
+
+
+class RecipientStatus(str, enum.Enum):
+    pending = "pending"
+    sent = "sent"
+    failed = "failed"
+    opened = "opened"
+    clicked = "clicked"
+
+
+class Campaign(Base):
+    __tablename__ = "campaigns"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    subject: Mapped[str] = mapped_column(Text, nullable=False)
+    html_body: Mapped[str] = mapped_column(Text, nullable=False)
+    from_email: Mapped[str] = mapped_column(String(255), nullable=False)
+    audience_type: Mapped[AudienceType] = mapped_column(Enum(AudienceType), nullable=False)
+    audience_config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    status: Mapped[CampaignStatus] = mapped_column(Enum(CampaignStatus), default=CampaignStatus.draft)
+    schedule_type: Mapped[ScheduleType] = mapped_column(Enum(ScheduleType), default=ScheduleType.now)
+    cron_expr: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    next_send_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    total_recipients: Mapped[int] = mapped_column(Integer, default=0)
+    sent_count: Mapped[int] = mapped_column(Integer, default=0)
+    opened_count: Mapped[int] = mapped_column(Integer, default=0)
+    clicked_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+    creator: Mapped["User"] = relationship("User")
+    recipients: Mapped[list["CampaignRecipient"]] = relationship("CampaignRecipient", back_populates="campaign", cascade="all, delete-orphan")
+    links: Mapped[list["CampaignLink"]] = relationship("CampaignLink", back_populates="campaign", cascade="all, delete-orphan")
+
+
+class CampaignRecipient(Base):
+    __tablename__ = "campaign_recipients"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    campaign_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("campaigns.id"), nullable=False)
+    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    status: Mapped[RecipientStatus] = mapped_column(Enum(RecipientStatus), default=RecipientStatus.pending)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    opened_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    clicked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+    campaign: Mapped["Campaign"] = relationship("Campaign", back_populates="recipients")
+
+
+class CampaignLink(Base):
+    __tablename__ = "campaign_links"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    campaign_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("campaigns.id"), nullable=False)
+    original_url: Mapped[str] = mapped_column(Text, nullable=False)
+    redirect_path: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
+    click_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+    campaign: Mapped["Campaign"] = relationship("Campaign", back_populates="links")

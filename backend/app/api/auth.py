@@ -124,6 +124,7 @@ class UserResponse(BaseModel):
     email: str
     display_name: str
     created_at: str
+    is_admin: bool = False
 
 class PasskeyResponse(BaseModel):
     id: str
@@ -253,6 +254,7 @@ async def register_finish(body: RegisterFinishRequest, request: Request, respons
             email=user.email,
             display_name=user.display_name,
             created_at=user.created_at.isoformat(),
+            is_admin=user.email in settings.admin_emails_list,
         )}
 
     except ImportError:
@@ -362,6 +364,7 @@ async def login_finish(body: LoginFinishRequest, request: Request, response: Res
             email=user.email,
             display_name=user.display_name,
             created_at=user.created_at.isoformat(),
+            is_admin=user.email in settings.admin_emails_list,
         )}
 
     except ImportError:
@@ -380,6 +383,7 @@ async def get_me(user: User = Depends(get_current_user)):
         email=user.email,
         display_name=user.display_name,
         created_at=user.created_at.isoformat(),
+        is_admin=user.email in settings.admin_emails_list,
     )
 
 

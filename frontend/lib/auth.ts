@@ -1,10 +1,11 @@
 import { create } from "zustand";
 
-interface User {
+export interface User {
   id: string;
   email: string;
   display_name: string;
   created_at: string;
+  is_admin?: boolean;
 }
 
 type AuthMode = "login" | "register";

@@ -11,6 +11,10 @@
   "dependencies": {
     "@simplewebauthn/browser": "^13.3.0",
     "@tanstack/react-query": "^5.101.1",
+    "@tiptap/extension-link": "^3.27.1",
+    "@tiptap/extension-placeholder": "^3.27.1",
+    "@tiptap/react": "^3.27.1",
+    "@tiptap/starter-kit": "^3.27.1",
     "@vercel/analytics": "^2.0.1",
     "axios": "^1.18.1",
     "lucide-react": "^1.21.0",
