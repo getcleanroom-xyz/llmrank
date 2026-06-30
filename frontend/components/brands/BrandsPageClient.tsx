@@ -1,12 +1,11 @@
 "use client";
 
-import { Suspense, useEffect, useState, useRef, useCallback, useMemo } from "react";
+import { Suspense, useState, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { getBrands, createBrand, deleteBrand } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useBrands, useCreateBrand, useDeleteBrand } from "@/lib/hooks";
 import { AppHeader, PageHeader } from "@/components/AppHeader";
-import type { Brand } from "@/types";
 
 const PAGE_SIZE = 10;
 
@@ -17,25 +16,20 @@ function BrandsPageInner() {
   const search = searchParams.get("search") ?? "";
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
 
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: brands = [], isLoading, error: loadError, refetch } = useBrands();
+  const createBrand = useCreateBrand();
+  const deleteBrand = useDeleteBrand();
+
   const [success, setSuccess] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState(search);
 
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState("");
   const [domain, setDomain] = useState("");
-  const [creating, setCreating] = useState(false);
   const [nameError, setNameError] = useState("");
   const [domainError, setDomainError] = useState("");
 
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
-
-  const nameInputRef = useRef<HTMLInputElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const abortRef = useRef<AbortController | null>(null);
 
   const navigate = useCallback((p: Record<string, string>) => {
     const sp = new URLSearchParams(searchParams.toString());
@@ -47,48 +41,10 @@ function BrandsPageInner() {
     router.replace(`/brands${sp.toString() ? `?${sp.toString()}` : ""}`);
   }, [searchParams, router]);
 
-  const load = useCallback(async () => {
-    abortRef.current?.abort();
-    const c = new AbortController();
-    abortRef.current = c;
-    try {
-      setError(null);
-      const data = await getBrands();
-      if (!c.signal.aborted) setBrands(data);
-    } catch (err) {
-      if (!c.signal.aborted) setError(err instanceof Error ? err.message : "Failed to load brands");
-    } finally {
-      if (!c.signal.aborted) setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-    return () => abortRef.current?.abort();
-  }, [load]);
-
-  useEffect(() => { setSearchInput(search); }, [search]);
-
-  useEffect(() => {
-    if (showModal) setTimeout(() => nameInputRef.current?.focus(), 50);
-  }, [showModal]);
-
-  useEffect(() => {
-    if (!success) return;
-    const t = setTimeout(() => setSuccess(null), 3000);
-    return () => clearTimeout(t);
-  }, [success]);
-
-  useEffect(() => {
-    if (!error) return;
-    const t = setTimeout(() => setError(null), 5000);
-    return () => clearTimeout(t);
-  }, [error]);
-
   const filtered = useMemo(() => {
     if (!search) return brands;
     const q = search.toLowerCase();
-    return brands.filter((b) => b.name.toLowerCase().includes(q) || b.domain.toLowerCase().includes(q));
+    return brands.filter((b: any) => b.name.toLowerCase().includes(q) || b.domain.toLowerCase().includes(q));
   }, [brands, search]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -106,32 +62,29 @@ function BrandsPageInner() {
 
   const handleCreate = async () => {
     if (!validate()) return;
-    setCreating(true);
     try {
-      await createBrand(name.trim(), domain.trim());
+      await createBrand.mutateAsync({ name: name.trim(), domain: domain.trim() });
       setName(""); setDomain(""); setShowModal(false);
       setSuccess(`${name.trim()} created`);
-      await load();
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create brand");
-    } finally {
-      setCreating(false);
+      setSuccess(null);
     }
   };
 
   const handleDelete = async (id: string) => {
-    setDeleting(true);
     try {
-      await deleteBrand(id);
+      await deleteBrand.mutateAsync(id);
       setDeleteConfirm(null);
       setSuccess("Brand deleted");
-      await load();
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete brand");
-    } finally {
-      setDeleting(false);
+      setSuccess(null);
     }
   };
+
+  const loading = isLoading;
+  const error = loadError ? (loadError instanceof Error ? loadError.message : "Failed to load brands") : null;
 
   return (
     <div className="page" style={{ display: "flex", flexDirection: "column" }}>
@@ -150,7 +103,6 @@ function BrandsPageInner() {
         {user && (
           <div style={{ marginBottom: 16, display: "flex", gap: 8 }}>
             <input
-              ref={searchInputRef}
               className="input"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
@@ -182,9 +134,8 @@ function BrandsPageInner() {
         )}
 
         {error && (
-          <div className="card" style={{ background: "#FEE2E2", borderColor: "var(--red)", padding: "10px 14px", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: 13, color: "#991B1B", fontWeight: 600 }}>{error}</span>
-            <button onClick={() => setError(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#991B1B" }}>x</button>
+          <div className="card" style={{ background: "#FEE2E2", borderColor: "var(--red)", padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#991B1B", fontWeight: 600 }}>
+            {error}
           </div>
         )}
         {success && (
@@ -229,7 +180,7 @@ function BrandsPageInner() {
                   <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
                     {deleteConfirm === b.id ? (
                       <>
-                        <button onClick={() => handleDelete(b.id)} disabled={deleting} className="btn btn-danger btn-sm">{deleting ? "..." : "Yes"}</button>
+                        <button onClick={() => handleDelete(b.id)} disabled={deleteBrand.isPending} className="btn btn-danger btn-sm">{deleteBrand.isPending ? "..." : "Yes"}</button>
                         <button onClick={() => setDeleteConfirm(null)} className="btn btn-sm btn-ghost">No</button>
                       </>
                     ) : (
@@ -292,7 +243,7 @@ function BrandsPageInner() {
             <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
               <div>
                 <label htmlFor="modal-brand-name" style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Brand name</label>
-                <input ref={nameInputRef} id="modal-brand-name" className="input" value={name} onChange={(e) => { setName(e.target.value); setNameError(""); }} onKeyDown={(e) => e.key === "Enter" && handleCreate()} placeholder="e.g. Notion" autoComplete="off" />
+                <input id="modal-brand-name" className="input" value={name} onChange={(e) => { setName(e.target.value); setNameError(""); }} onKeyDown={(e) => e.key === "Enter" && handleCreate()} placeholder="e.g. Notion" autoComplete="off" />
                 {nameError && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4, fontWeight: 600 }}>{nameError}</div>}
               </div>
               <div>
@@ -302,7 +253,7 @@ function BrandsPageInner() {
               </div>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={handleCreate} disabled={creating} className="btn btn-primary" style={{ flex: 1 }}>{creating ? "Creating..." : "Create brand"}</button>
+              <button onClick={handleCreate} disabled={createBrand.isPending} className="btn btn-primary" style={{ flex: 1 }}>{createBrand.isPending ? "Creating..." : "Create brand"}</button>
               <button onClick={() => setShowModal(false)} className="btn btn-ghost">Cancel</button>
             </div>
           </div>

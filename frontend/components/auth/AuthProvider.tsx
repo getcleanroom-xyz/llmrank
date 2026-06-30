@@ -2,16 +2,17 @@
 
 import { useEffect, ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
-import { authGetMe } from "@/lib/api";
+import { useCurrentUser } from "@/lib/hooks";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { setUser, setLoading } = useAuth();
+  const { data: user, isFetched } = useCurrentUser();
 
   useEffect(() => {
-    authGetMe()
-      .then((user) => setUser(user))
-      .catch(() => setUser(null));
-  }, [setUser, setLoading]);
+    if (isFetched) {
+      setUser(user ?? null);
+    }
+  }, [user, isFetched, setUser, setLoading]);
 
   return <>{children}</>;
 }

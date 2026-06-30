@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { getCreditPackages, createCheckout, type CreditPackage } from "@/lib/api";
+import { useState } from "react";
+import { useCreditPackages, useCreateCheckout } from "@/lib/hooks";
 import { useAuth } from "@/lib/auth";
 
 interface BuyCreditsModalProps {
@@ -11,19 +11,10 @@ interface BuyCreditsModalProps {
 
 export function BuyCreditsModal({ open, onClose }: BuyCreditsModalProps) {
   const { user } = useAuth();
-  const [packages, setPackages] = useState<CreditPackage[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: packages = [], isLoading, error: loadError } = useCreditPackages();
+  const createCheckout = useCreateCheckout();
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (open) {
-      getCreditPackages()
-        .then(setPackages)
-        .catch(() => setError("Failed to load packages"))
-        .finally(() => setLoading(false));
-    }
-  }, [open]);
 
   if (!open) return null;
 
@@ -37,7 +28,7 @@ export function BuyCreditsModal({ open, onClose }: BuyCreditsModalProps) {
     setError("");
 
     try {
-      const session = await createCheckout(packageKey);
+      const session = await createCheckout.mutateAsync({ packageKey });
 
       if (session.checkout_url) {
         const url = session.checkout_url;
@@ -78,7 +69,7 @@ export function BuyCreditsModal({ open, onClose }: BuyCreditsModalProps) {
           </div>
         )}
 
-        {loading ? (
+        {isLoading ? (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="skeleton" style={{ height: 100 }} />

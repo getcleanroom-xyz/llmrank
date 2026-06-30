@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
-import { getCredits, type CreditBalance } from "@/lib/api";
+import { useCredits } from "@/lib/hooks";
 import { AuthButton } from "@/components/auth/AuthButton";
 import { BuyCreditsModal } from "@/components/BuyCreditsModal";
 
@@ -43,19 +43,9 @@ function HeaderDrawer({ open, onClose, children }: { open: boolean; onClose: () 
 
 export function AppHeader({ breadcrumb }: { breadcrumb?: React.ReactNode }) {
   const { user } = useAuth();
-  const [credits, setCredits] = useState<CreditBalance | null>(null);
+  const { data: credits } = useCredits();
   const [showBuy, setShowBuy] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-
-  useEffect(() => {
-    if (!user) {
-      setCredits(null);
-      return;
-    }
-    getCredits()
-      .then(setCredits)
-      .catch(() => setCredits(null));
-  }, [user]);
 
   return (
     <header className="app-header">

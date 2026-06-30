@@ -5,6 +5,7 @@ import "./globals.css";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { Providers } from "@/components/Providers";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -22,11 +23,13 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <body className={inter.className}>
-        <AuthProvider>
-          <ErrorBoundary>{children}</ErrorBoundary>
-          <AuthModal />
-          <Analytics />
-        </AuthProvider>
+        <Providers>
+          <AuthProvider>
+            <ErrorBoundary>{children}</ErrorBoundary>
+            <AuthModal />
+            <Analytics />
+          </AuthProvider>
+        </Providers>
       </body>
     </html>
   );

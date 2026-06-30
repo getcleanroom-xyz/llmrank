@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -9,16 +9,16 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { useAuth } from "@/lib/auth";
 import { AppHeader, PageHeader } from "@/components/AppHeader";
 import {
-  adminCreateCampaign,
-  adminUpdateCampaign,
-  adminScheduleCampaign,
-  adminPreviewCampaign,
-  adminBuildAudience,
-  adminUploadCsv,
-  adminListUsers,
-  type AdminCampaignDetail,
-  type AdminUser,
-} from "@/lib/api";
+  useAdminCreateCampaign,
+  useAdminUpdateCampaign,
+  useAdminScheduleCampaign,
+  useAdminPreviewCampaign,
+  useAdminBuildAudience,
+  useAdminUploadCsv,
+  useAdminUsers,
+  useAdminCampaign,
+} from "@/lib/hooks";
+import type { AdminCampaignDetail } from "@/lib/api";
 
 interface CampaignEditorProps {
   existing?: AdminCampaignDetail;
@@ -27,6 +27,14 @@ interface CampaignEditorProps {
 export function CampaignEditor({ existing }: CampaignEditorProps) {
   const { user } = useAuth();
   const router = useRouter();
+
+  const createCampaign = useAdminCreateCampaign();
+  const updateCampaign = useAdminUpdateCampaign();
+  const scheduleCampaign = useAdminScheduleCampaign();
+  const previewCampaign = useAdminPreviewCampaign();
+  const buildAudience = useAdminBuildAudience();
+  const uploadCsv = useAdminUploadCsv();
+  const { data: users = [] } = useAdminUsers();
 
   const [name, setName] = useState(existing?.name || "");
   const [subject, setSubject] = useState(existing?.subject || "");
@@ -37,12 +45,12 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
   const [scheduleType, setScheduleType] = useState("now");
   const [cronExpr, setCronExpr] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [users, setUsers] = useState<AdminUser[]>([]);
   const [showUserPicker, setShowUserPicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const saving = createCampaign.isPending || updateCampaign.isPending || scheduleCampaign.isPending || buildAudience.isPending;
 
   const editor = useEditor({
     extensions: [
@@ -59,18 +67,12 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
     },
   });
 
-  useEffect(() => {
-    if (!user) return;
-    adminListUsers().then(setUsers).catch(() => {});
-  }, [user]);
-
   const handleSave = async () => {
     if (!editor) return;
     setError("");
-    setSaving(true);
 
     try {
-      const payload = {
+      const payload: Record<string, unknown> = {
         name,
         subject,
         html_body: editor.getHTML(),
@@ -81,35 +83,34 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
 
       let campaign;
       if (existing) {
-        campaign = await adminUpdateCampaign(existing.id, payload);
+        campaign = await updateCampaign.mutateAsync({ id: existing.id, data: payload });
       } else {
-        campaign = await adminCreateCampaign(payload);
+        campaign = await createCampaign.mutateAsync(payload as any);
       }
 
-      // Schedule the campaign
-      await adminScheduleCampaign(campaign.id, {
-        schedule_type: scheduleType,
-        cron_expr: scheduleType === "recurring" ? cronExpr : undefined,
-        scheduled_at: scheduleType === "once" ? scheduledAt : undefined,
+      await scheduleCampaign.mutateAsync({
+        id: campaign.id,
+        data: {
+          schedule_type: scheduleType,
+          cron_expr: scheduleType === "recurring" ? cronExpr : undefined,
+          scheduled_at: scheduleType === "once" ? scheduledAt : undefined,
+        },
       });
 
-      // Build audience
       if (audienceType !== "upload") {
-        await adminBuildAudience(campaign.id);
+        await buildAudience.mutateAsync(campaign.id);
       }
 
       router.push("/admin");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
-    } finally {
-      setSaving(false);
     }
   };
 
   const handlePreview = async () => {
     if (!existing) return;
     try {
-      const result = await adminPreviewCampaign(existing.id);
+      const result = await previewCampaign.mutateAsync(existing.id);
       alert(result.message);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Preview failed");
@@ -120,7 +121,7 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
     const file = e.target.files?.[0];
     if (!file || !existing) return;
     try {
-      await adminUploadCsv(existing.id, file);
+      await uploadCsv.mutateAsync({ id: existing.id, file });
       alert("CSV uploaded — audience built");
       e.target.value = "";
     } catch (err) {

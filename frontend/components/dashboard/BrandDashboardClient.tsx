@@ -1,10 +1,10 @@
 "use client";
 
-import { Suspense, useEffect, useState, useCallback, useRef, lazy } from "react";
+import { Suspense, useState, useCallback, lazy } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { getDashboard, getQueries, getCredits, type CreditBalance } from "@/lib/api";
-import type { DashboardData, MonitoredQuery } from "@/types";
+import { useDashboard, useCredits } from "@/lib/hooks";
+import type { DashboardData } from "@/types";
 import { KpiCard, ScoreRing, InsightRow } from "@/components/ui";
 import { AppHeader, PageHeader } from "@/components/AppHeader";
 import { ScanControls } from "@/components/dashboard/DashboardHeader";
@@ -25,12 +25,11 @@ function BrandDashboardPageInner() {
   const tab = (searchParams.get("tab") as Tab) ?? "overview";
   const manage = searchParams.get("manage") === "true";
 
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [queries, setQueries] = useState<MonitoredQuery[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [credits, setCredits] = useState<CreditBalance | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  const { data: dashResult, isLoading, error: loadError, refetch } = useDashboard(brandId);
+  const { data: credits } = useCredits();
+
+  const data: DashboardData | null = dashResult?.dashboard ?? null;
+  const queries = dashResult?.queries ?? [];
 
   const setTab = useCallback((t: Tab, extras?: Record<string, string>) => {
     const p = new URLSearchParams(searchParams.toString());
@@ -46,31 +45,9 @@ function BrandDashboardPageInner() {
     router.replace(`/brands/${brandId}?${p.toString()}`);
   }, [brandId, searchParams, router]);
 
-  const loadDashboard = useCallback(async () => {
-    abortRef.current?.abort();
-    const c = new AbortController();
-    abortRef.current = c;
-    try {
-      setError(null);
-      const [dash, qs] = await Promise.all([getDashboard(brandId), getQueries(brandId)]);
-      if (!c.signal.aborted) { setData(dash); setQueries(qs); }
-    } catch (err) {
-      if (!c.signal.aborted) setError(err instanceof Error ? err.message : "Failed to load");
-    } finally {
-      if (!c.signal.aborted) setLoading(false);
-    }
-  }, [brandId]);
+  const error = loadError ? (loadError instanceof Error ? loadError.message : "Failed to load") : null;
 
-  useEffect(() => { loadDashboard(); getCredits().then(setCredits).catch(() => {}); return () => abortRef.current?.abort(); }, [loadDashboard]);
-
-  useEffect(() => {
-    const scan = data?.active_scan;
-    if (!scan || scan.status === "completed" || scan.status === "failed") return;
-    const i = setInterval(loadDashboard, 4000);
-    return () => clearInterval(i);
-  }, [data?.active_scan, loadDashboard]);
-
-  if (loading) return <div className="page" style={{ display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "var(--text-muted)" }}>Loading...</div>;
+  if (isLoading) return <div className="page" style={{ display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "var(--text-muted)" }}>Loading...</div>;
   if (!data) return <div className="page" style={{ padding: "var(--page-px)" }}><div style={{ color: "var(--red)", fontWeight: 700, marginBottom: 8 }}>{error ?? "Brand not found."}</div></div>;
 
   const { brand, latest_scan, active_scan, visibility_score, mention_rate, llm_breakdown, competitor_share, query_summaries, score_history, top_competitor } = data;
@@ -104,7 +81,7 @@ function BrandDashboardPageInner() {
               {new Date((active_scan ?? latest_scan)!.completed_at!).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
             </span>
           )}
-          <ScanControls brandId={brandId} latestScan={active_scan ?? latest_scan} credits={credits} onScanTriggered={loadDashboard} />
+          <ScanControls brandId={brandId} latestScan={active_scan ?? latest_scan} credits={credits} />
         </div>
       </PageHeader>
       <div style={{ flex: 1, padding: "var(--gap) var(--page-px)", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
@@ -170,7 +147,7 @@ function BrandDashboardPageInner() {
                   <div className="section-label">Manage queries</div>
                   <button onClick={() => setTab("queries")} className="btn btn-ghost btn-sm">Done</button>
                 </div>
-                <QueryManager brandId={brandId} brandName={brand.name} domain={brand.domain} queries={queries} onUpdate={loadDashboard} />
+                <QueryManager brandId={brandId} brandName={brand.name} domain={brand.domain} />
               </div>
             ) : (
               <>

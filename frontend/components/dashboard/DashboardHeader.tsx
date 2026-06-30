@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { triggerScan } from "@/lib/api";
+import { useTriggerScan } from "@/lib/hooks";
 import type { Brand, Scan } from "@/types";
 import type { CreditBalance } from "@/lib/api";
 
@@ -15,8 +15,8 @@ export const LLM_OPTIONS = [
   { id: "qwen", label: "Qwen 2.5 72B", provider: "Alibaba" },
 ];
 
-export function ScanControls({ brandId, latestScan, credits, onScanTriggered }: { brandId: string; latestScan: Scan | null; credits: CreditBalance | null; onScanTriggered: () => void }) {
-  const [scanning, setScanning] = useState(false);
+export function ScanControls({ brandId, latestScan, credits }: { brandId: string; latestScan: Scan | null; credits: CreditBalance | undefined }) {
+  const triggerScan = useTriggerScan();
   const [scanError, setScanError] = useState<string | null>(null);
   const [selectedLLMs, setSelectedLLMs] = useState(["chatgpt", "llama"]);
   const [showConfig, setShowConfig] = useState(false);
@@ -34,13 +34,11 @@ export function ScanControls({ brandId, latestScan, credits, onScanTriggered }: 
   }, [showConfig]);
 
   const handleScan = async () => {
-    if (scanning || selectedLLMs.length === 0 || isRunning) return;
-    setScanning(true);
+    if (triggerScan.isPending || selectedLLMs.length === 0 || isRunning) return;
     setScanError(null);
     setShowConfig(false);
     try {
-      await triggerScan(brandId, selectedLLMs);
-      onScanTriggered();
+      await triggerScan.mutateAsync({ brandId, llms: selectedLLMs });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Scan failed";
       if (msg.includes("402") || msg.includes("Insufficient credits")) {
@@ -48,8 +46,6 @@ export function ScanControls({ brandId, latestScan, credits, onScanTriggered }: 
       } else {
         setScanError(msg);
       }
-    } finally {
-      setScanning(false);
     }
   };
 
@@ -62,7 +58,7 @@ export function ScanControls({ brandId, latestScan, credits, onScanTriggered }: 
     <>
       <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
         {isRunning && <span className="pill pill-gold" style={{ fontSize: 10, lineHeight: "20px" }}>...</span>}
-        <button onClick={onScanTriggered} className="btn btn-ghost btn-sm" style={{ fontSize: 11, padding: "3px 6px", lineHeight: "20px" }} title="Refresh">
+        <button className="btn btn-ghost btn-sm" style={{ fontSize: 11, padding: "3px 6px", lineHeight: "20px" }} title="Refresh" onClick={() => window.location.reload()}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
             <path d="M3 3v5h5" />
@@ -95,8 +91,8 @@ export function ScanControls({ brandId, latestScan, credits, onScanTriggered }: 
             </div>
           )}
         </div>
-        <button onClick={handleScan} disabled={scanning || selectedLLMs.length === 0 || isRunning || (credits?.balance ?? 0) <= 0} className={`btn btn-sm ${isRunning || scanning ? "btn-ghost" : "btn-primary"}`} style={{ fontSize: 11, padding: "3px 12px", lineHeight: "20px" }}>
-          {isRunning ? "..." : scanning ? "..." : "Scan"}
+        <button onClick={handleScan} disabled={triggerScan.isPending || selectedLLMs.length === 0 || isRunning || (credits?.balance ?? 0) <= 0} className={`btn btn-sm ${isRunning || triggerScan.isPending ? "btn-ghost" : "btn-primary"}`} style={{ fontSize: 11, padding: "3px 12px", lineHeight: "20px" }}>
+          {isRunning ? "..." : triggerScan.isPending ? "..." : "Scan"}
         </button>
       </div>
       {scanError && <div style={{ maxWidth: 1100, margin: "0 auto", padding: "4px var(--page-px) 0" }}><div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "5px 10px", fontSize: 11, color: "#991B1B", fontWeight: 600 }}>{scanError}</div></div>}

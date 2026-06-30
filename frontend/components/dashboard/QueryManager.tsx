@@ -1,66 +1,55 @@
 "use client";
 
 import { useState } from "react";
-import type { MonitoredQuery } from "@/types";
-import { addQuery, deleteQuery, suggestQueries } from "@/lib/api";
+import { useQueries, useAddQuery, useDeleteQuery, useSuggestQueries } from "@/lib/hooks";
 
 export function QueryManager({
   brandId,
   brandName,
   domain,
-  queries,
-  onUpdate,
 }: {
   brandId: string;
   brandName: string;
   domain: string;
-  queries: MonitoredQuery[];
-  onUpdate: () => void;
 }) {
+  const { data: queries = [] } = useQueries(brandId);
+  const addQuery = useAddQuery();
+  const deleteQuery = useDeleteQuery();
+  const suggestQueries = useSuggestQueries();
+
   const [input, setInput] = useState("");
   const [keywords, setKeywords] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
-  const [adding, setAdding] = useState(false);
   const [showSuggest, setShowSuggest] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [addingSuggestion, setAddingSuggestion] = useState<string | null>(null);
 
   const handleAdd = async (text: string) => {
     if (!text.trim()) return;
-    setAdding(true);
     setError(null);
     try {
-      await addQuery(brandId, text.trim());
+      await addQuery.mutateAsync({ brandId, query_text: text.trim() });
       setInput("");
       setSuggestions((prev) => prev.filter((s) => s !== text));
-      onUpdate();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to add query");
-    } finally {
-      setAdding(false);
     }
   };
 
   const handleAddSuggestion = async (text: string) => {
-    setAddingSuggestion(text);
     setError(null);
     try {
-      await addQuery(brandId, text.trim());
+      await addQuery.mutateAsync({ brandId, query_text: text.trim() });
       setSuggestions((prev) => prev.filter((s) => s !== text));
-      onUpdate();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to add query");
-    } finally {
-      setAddingSuggestion(null);
     }
   };
 
   const handleDelete = async (queryId: string) => {
     setError(null);
     try {
-      await deleteQuery(brandId, queryId);
-      onUpdate();
+      await deleteQuery.mutateAsync({ brandId, queryId });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete query");
     }
@@ -71,8 +60,8 @@ export function QueryManager({
     setError(null);
     try {
       const kws = keywords.split(",").map((k) => k.trim()).filter(Boolean);
-      const res = await suggestQueries(brandId, brandName, domain, kws);
-      const existing = new Set(queries.map((q) => q.query_text.toLowerCase()));
+      const res = await suggestQueries.mutateAsync({ brandId, brand_name: brandName, domain, keywords: kws });
+      const existing = new Set(queries.map((q: any) => q.query_text.toLowerCase()));
       setSuggestions(res.suggested_queries.filter((s) => !existing.has(s.toLowerCase())));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to generate suggestions");
@@ -177,7 +166,7 @@ export function QueryManager({
         />
         <button
           onClick={() => handleAdd(input)}
-          disabled={adding || !input.trim()}
+          disabled={addQuery.isPending || !input.trim()}
           style={{
             fontSize: 12,
             padding: "8px 16px",
@@ -186,8 +175,8 @@ export function QueryManager({
             borderRadius: 8,
             color: "#0A0A0B",
             fontWeight: 500,
-            cursor: adding ? "not-allowed" : "pointer",
-            opacity: adding ? 0.6 : 1,
+            cursor: addQuery.isPending ? "not-allowed" : "pointer",
+            opacity: addQuery.isPending ? 0.6 : 1,
           }}
         >
           Add
@@ -267,7 +256,7 @@ export function QueryManager({
                   </span>
                   <button
                     onClick={() => handleAddSuggestion(s)}
-                    disabled={addingSuggestion === s}
+                    disabled={addQuery.isPending}
                     style={{
                       fontSize: 11,
                       padding: "3px 10px",
@@ -275,11 +264,11 @@ export function QueryManager({
                       border: "0.5px solid var(--green)",
                       borderRadius: 6,
                       color: "var(--green-text)",
-                      cursor: addingSuggestion === s ? "not-allowed" : "pointer",
-                      opacity: addingSuggestion === s ? 0.6 : 1,
+                      cursor: addQuery.isPending ? "not-allowed" : "pointer",
+                      opacity: addQuery.isPending ? 0.6 : 1,
                     }}
                   >
-                    {addingSuggestion === s ? "Adding…" : "+ Add"}
+                    + Add
                   </button>
                 </div>
               ))}

@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { Scan } from "@/types";
-import { getScans } from "@/lib/api";
+import { useScans } from "@/lib/hooks";
 
 function timeAgo(date: string): string {
   const diff = Date.now() - new Date(date).getTime();
@@ -16,17 +14,9 @@ function timeAgo(date: string): string {
 }
 
 export function ScanHistory({ brandId }: { brandId: string }) {
-  const [scans, setScans] = useState<Scan[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: scans = [], isLoading } = useScans(brandId);
 
-  useEffect(() => {
-    getScans(brandId)
-      .then(setScans)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [brandId]);
-
-  if (loading) return <div style={{ color: "var(--text-muted)", fontSize: 13, padding: "16px 0", textAlign: "center", fontWeight: 600 }}>Loading scans...</div>;
+  if (isLoading) return <div style={{ color: "var(--text-muted)", fontSize: 13, padding: "16px 0", textAlign: "center", fontWeight: 600 }}>Loading scans...</div>;
   if (!scans.length) return <div style={{ color: "var(--text-muted)", fontSize: 13, padding: "16px 0", textAlign: "center", fontWeight: 600 }}>No scans yet.</div>;
 
   return (

@@ -1,18 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { useAdminCampaigns, useAdminStats, useAdminDeleteCampaign, useAdminCancelCampaign } from "@/lib/hooks";
 import { AppHeader, PageHeader } from "@/components/AppHeader";
-import {
-  adminListCampaigns,
-  adminGetStats,
-  adminDeleteCampaign,
-  adminCancelCampaign,
-  type AdminCampaign,
-  type AdminStats,
-} from "@/lib/api";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Draft",
@@ -32,39 +23,17 @@ const STATUS_COLORS: Record<string, string> = {
 
 export function AdminDashboard() {
   const { user } = useAuth();
-  const router = useRouter();
-  const [campaigns, setCampaigns] = useState<AdminCampaign[]>([]);
-  const [stats, setStats] = useState<AdminStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { data: campaigns = [], isLoading, error: loadError, refetch } = useAdminCampaigns();
+  const { data: stats } = useAdminStats();
+  const deleteCampaign = useAdminDeleteCampaign();
+  const cancelCampaign = useAdminCancelCampaign();
 
-  useEffect(() => {
-    if (!user) return;
-    loadData();
-  }, [user]);
-
-  const loadData = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const [c, s] = await Promise.all([
-        adminListCampaigns(),
-        adminGetStats(),
-      ]);
-      setCampaigns(c);
-      setStats(s);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const error = loadError ? (loadError instanceof Error ? loadError.message : "Failed to load") : null;
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this campaign?")) return;
     try {
-      await adminDeleteCampaign(id);
-      setCampaigns((prev) => prev.filter((c) => c.id !== id));
+      await deleteCampaign.mutateAsync(id);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Delete failed");
     }
@@ -72,8 +41,7 @@ export function AdminDashboard() {
 
   const handleCancel = async (id: string) => {
     try {
-      const updated = await adminCancelCampaign(id);
-      setCampaigns((prev) => prev.map((c) => c.id === id ? { ...c, status: updated.status } : c));
+      await cancelCampaign.mutateAsync(id);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Cancel failed");
     }
@@ -90,7 +58,7 @@ export function AdminDashboard() {
         <Link href="/admin/campaigns/new" className="btn btn-primary btn-sm">
           + New Campaign
         </Link>
-        <button onClick={loadData} className="btn btn-sm">
+        <button onClick={() => refetch()} className="btn btn-sm">
           Refresh
         </button>
       </PageHeader>
@@ -102,7 +70,7 @@ export function AdminDashboard() {
           </div>
         )}
 
-        {loading ? (
+        {isLoading ? (
           <div className="card" style={{ textAlign: "center", color: "var(--text-muted)", fontSize: 13 }}>
             Loading...
           </div>
@@ -141,7 +109,7 @@ export function AdminDashboard() {
             </span>
           </div>
 
-          {campaigns.length === 0 && !loading && (
+          {campaigns.length === 0 && !isLoading && (
             <div style={{ textAlign: "center", padding: "24px 0", color: "var(--text-muted)", fontSize: 13 }}>
               No campaigns yet.
               <br />

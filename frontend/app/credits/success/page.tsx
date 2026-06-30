@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { verifyPayment } from "@/lib/api";
+import { useVerifyPayment } from "@/lib/hooks";
 
 type State =
   | { status: "loading" }
@@ -14,6 +14,7 @@ type State =
 export default function CreditsSuccessPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const verifyPayment = useVerifyPayment();
   const [state, setState] = useState<State>({ status: "loading" });
 
   useEffect(() => {
@@ -26,7 +27,7 @@ export default function CreditsSuccessPage() {
       return;
     }
 
-    verifyPayment(transactionId)
+    verifyPayment.mutateAsync(transactionId)
       .then((res: Record<string, unknown>) => {
         const s = res.status as string;
         if (s === "successful") {
@@ -40,7 +41,7 @@ export default function CreditsSuccessPage() {
       .catch((err) => {
         setState({ status: "error", message: err instanceof Error ? err.message : "Verification failed" });
       });
-  }, [searchParams]);
+  }, [searchParams, verifyPayment]);
 
   return (
     <main className="page" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100dvh", padding: "0 var(--page-px)" }}>
