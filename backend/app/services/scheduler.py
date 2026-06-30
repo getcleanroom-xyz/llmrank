@@ -52,47 +52,50 @@ async def init_scheduler():
     scheduler.start()
     logger.info("APScheduler started")
 
-    from app.core.database import AsyncSessionLocal
-    from app.models.models import Campaign, CampaignStatus, ScheduleType
+    try:
+        from app.core.database import AsyncSessionLocal
+        from app.models.models import Campaign, CampaignStatus, ScheduleType
 
-    async with AsyncSessionLocal() as db:
-        result = await db.execute(
-            select(Campaign).where(
-                Campaign.status.in_([CampaignStatus.scheduled, CampaignStatus.sending])
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(Campaign).where(
+                    Campaign.status.in_([CampaignStatus.scheduled, CampaignStatus.sending])
+                )
             )
-        )
-        campaigns = result.scalars().all()
-        for campaign in campaigns:
-            job_id = f"campaign_{campaign.id}"
-            if scheduler.get_job(job_id):
-                continue
+            campaigns = result.scalars().all()
+            for campaign in campaigns:
+                job_id = f"campaign_{campaign.id}"
+                if scheduler.get_job(job_id):
+                    continue
 
-            try:
-                if campaign.schedule_type == ScheduleType.now:
-                    scheduler.add_job(
-                        send_campaign_job,
-                        args=[str(campaign.id), settings.CORS_ORIGINS.split(",")[0].strip()],
-                        id=job_id,
-                        replace_existing=True,
-                    )
-                elif campaign.schedule_type == ScheduleType.once and campaign.scheduled_at:
-                    scheduler.add_job(
-                        send_campaign_job,
-                        trigger=DateTrigger(run_date=campaign.scheduled_at),
-                        args=[str(campaign.id), settings.CORS_ORIGINS.split(",")[0].strip()],
-                        id=job_id,
-                        replace_existing=True,
-                    )
-                elif campaign.schedule_type == ScheduleType.recurring and campaign.cron_expr:
-                    scheduler.add_job(
-                        send_campaign_job,
-                        trigger=CronTrigger.from_crontab(campaign.cron_expr),
-                        args=[str(campaign.id), settings.CORS_ORIGINS.split(",")[0].strip()],
-                        id=job_id,
-                        replace_existing=True,
-                    )
-            except Exception:
-                logger.exception("Failed to register job for campaign %s", campaign.id)
+                try:
+                    if campaign.schedule_type == ScheduleType.now:
+                        scheduler.add_job(
+                            send_campaign_job,
+                            args=[str(campaign.id), settings.CORS_ORIGINS.split(",")[0].strip()],
+                            id=job_id,
+                            replace_existing=True,
+                        )
+                    elif campaign.schedule_type == ScheduleType.once and campaign.scheduled_at:
+                        scheduler.add_job(
+                            send_campaign_job,
+                            trigger=DateTrigger(run_date=campaign.scheduled_at),
+                            args=[str(campaign.id), settings.CORS_ORIGINS.split(",")[0].strip()],
+                            id=job_id,
+                            replace_existing=True,
+                        )
+                    elif campaign.schedule_type == ScheduleType.recurring and campaign.cron_expr:
+                        scheduler.add_job(
+                            send_campaign_job,
+                            trigger=CronTrigger.from_crontab(campaign.cron_expr),
+                            args=[str(campaign.id), settings.CORS_ORIGINS.split(",")[0].strip()],
+                            id=job_id,
+                            replace_existing=True,
+                        )
+                except Exception:
+                    logger.exception("Failed to register job for campaign %s", campaign.id)
+    except Exception:
+        logger.exception("Failed to recover pending campaigns (table may not exist yet)")
 
 
 async def shutdown_scheduler():
