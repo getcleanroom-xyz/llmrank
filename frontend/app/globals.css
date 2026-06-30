@@ -310,6 +310,52 @@ body {
   }
 }
 
+/* ─── Checkbox / Radio (neobrutalist) ─── */
+input[type="checkbox"]:not(.native), input[type="radio"]:not(.native) {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  margin: 0;
+}
+input[type="checkbox"]:not(.native) { border-radius: 2px; }
+input[type="radio"]:not(.native) { border-radius: 50%; }
+input[type="checkbox"]:not(.native):hover, input[type="radio"]:not(.native):hover {
+  box-shadow: var(--shadow-sm);
+}
+input[type="checkbox"]:not(.native):checked, input[type="radio"]:not(.native):checked {
+  background: var(--primary);
+}
+input[type="checkbox"]:not(.native):checked::after {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--black);
+}
+input[type="radio"]:not(.native):checked::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--black);
+}
+input[type="checkbox"]:not(.native):disabled, input[type="radio"]:not(.native):disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* ─── Header Drawer ─── */
 .header-drawer-overlay {
   position: fixed;

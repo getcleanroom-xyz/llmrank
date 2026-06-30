@@ -13,13 +13,15 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  draft: "var(--text-muted)",
-  scheduled: "var(--blue)",
-  sending: "var(--orange)",
-  sent: "var(--green)",
-  cancelled: "var(--text-muted)",
+const STATUS_PILL: Record<string, string> = {
+  draft: "pill pill-neu",
+  scheduled: "pill pill-gold",
+  sending: "pill pill-gold",
+  sent: "pill pill-pos",
+  cancelled: "pill pill-neu",
 };
+
+const ACCENT_COLORS = ["var(--primary)", "var(--blue)", "var(--green)", "var(--orange)"];
 
 export function AdminDashboard() {
   const { user } = useAuth();
@@ -78,31 +80,52 @@ export function AdminDashboard() {
           <>
             {stats && (
               <div className="grid-4" style={{ marginBottom: "var(--gap)" }}>
-                <div className="card" style={{ textAlign: "center" }}>
-                  <div className="section-label">Users</div>
-                  <div style={{ fontSize: 24, fontWeight: 800 }}>{stats.total_users}</div>
-                </div>
-                <div className="card" style={{ textAlign: "center" }}>
-                  <div className="section-label">Campaigns</div>
-                  <div style={{ fontSize: 24, fontWeight: 800 }}>{stats.total_campaigns}</div>
-                </div>
-                <div className="card" style={{ textAlign: "center" }}>
-                  <div className="section-label">Sent</div>
-                  <div style={{ fontSize: 24, fontWeight: 800 }}>{stats.total_sent}</div>
-                </div>
-                <div className="card" style={{ textAlign: "center" }}>
-                  <div className="section-label">Opened / Clicked</div>
-                  <div style={{ fontSize: 24, fontWeight: 800 }}>
-                    {stats.total_opened} / {stats.total_clicked}
+                {[
+                  { label: "Users", value: stats.total_users },
+                  { label: "Campaigns", value: stats.total_campaigns },
+                  { label: "Sent", value: stats.total_sent },
+                  { label: "Opened / Clicked", value: `${stats.total_opened} / ${stats.total_clicked}` },
+                ].map((s, i) => (
+                  <div
+                    key={s.label}
+                    className="card"
+                    style={{
+                      textAlign: "center",
+                      position: "relative",
+                      overflow: "hidden",
+                      paddingTop: 20,
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: 4,
+                        background: ACCENT_COLORS[i],
+                      }}
+                    />
+                    <div className="section-label" style={{ marginBottom: 4 }}>{s.label}</div>
+                    <div style={{ fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>{s.value}</div>
                   </div>
-                </div>
+                ))}
               </div>
             )}
           </>
         )}
 
-        <div className="card" style={{ overflow: "hidden" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <div className="card" style={{ overflow: "hidden", padding: 0 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "14px 16px",
+              borderBottom: "2px solid var(--border)",
+              background: "var(--bg-dark)",
+            }}
+          >
             <div className="section-label">Campaigns</div>
             <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
               {campaigns.length} total
@@ -110,11 +133,39 @@ export function AdminDashboard() {
           </div>
 
           {campaigns.length === 0 && !isLoading && (
-            <div style={{ textAlign: "center", padding: "24px 0", color: "var(--text-muted)", fontSize: 13 }}>
-              No campaigns yet.
-              <br />
-              <Link href="/admin/campaigns/new" style={{ color: "var(--blue)", fontWeight: 600 }}>
-                Create your first campaign
+            <div
+              style={{
+                textAlign: "center",
+                padding: "48px 24px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: "var(--radius)",
+                  border: "2px dashed var(--text-muted)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 28,
+                  fontWeight: 800,
+                  color: "var(--text-muted)",
+                  marginBottom: 4,
+                }}
+              >
+                0
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>No campaigns yet</div>
+              <div style={{ fontSize: 13, color: "var(--text-secondary)", maxWidth: 320, lineHeight: 1.6 }}>
+                Create your first email campaign to start engaging with your users.
+              </div>
+              <Link href="/admin/campaigns/new" className="btn btn-primary" style={{ marginTop: 4 }}>
+                + Create Campaign
               </Link>
             </div>
           )}
@@ -126,30 +177,39 @@ export function AdminDashboard() {
                 display: "flex",
                 alignItems: "center",
                 gap: 12,
-                padding: "10px 0",
-                borderBottom: "1px solid var(--bg-dark)",
+                padding: "12px 16px",
+                borderBottom: "1.5px solid var(--bg-dark)",
                 flexWrap: "wrap",
               }}
             >
-              <div style={{ flex: 1, minWidth: 150 }}>
+              <div style={{ flex: 1, minWidth: 160 }}>
                 <Link
                   href={`/admin/campaigns/${c.id}`}
-                  style={{ fontWeight: 600, color: "var(--text)", textDecoration: "none", fontSize: 14 }}
+                  style={{ fontWeight: 700, color: "var(--text)", textDecoration: "none", fontSize: 14 }}
                 >
                   {c.name}
                 </Link>
-                <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 300 }}>
                   {c.subject}
                 </div>
               </div>
 
-              <span className="pill" style={{ borderColor: STATUS_COLORS[c.status] || "var(--border)", color: STATUS_COLORS[c.status] || "var(--text)" }}>
+              <span className={STATUS_PILL[c.status] || "pill pill-neu"} style={{ fontSize: 10 }}>
                 {STATUS_LABELS[c.status] || c.status}
               </span>
 
-              <div style={{ fontSize: 11, color: "var(--text-secondary)", textAlign: "right", minWidth: 80 }}>
-                <div>{c.sent_count} sent</div>
-                <div>{c.opened_count} opened</div>
+              <div style={{ display: "flex", gap: 16, alignItems: "center", fontSize: 11, color: "var(--text-secondary)" }}>
+                <div style={{ textAlign: "right", minWidth: 60 }}>
+                  <div style={{ fontWeight: 600 }}>{c.sent_count} sent</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, justifyContent: "flex-end" }}>
+                    <span style={{ color: "var(--green)", fontWeight: 600 }}>{c.opened_count} opened</span>
+                    {c.sent_count > 0 && (
+                      <div style={{ width: 40, height: 4, background: "var(--bg-dark)", borderRadius: 2, overflow: "hidden", border: "1px solid var(--border)" }}>
+                        <div style={{ height: "100%", width: `${Math.round((c.opened_count / c.sent_count) * 100)}%`, background: "var(--green)", borderRadius: 1 }} />
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div style={{ display: "flex", gap: 4 }}>

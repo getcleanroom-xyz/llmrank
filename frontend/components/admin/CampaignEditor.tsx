@@ -24,6 +24,79 @@ interface CampaignEditorProps {
   existing?: AdminCampaignDetail;
 }
 
+const AUDIENCE_OPTIONS = [
+  { value: "all_users", label: "All registered users" },
+  { value: "segment", label: "Segment by sign-up date" },
+  { value: "upload", label: "CSV upload" },
+] as const;
+
+const SCHEDULE_OPTIONS = [
+  { value: "now", label: "Send immediately" },
+  { value: "once", label: "Schedule for later" },
+  { value: "recurring", label: "Recurring (cron)" },
+] as const;
+
+function RadioGroup<T extends string>({
+  options,
+  value,
+  onChange,
+  disabled,
+}: {
+  options: readonly { value: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+  disabled: boolean;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {options.map((opt) => {
+        const selected = value === opt.value;
+        return (
+          <label
+            key={opt.value}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "8px 10px",
+              borderRadius: "var(--radius)",
+              border: selected ? "2px solid var(--border)" : "2px solid transparent",
+              background: selected ? "var(--primary)" : "transparent",
+              cursor: disabled ? "not-allowed" : "pointer",
+              fontSize: 12,
+              fontWeight: selected ? 700 : 600,
+              transition: "all 0.1s",
+              opacity: disabled ? 0.5 : 1,
+            }}
+            onMouseEnter={(e) => {
+              if (!disabled && !selected) {
+                (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
+                (e.currentTarget as HTMLElement).style.background = "var(--bg-dark)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!selected) {
+                (e.currentTarget as HTMLElement).style.borderColor = "transparent";
+                (e.currentTarget as HTMLElement).style.background = "transparent";
+              }
+            }}
+          >
+            <input
+              type="radio"
+              name={opt.label}
+              value={opt.value}
+              checked={selected}
+              onChange={() => onChange(opt.value)}
+              disabled={disabled}
+            />
+            {opt.label}
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
 export function CampaignEditor({ existing }: CampaignEditorProps) {
   const { user } = useAuth();
   const router = useRouter();
@@ -249,113 +322,109 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
 
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap)" }}>
             <div className="card">
-              <div className="section-label" style={{ marginBottom: 8 }}>Audience</div>
+              <div className="section-label" style={{ marginBottom: 10 }}>Audience</div>
+              <RadioGroup
+                options={AUDIENCE_OPTIONS}
+                value={audienceType as typeof AUDIENCE_OPTIONS[number]["value"]}
+                onChange={setAudienceType}
+                disabled={!editable}
+              />
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600 }}>
-                  <input type="radio" name="audience" value="all_users" checked={audienceType === "all_users"} onChange={() => setAudienceType("all_users")} disabled={!editable} />
-                  All registered users
-                </label>
-
-                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600 }}>
-                  <input type="radio" name="audience" value="segment" checked={audienceType === "segment"} onChange={() => setAudienceType("segment")} disabled={!editable} />
-                  Segment
-                </label>
-
-                {audienceType === "segment" && (
-                  <div style={{ paddingLeft: 20, display: "flex", flexDirection: "column", gap: 6 }}>
-                    <div>
-                      <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>Signed up after</div>
-                      <input type="date" value={signedUpAfter} onChange={(e) => setSignedUpAfter(e.target.value)} className="input" disabled={!editable} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>Signed up before</div>
-                      <input type="date" value={signedUpBefore} onChange={(e) => setSignedUpBefore(e.target.value)} className="input" disabled={!editable} />
-                    </div>
+              {audienceType === "segment" && (
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1.5px solid var(--bg-dark)", display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div>
+                    <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>Signed up after</div>
+                    <input type="date" value={signedUpAfter} onChange={(e) => setSignedUpAfter(e.target.value)} className="input" disabled={!editable} />
                   </div>
-                )}
-
-                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600 }}>
-                  <input type="radio" name="audience" value="upload" checked={audienceType === "upload"} onChange={() => setAudienceType("upload")} disabled={!editable} />
-                  CSV upload
-                </label>
-
-                {audienceType === "upload" && existing && (
-                  <div style={{ paddingLeft: 20 }}>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".csv"
-                      onChange={handleCsvUpload}
-                      style={{ fontSize: 11, width: "100%" }}
-                      disabled={!editable}
-                    />
+                  <div>
+                    <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>Signed up before</div>
+                    <input type="date" value={signedUpBefore} onChange={(e) => setSignedUpBefore(e.target.value)} className="input" disabled={!editable} />
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+
+              {audienceType === "upload" && existing && (
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1.5px solid var(--bg-dark)" }}>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv"
+                    onChange={handleCsvUpload}
+                    style={{ fontSize: 11, width: "100%" }}
+                    disabled={!editable}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="card">
-              <div className="section-label" style={{ marginBottom: 8 }}>Schedule</div>
+              <div className="section-label" style={{ marginBottom: 10 }}>Schedule</div>
+              <RadioGroup
+                options={SCHEDULE_OPTIONS}
+                value={scheduleType as typeof SCHEDULE_OPTIONS[number]["value"]}
+                onChange={setScheduleType}
+                disabled={!editable}
+              />
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600 }}>
-                  <input type="radio" name="schedule" value="now" checked={scheduleType === "now"} onChange={() => setScheduleType("now")} disabled={!editable} />
-                  Send immediately on save
-                </label>
+              {scheduleType === "once" && (
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1.5px solid var(--bg-dark)" }}>
+                  <input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} className="input" disabled={!editable} />
+                </div>
+              )}
 
-                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600 }}>
-                  <input type="radio" name="schedule" value="once" checked={scheduleType === "once"} onChange={() => setScheduleType("once")} disabled={!editable} />
-                  Schedule for later
-                </label>
-
-                {scheduleType === "once" && (
-                  <div style={{ paddingLeft: 20 }}>
-                    <input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} className="input" disabled={!editable} />
+              {scheduleType === "recurring" && (
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1.5px solid var(--bg-dark)" }}>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>Cron expression</div>
+                  <input
+                    type="text"
+                    value={cronExpr}
+                    onChange={(e) => setCronExpr(e.target.value)}
+                    className="input"
+                    placeholder='e.g. "0 9 * * 1"'
+                    disabled={!editable}
+                  />
+                  <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4 }}>
+                    Examples: 0 9 * * 1 (Mon 9AM), 0 0 1 * * (1st of month), */15 * * * * (every 15 min)
                   </div>
-                )}
-
-                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600 }}>
-                  <input type="radio" name="schedule" value="recurring" checked={scheduleType === "recurring"} onChange={() => setScheduleType("recurring")} disabled={!editable} />
-                  Recurring
-                </label>
-
-                {scheduleType === "recurring" && (
-                  <div style={{ paddingLeft: 20 }}>
-                    <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>Cron expression</div>
-                    <input
-                      type="text"
-                      value={cronExpr}
-                      onChange={(e) => setCronExpr(e.target.value)}
-                      className="input"
-                      placeholder='e.g. "0 9 * * 1" (weekly Mon 9AM)'
-                      disabled={!editable}
-                    />
-                    <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4 }}>
-                      Examples: 0 9 * * 1 (Mon 9AM), 0 0 1 * * (1st of month), */15 * * * * (every 15 min)
-                    </div>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             {existing && (
               <div className="card">
-                <div className="section-label" style={{ marginBottom: 8 }}>Stats</div>
-                <div style={{ fontSize: 12, display: "flex", flexDirection: "column", gap: 4 }}>
-                  <div>Status: <strong>{existing.status}</strong></div>
-                  <div>Recipients: <strong>{existing.total_recipients}</strong></div>
-                  <div>Sent: <strong>{existing.sent_count}</strong></div>
-                  <div>Opened: <strong>{existing.opened_count}</strong></div>
-                  <div>Clicked: <strong>{existing.clicked_count}</strong></div>
-                  {existing.scheduled_at && <div>Scheduled: <strong>{new Date(existing.scheduled_at).toLocaleString()}</strong></div>}
-                  {existing.last_sent_at && <div>Last sent: <strong>{new Date(existing.last_sent_at).toLocaleString()}</strong></div>}
+                <div
+                  className="section-label"
+                  style={{
+                    marginBottom: 10,
+                    paddingBottom: 8,
+                    borderBottom: "2px solid var(--border)",
+                  }}
+                >
+                  Stats
+                </div>
+                <div style={{ fontSize: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+                  <StatRow label="Status" value={existing.status} />
+                  <StatRow label="Recipients" value={String(existing.total_recipients)} />
+                  <StatRow label="Sent" value={String(existing.sent_count)} />
+                  <StatRow label="Opened" value={String(existing.opened_count)} />
+                  <StatRow label="Clicked" value={String(existing.clicked_count)} />
+                  {existing.scheduled_at && <StatRow label="Scheduled" value={new Date(existing.scheduled_at).toLocaleString()} />}
+                  {existing.last_sent_at && <StatRow label="Last sent" value={new Date(existing.last_sent_at).toLocaleString()} />}
                 </div>
               </div>
             )}
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function StatRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0" }}>
+      <span style={{ color: "var(--text-secondary)" }}>{label}</span>
+      <strong>{value}</strong>
     </div>
   );
 }
