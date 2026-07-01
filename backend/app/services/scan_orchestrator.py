@@ -14,6 +14,24 @@ from app.services.insight_engine import generate_insights_for_query
 logger = logging.getLogger(__name__)
 
 
+async def _keepalive_ping(db: AsyncSession, scan_id: uuid.UUID, stop_event: asyncio.Event):
+    """Periodically ping DB to keep connection alive during long scans."""
+    while not stop_event.is_set():
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout=30)
+        except asyncio.TimeoutError:
+            pass
+        if stop_event.is_set():
+            break
+        try:
+            await db.execute(text("SELECT 1"))
+        except Exception:
+            logger.warning("Keepalive ping failed for scan %s (connection may be stale)", scan_id)
+            break
+
+logger = logging.getLogger(__name__)
+
+
 def _utcnow() -> datetime:
     """Return naive UTC datetime compatible with TIMESTAMP WITHOUT TIME ZONE columns."""
     return datetime.now(timezone.utc).replace(tzinfo=None)
@@ -86,6 +104,10 @@ async def run_scan(
     total_mentioned = 0
     total_successful = 0
 
+    # Start keepalive ping to prevent connection timeout during long LLM calls
+    stop_event = asyncio.Event()
+    keepalive_task = asyncio.create_task(_keepalive_ping(db, scan.id, stop_event))
+
     # Process each query
     for query in queries:
         # Fire all LLMs concurrently for this query
@@ -144,21 +166,15 @@ async def run_scan(
     scan.status = ScanStatus.completed
     scan.completed_at = _utcnow()
 
-    logger.info("Scan %s committing: score=%.1f mention_rate=%.1f successful=%d", scan.id, visibility_score, mention_rate, total_successful)
-
-    # Keepalive: ping DB before final write to detect stale connections
-    # (Neon free tier closes idle connections after ~5 min; LLM calls can take that long)
+    # Stop keepalive ping — we're done with LLM calls
+    stop_event.set()
+    keepalive_task.cancel()
     try:
-        await db.execute(text("SELECT 1"))
-    except Exception:
-        logger.warning("Scan %s: connection stale after LLM calls, rolling back and retrying", scan.id)
-        await db.rollback()
-        # Re-run aggregate assignments after rollback (session state is preserved)
-        scan.visibility_score = visibility_score
-        scan.mention_rate = mention_rate
-        scan.status = ScanStatus.completed
-        scan.completed_at = _utcnow()
+        await keepalive_task
+    except asyncio.CancelledError:
+        pass
 
+    logger.info("Scan %s committing: score=%.1f mention_rate=%.1f successful=%d", scan.id, visibility_score, mention_rate, total_successful)
     await db.commit()
     await db.refresh(scan)
     logger.info("Scan %s committed successfully", scan.id)
