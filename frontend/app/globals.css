@@ -393,3 +393,27 @@ input[type="checkbox"]:not(.native):disabled, input[type="radio"]:not(.native):d
   overflow-y: auto;
   flex: 1;
 }
+
+/* ─── TipTap Editor Content ─── */
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 22px;
+  margin-bottom: 8px;
+}
+.ProseMirror ul { list-style: disc; }
+.ProseMirror ol { list-style: decimal; }
+.ProseMirror li { margin-bottom: 4px; }
+.ProseMirror li p { margin: 0; display: inline; }
+.ProseMirror blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 12px;
+  margin: 8px 0;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+.ProseMirror h2 { font-size: 1.25rem; font-weight: 800; margin: 12px 0 6px; }
+.ProseMirror h3 { font-size: 1.1rem; font-weight: 700; margin: 10px 0 4px; }
+.ProseMirror p { margin-bottom: 8px; }
+.ProseMirror p:last-child { margin-bottom: 0; }
+.ProseMirror hr { border: none; border-top: 2px solid var(--border); margin: 12px 0; }
+.ProseMirror a { color: var(--text); text-decoration: underline; }
