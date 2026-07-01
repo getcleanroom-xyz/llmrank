@@ -288,7 +288,7 @@ body {
 }
 @media (max-width: 640px) {
   .page-header-inner { justify-content: stretch; }
-  .page-header-inner .btn { flex: 1; min-width: 0; text-align: center; }
+  .page-header-inner .btn:not(.btn-back) { flex: 1; min-width: 0; text-align: center; }
 }
 @media (min-width: 768px) {
   .page-header-inner {
