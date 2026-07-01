@@ -443,15 +443,69 @@ input[type="checkbox"]:not(.native):disabled, input[type="radio"]:not(.native):d
 .campaign-row-stats { display: flex; gap: 16px; align-items: center; font-size: 11px; color: var(--text-secondary); }
 .campaign-row-pill { flex-shrink: 0; }
 .campaign-row-bars { width: 50px; display: flex; flex-direction: column; gap: 2px; }
+.campaign-row-sub { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+.campaign-row-end { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 
 @media (max-width: 640px) {
-  .campaign-row { flex-direction: column; align-items: flex-start; gap: 8px; padding: 10px 12px; }
-  .campaign-row-main { min-width: 0; width: 100%; }
-  .campaign-row-main-name { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-  .campaign-row-pill { order: -1; }
-  .campaign-row-stats { width: 100%; justify-content: flex-start; gap: 12px; }
-  .campaign-row-stats > div { text-align: left; min-width: 0; }
-  .campaign-row-bars { display: none; }
-  .campaign-row-actions { width: 100%; }
-  .campaign-row-actions .btn { font-size: 11px; padding: 4px 8px; }
+  .campaign-row {
+    padding: 6px 8px;
+  }
+  .campaign-row-main {
+    min-width: 0;
+    width: 100%;
+  }
+  .campaign-row-main-name {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .campaign-row-main-name a {
+    font-size: 12px !important;
+  }
+  .campaign-row-date {
+    display: none !important;
+  }
+  .campaign-row-pill {
+    font-size: 9px !important;
+    padding: 1px 5px !important;
+  }
+  .campaign-row-sub {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 1px;
+  }
+  .campaign-row-sub > span {
+    font-size: 10px !important;
+    max-width: none !important;
+    white-space: normal !important;
+  }
+  .campaign-row-end {
+    margin-left: 0;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .campaign-row-stats {
+    font-size: 10px !important;
+    display: inline-flex;
+    gap: 4px;
+  }
+  .campaign-row-stats span:first-child {
+    font-weight: 600;
+  }
+  .campaign-row-stats span:last-child {
+    font-size: 9px !important;
+  }
+  .campaign-row-bars {
+    display: none !important;
+  }
+  .campaign-row-actions {
+    display: inline-flex;
+    gap: 2px;
+  }
+  .campaign-row-actions .btn {
+    font-size: 9px !important;
+    padding: 1px 5px !important;
+  }
 }

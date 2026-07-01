@@ -251,7 +251,7 @@ export function AdminDashboard() {
                       {c.name}
                     </Link>
                     {c.last_sent_at && (
-                      <span style={{ fontSize: 10, color: "var(--text-muted)" }}>
+                      <span className="campaign-row-date" style={{ fontSize: 10, color: "var(--text-muted)" }}>
                         {new Date(c.last_sent_at).toLocaleDateString()}
                       </span>
                     )}
@@ -259,58 +259,58 @@ export function AdminDashboard() {
                       {STATUS_LABELS[c.status] || c.status}
                     </span>
                   </div>
-                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 300 }}>
-                    {c.subject}
-                  </div>
-                </div>
-
-                <div className="campaign-row-stats">
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{c.sent_count} sent</div>
-                    {c.sent_count > 0 && (
-                      <div style={{ fontSize: 10, color: "var(--green)", fontWeight: 600 }}>
-                        {openRate}% opened
-                        {c.opened_count > 0 && <> · {clickRate}% clicked</>}
+                  <div className="campaign-row-sub">
+                    <span style={{ fontSize: 11, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 300 }}>
+                      {c.subject}
+                    </span>
+                    <div className="campaign-row-end">
+                      <div className="campaign-row-stats">
+                        <span style={{ fontWeight: 600 }}>{c.sent_count} sent</span>
+                        {c.sent_count > 0 && (
+                          <span style={{ fontSize: 10, color: "var(--green)", fontWeight: 600 }}>
+                            {openRate}% opened
+                            {c.opened_count > 0 && <> · {clickRate}% clicked</>}
+                          </span>
+                        )}
                       </div>
-                    )}
-                  </div>
-                  {c.sent_count > 0 && (
-                    <div className="campaign-row-bars">
-                      <div style={{ height: 4, background: "var(--bg-dark)", borderRadius: 2, overflow: "hidden", border: "1px solid var(--border)" }}>
-                        <div style={{ height: "100%", width: `${openRate}%`, background: "var(--green)", borderRadius: 1 }} />
-                      </div>
-                      <div style={{ height: 4, background: "var(--bg-dark)", borderRadius: 2, overflow: "hidden", border: "1px solid var(--border)" }}>
-                        <div style={{ height: "100%", width: `${clickRate}%`, background: "var(--text-secondary)", borderRadius: 1 }} />
+                      {c.sent_count > 0 && (
+                        <div className="campaign-row-bars">
+                          <div style={{ height: 4, background: "var(--bg-dark)", borderRadius: 2, overflow: "hidden", border: "1px solid var(--border)" }}>
+                            <div style={{ height: "100%", width: `${openRate}%`, background: "var(--green)", borderRadius: 1 }} />
+                          </div>
+                          <div style={{ height: 4, background: "var(--bg-dark)", borderRadius: 2, overflow: "hidden", border: "1px solid var(--border)" }}>
+                            <div style={{ height: "100%", width: `${clickRate}%`, background: "var(--text-secondary)", borderRadius: 1 }} />
+                          </div>
+                        </div>
+                      )}
+                      <div className="campaign-row-actions">
+                        <Link href={`/admin/campaigns/${c.id}`} className="btn btn-sm btn-ghost">
+                          Edit
+                        </Link>
+                        <button onClick={() => handleClone(c.id)} className="btn btn-sm btn-ghost" style={{ fontSize: 11 }}>
+                          Clone
+                        </button>
+                        {(c.status === "scheduled" || c.status === "sending") && (
+                          <button
+                            onClick={() => setConfirmAction({ type: "cancel", id: c.id, name: c.name })}
+                            className="btn btn-sm btn-ghost"
+                            style={{ color: "var(--orange)" }}
+                          >
+                            Cancel
+                          </button>
+                        )}
+                        {(c.status === "draft" || c.status === "cancelled") && (
+                          <button
+                            onClick={() => setConfirmAction({ type: "delete", id: c.id, name: c.name })}
+                            className="btn btn-sm btn-ghost"
+                            style={{ color: "var(--red)" }}
+                          >
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </div>
-                  )}
-                </div>
-
-                <div className="campaign-row-actions">
-                  <Link href={`/admin/campaigns/${c.id}`} className="btn btn-sm btn-ghost">
-                    Edit
-                  </Link>
-                  <button onClick={() => handleClone(c.id)} className="btn btn-sm btn-ghost" style={{ fontSize: 11 }}>
-                    Clone
-                  </button>
-                  {(c.status === "scheduled" || c.status === "sending") && (
-                    <button
-                      onClick={() => setConfirmAction({ type: "cancel", id: c.id, name: c.name })}
-                      className="btn btn-sm btn-ghost"
-                      style={{ color: "var(--orange)" }}
-                    >
-                      Cancel
-                    </button>
-                  )}
-                  {(c.status === "draft" || c.status === "cancelled") && (
-                    <button
-                      onClick={() => setConfirmAction({ type: "delete", id: c.id, name: c.name })}
-                      className="btn btn-sm btn-ghost"
-                      style={{ color: "var(--red)" }}
-                    >
-                      Delete
-                    </button>
-                  )}
+                  </div>
                 </div>
               </div>
             );
