@@ -1,19 +1,31 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import type { AdminUser } from "@/lib/api";
 
 interface MultiUserSelectProps {
   users: AdminUser[];
   selectedIds: string[];
   onChange: (ids: string[]) => void;
+  manualEmails: string[];
+  onManualEmailsChange: (emails: string[]) => void;
   disabled?: boolean;
 }
 
-export function MultiUserSelect({ users, selectedIds, onChange, disabled }: MultiUserSelectProps) {
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function MultiUserSelect({
+  users,
+  selectedIds,
+  onChange,
+  manualEmails,
+  onManualEmailsChange,
+  disabled,
+}: MultiUserSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -26,14 +38,43 @@ export function MultiUserSelect({ users, selectedIds, onChange, disabled }: Mult
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  const selectedSet = new Set(selectedIds);
-  const selectedUsers = users.filter((u) => selectedSet.has(u.id));
+  useEffect(() => {
+    if (open && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [open]);
 
-  const filtered = users.filter((u) => {
-    if (!search) return true;
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const manualSet = useMemo(() => new Set(manualEmails), [manualEmails]);
+  const selectedUsers = useMemo(() => users.filter((u) => selectedSet.has(u.id)), [users, selectedSet]);
+
+  const userEmailSet = useMemo(() => new Set(users.map((u) => u.email.toLowerCase())), [users]);
+
+  const filtered = useMemo(() => {
+    if (!search) return users;
     const q = search.toLowerCase();
-    return u.email.toLowerCase().includes(q) || u.display_name.toLowerCase().includes(q);
-  });
+    return users.filter((u) => u.email.toLowerCase().includes(q) || u.display_name.toLowerCase().includes(q));
+  }, [users, search]);
+
+  const isEmailSearch = EMAIL_RE.test(search.trim());
+  const emailAlreadyInUsers = isEmailSearch && userEmailSet.has(search.trim().toLowerCase());
+  const emailAlreadyManual = isEmailSearch && manualSet.has(search.trim().toLowerCase());
+  const showAddEmail = isEmailSearch && !emailAlreadyInUsers && !emailAlreadyManual;
+
+  const addManualEmail = () => {
+    const email = search.trim();
+    if (!EMAIL_RE.test(email)) return;
+    if (manualSet.has(email)) return;
+    if (selectedSet.size === 0 && manualEmails.length === 0) {
+      onChange([]);
+    }
+    onManualEmailsChange([...manualEmails, email]);
+    setSearch("");
+  };
+
+  const removeManualEmail = (email: string) => {
+    onManualEmailsChange(manualEmails.filter((e) => e !== email));
+  };
 
   const toggle = (id: string) => {
     if (selectedSet.has(id)) {
@@ -42,6 +83,12 @@ export function MultiUserSelect({ users, selectedIds, onChange, disabled }: Mult
       onChange([...selectedIds, id]);
     }
   };
+
+  const allTags = [
+    ...selectedUsers.map((u) => ({ type: "user" as const, id: u.id, label: u.display_name, sub: u.email })),
+    ...manualEmails.map((e) => ({ type: "manual" as const, id: e, label: e, sub: undefined })),
+  ];
+  const totalSelected = selectedIds.length + manualEmails.length;
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
@@ -61,40 +108,51 @@ export function MultiUserSelect({ users, selectedIds, onChange, disabled }: Mult
         }}
         onClick={() => { if (!disabled) setOpen(!open); }}
       >
-        {selectedUsers.length === 0 && (
+        {totalSelected === 0 && (
           <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-            {disabled ? "No users selected" : "Search and select users..."}
+            {disabled ? "None selected" : "Search users or type an email..."}
           </span>
         )}
-        {selectedUsers.slice(0, 5).map((u) => (
+        {allTags.slice(0, 5).map((t) => (
           <span
-            key={u.id}
+            key={t.id}
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 4,
+              gap: 3,
               fontSize: 10,
               fontWeight: 600,
               padding: "2px 6px",
-              background: "var(--primary)",
+              background: t.type === "manual" ? "var(--blue)" : "var(--primary)",
               border: "1.5px solid var(--border)",
               borderRadius: "var(--radius)",
+              color: t.type === "manual" ? "#fff" : "var(--text)",
             }}
           >
-            {u.display_name}
+            {t.type === "manual" && (
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <rect x="2" y="4" width="20" height="16" rx="2" />
+                <polyline points="22,4 12,13 2,4" />
+              </svg>
+            )}
+            {t.label}
             {!disabled && (
               <span
-                style={{ cursor: "pointer", fontSize: 12, lineHeight: 1 }}
-                onClick={(e) => { e.stopPropagation(); toggle(u.id); }}
+                style={{ cursor: "pointer", fontSize: 12, lineHeight: 1, marginLeft: 1 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (t.type === "user") toggle(t.id);
+                  else removeManualEmail(t.id);
+                }}
               >
                 ✕
               </span>
             )}
           </span>
         ))}
-        {selectedUsers.length > 5 && (
+        {allTags.length > 5 && (
           <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600 }}>
-            +{selectedUsers.length - 5}
+            +{allTags.length - 5}
           </span>
         )}
         <div style={{ flex: 1 }} />
@@ -125,31 +183,75 @@ export function MultiUserSelect({ users, selectedIds, onChange, disabled }: Mult
             border: "1.5px solid var(--border)",
             borderRadius: "var(--radius)",
             boxShadow: "var(--shadow)",
-            maxHeight: 280,
+            maxHeight: 320,
             display: "flex",
             flexDirection: "column",
           }}
         >
           <div style={{ padding: "6px 8px", borderBottom: "1px solid var(--border)" }}>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search users..."
-              autoFocus
-              style={{
-                width: "100%",
-                fontSize: 11,
-                padding: "4px 6px",
-                border: "1.5px solid var(--border)",
-                borderRadius: "var(--radius)",
-                outline: "none",
-                background: "var(--surface)",
-              }}
-              onClick={(e) => e.stopPropagation()}
-            />
+            <div style={{ display: "flex", gap: 4 }}>
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && showAddEmail) {
+                    e.preventDefault();
+                    addManualEmail();
+                  }
+                }}
+                placeholder="Search users or type an email + Enter..."
+                style={{
+                  flex: 1,
+                  fontSize: 11,
+                  padding: "4px 6px",
+                  border: "1.5px solid var(--border)",
+                  borderRadius: "var(--radius)",
+                  outline: "none",
+                  background: "var(--surface)",
+                }}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
           </div>
+
           <div style={{ overflow: "auto", flex: 1 }}>
+            {showAddEmail && (
+              <div style={{ padding: "2px 4px", borderBottom: "1px solid var(--bg-dark)" }}>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addManualEmail();
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "6px 8px",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    background: "var(--bg-dark)",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "var(--blue)",
+                    borderRadius: "var(--radius)",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "var(--primary)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "var(--bg-dark)"; }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="4" width="20" height="16" rx="2" />
+                    <polyline points="22,4 12,13 2,4" />
+                  </svg>
+                  Add <strong>{search.trim()}</strong> as external recipient
+                </button>
+              </div>
+            )}
+
             <div style={{ padding: "2px 4px" }}>
               <button
                 type="button"
@@ -179,11 +281,13 @@ export function MultiUserSelect({ users, selectedIds, onChange, disabled }: Mult
                 {selectedIds.length === users.length ? "Deselect all" : "Select all users"}
               </button>
             </div>
-            {filtered.length === 0 && (
+
+            {filtered.length === 0 && !showAddEmail && (
               <div style={{ padding: "12px 10px", fontSize: 11, color: "var(--text-muted)", textAlign: "center" }}>
                 No users found
               </div>
             )}
+
             {filtered.map((u) => {
               const checked = selectedSet.has(u.id);
               return (
@@ -214,8 +318,11 @@ export function MultiUserSelect({ users, selectedIds, onChange, disabled }: Mult
               );
             })}
           </div>
+
           <div style={{ padding: "6px 8px", borderTop: "1px solid var(--border)", fontSize: 10, color: "var(--text-muted)", textAlign: "center" }}>
-            {selectedIds.length} user{selectedIds.length !== 1 ? "s" : ""} selected
+            {totalSelected > 0
+              ? `${totalSelected} recipient${totalSelected !== 1 ? "s" : ""} (${selectedIds.length} user${selectedIds.length !== 1 ? "s" : ""}${manualEmails.length > 0 ? `, ${manualEmails.length} external` : ""})`
+              : "No recipients selected"}
           </div>
         </div>
       )}

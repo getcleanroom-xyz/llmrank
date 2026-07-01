@@ -367,6 +367,7 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [manualEmails, setManualEmails] = useState<string[]>([]);
   const [showSource, setShowSource] = useState(false);
   const [sourceHtml, setSourceHtml] = useState(existing?.html_body || "");
   const [showPreview, setShowPreview] = useState(false);
@@ -401,7 +402,7 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
     if (audienceType === "segment") {
       audience_config = { signed_up_after: signedUpAfter || undefined, signed_up_before: signedUpBefore || undefined };
     } else if (audienceType === "selected") {
-      audience_config = { user_ids: selectedUserIds };
+      audience_config = { user_ids: selectedUserIds, emails: manualEmails };
     }
     return {
       name,
@@ -412,7 +413,7 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
       audience_config,
       template_vars: templateVars.length > 0 ? templateVars : undefined,
     };
-  }, [name, subject, getHtmlBody, fromEmail, audienceType, signedUpAfter, signedUpBefore, selectedUserIds, templateVars]);
+  }, [name, subject, getHtmlBody, fromEmail, audienceType, signedUpAfter, signedUpBefore, selectedUserIds, manualEmails, templateVars]);
 
   const saveDraft = async () => {
     setError("");
@@ -805,6 +806,8 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
                     users={users}
                     selectedIds={selectedUserIds}
                     onChange={setSelectedUserIds}
+                    manualEmails={manualEmails}
+                    onManualEmailsChange={setManualEmails}
                     disabled={!editable}
                   />
                 </div>
