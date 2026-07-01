@@ -3,10 +3,15 @@ name: Ping Render
 on:
   schedule:
     - cron: "*/5 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/ping.yml"
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
       - name: Ping API to prevent sleep
-        run: curl -sf https://llmrank-0u8o.onrender.com/health > /dev/null 2>&1 || true
+        run: curl -sSf --retry 3 --retry-delay 5 https://llmrank-0u8o.onrender.com/health > /dev/null 2>&1 || echo "Ping failed (server may be waking up)"
