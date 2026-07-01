@@ -373,6 +373,9 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
   const [showPreview, setShowPreview] = useState(false);
   const [previewHtml, setPreviewHtml] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkLabel, setLinkLabel] = useState("");
   const [campaignId, setCampaignId] = useState<string | null>(existing?.id || null);
 
   const saving = createCampaign.isPending || updateCampaign.isPending || scheduleCampaign.isPending || buildAudience.isPending;
@@ -509,6 +512,21 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
       setSourceHtml(editor?.getHTML() || "");
     }
     setShowSource(!showSource);
+  };
+
+  const handleInsertLink = () => {
+    if (!editor || !linkUrl.trim()) return;
+    const url = linkUrl.trim();
+    const label = linkLabel.trim();
+    const { from, to } = editor.state.selection;
+    if (from !== to) {
+      editor.chain().focus().setLink({ href: url }).run();
+    } else if (label) {
+      editor.chain().focus().insertContent(`<a href="${url}">${label}</a>`).run();
+    }
+    setShowLinkDialog(false);
+    setLinkUrl("");
+    setLinkLabel("");
   };
 
   const editable = !existing || existing.status === "draft" || existing.status === "scheduled";
@@ -698,8 +716,11 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
                       </button>
                       <button
                         onClick={() => {
-                          const url = prompt("Enter URL:");
-                          if (url) editor.chain().focus().setLink({ href: url }).run();
+                          const selected = editor.state.selection.content().content.textBetween(0, 100).trim();
+                          const existingHref = editor.getAttributes("link").href || "";
+                          setLinkLabel(selected || "");
+                          setLinkUrl(existingHref);
+                          setShowLinkDialog(true);
                         }}
                         className={`btn btn-sm ${editor.isActive("link") ? "btn-primary" : "btn-ghost"}`}
                         type="button"
@@ -916,6 +937,77 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
 
       {showPreview && (
         <RenderPreview html={previewHtml} onClose={() => setShowPreview(false)} />
+      )}
+
+      {showLinkDialog && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 200,
+            background: "rgba(0,0,0,0.3)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+          onClick={() => setShowLinkDialog(false)}
+        >
+          <div
+            className="card"
+            style={{ maxWidth: 400, width: "100%" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>
+              {editor?.getAttributes("link").href ? "Edit Link" : "Insert Link"}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>Label</div>
+                <input
+                  type="text"
+                  value={linkLabel}
+                  onChange={(e) => setLinkLabel(e.target.value)}
+                  className="input"
+                  placeholder="Display text"
+                  autoFocus
+                  style={{ fontSize: 13 }}
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>URL</div>
+                <input
+                  type="url"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  className="input"
+                  placeholder="https://example.com"
+                  style={{ fontSize: 13 }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleInsertLink();
+                  }}
+                />
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
+              <button
+                onClick={() => { setShowLinkDialog(false); setLinkUrl(""); setLinkLabel(""); }}
+                className="btn btn-sm btn-ghost"
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleInsertLink}
+                disabled={!linkUrl.trim()}
+                className="btn btn-sm btn-primary"
+                type="button"
+              >
+                {editor?.getAttributes("link").href ? "Update" : "Insert"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
