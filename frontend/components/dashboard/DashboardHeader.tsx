@@ -56,11 +56,6 @@ export function ScanControls({ brandId, latestScan, credits }: { brandId: string
 
   return (
     <>
-      {isRunning && (
-        <div style={{ textAlign: "left", marginBottom: 4 }}>
-          <span className="pill pill-gold" style={{ fontSize: 10 }}>Scanning...</span>
-        </div>
-      )}
       <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
         <button className="btn btn-ghost btn-sm" style={{ fontSize: 11, padding: "3px 6px", lineHeight: "20px" }} onClick={() => window.location.reload()}>
           Refresh
@@ -91,7 +86,7 @@ export function ScanControls({ brandId, latestScan, credits }: { brandId: string
           )}
         </div>
         <button onClick={handleScan} disabled={triggerScan.isPending || selectedLLMs.length === 0 || isRunning || (credits?.balance ?? 0) <= 0} className={`btn btn-sm ${isRunning || triggerScan.isPending ? "btn-ghost" : "btn-primary"}`} style={{ fontSize: 11, padding: "3px 12px", lineHeight: "20px" }}>
-          {isRunning ? "Scanning..." : triggerScan.isPending ? "Scanning..." : "Scan"}
+          Scan
         </button>
       </div>
       {scanError && <div style={{ maxWidth: 1100, margin: "0 auto", padding: "4px var(--page-px) 0" }}><div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "5px 10px", fontSize: 11, color: "#991B1B", fontWeight: 600 }}>{scanError}</div></div>}

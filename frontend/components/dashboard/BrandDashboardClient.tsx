@@ -75,13 +75,18 @@ function BrandDashboardPageInner() {
         }
       />
       <PageHeader>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto" }}>
-          {(active_scan ?? latest_scan)?.completed_at && (
-            <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>
-              {new Date((active_scan ?? latest_scan)!.completed_at!).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-            </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
+          {(active_scan?.status === "pending" || active_scan?.status === "running") && (
+            <span className="pill pill-gold" style={{ fontSize: 10, flexShrink: 0 }}>Scanning...</span>
           )}
-          <ScanControls brandId={brandId} latestScan={active_scan ?? latest_scan} credits={credits} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto" }}>
+            {(active_scan ?? latest_scan)?.completed_at && (
+              <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>
+                {new Date((active_scan ?? latest_scan)!.completed_at!).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+              </span>
+            )}
+            <ScanControls brandId={brandId} latestScan={active_scan ?? latest_scan} credits={credits} />
+          </div>
         </div>
       </PageHeader>
       <div style={{ flex: 1, padding: "var(--gap) var(--page-px)", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
