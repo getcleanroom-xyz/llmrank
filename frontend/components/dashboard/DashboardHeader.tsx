@@ -56,19 +56,18 @@ export function ScanControls({ brandId, latestScan, credits }: { brandId: string
 
   return (
     <>
+      {isRunning && (
+        <div style={{ textAlign: "left", marginBottom: 4 }}>
+          <span className="pill pill-gold" style={{ fontSize: 10 }}>Scanning...</span>
+        </div>
+      )}
       <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-        {isRunning && <span className="pill pill-gold" style={{ fontSize: 10, lineHeight: "20px" }}>...</span>}
-        <button className="btn btn-ghost btn-sm" style={{ fontSize: 11, padding: "3px 6px", lineHeight: "20px" }} title="Refresh" onClick={() => window.location.reload()}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-            <path d="M3 3v5h5" />
-            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-            <path d="M16 16h5v5" />
-          </svg>
+        <button className="btn btn-ghost btn-sm" style={{ fontSize: 11, padding: "3px 6px", lineHeight: "20px" }} onClick={() => window.location.reload()}>
+          Refresh
         </button>
         <div style={{ position: "relative" }} ref={configRef}>
           <button onClick={() => setShowConfig((s) => !s)} className="btn btn-ghost btn-sm" style={{ fontSize: 11, padding: "3px 8px", lineHeight: "20px" }}>
-            {selectedLLMs.length}m
+            {selectedLLMs.length} model{selectedLLMs.length !== 1 ? "s" : ""}
           </button>
           {showConfig && (
             <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, background: "var(--surface)", border: "2px solid var(--border)", borderRadius: "var(--radius)", padding: 10, minWidth: 220, zIndex: 50, boxShadow: "var(--shadow)" }}>
@@ -92,7 +91,7 @@ export function ScanControls({ brandId, latestScan, credits }: { brandId: string
           )}
         </div>
         <button onClick={handleScan} disabled={triggerScan.isPending || selectedLLMs.length === 0 || isRunning || (credits?.balance ?? 0) <= 0} className={`btn btn-sm ${isRunning || triggerScan.isPending ? "btn-ghost" : "btn-primary"}`} style={{ fontSize: 11, padding: "3px 12px", lineHeight: "20px" }}>
-          {isRunning ? "..." : triggerScan.isPending ? "..." : "Scan"}
+          {isRunning ? "Scanning..." : triggerScan.isPending ? "Scanning..." : "Scan"}
         </button>
       </div>
       {scanError && <div style={{ maxWidth: 1100, margin: "0 auto", padding: "4px var(--page-px) 0" }}><div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "5px 10px", fontSize: 11, color: "#991B1B", fontWeight: 600 }}>{scanError}</div></div>}
