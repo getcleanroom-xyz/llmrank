@@ -140,8 +140,10 @@ export default function ScanDetailPage() {
         }
       />
       <PageHeader>
-        <Link href={`/brands/${brandId}?tab=scans`} className="btn btn-sm btn-ghost">
-          ← Back
+        <Link href={`/brands/${brandId}?tab=scans`} className="btn btn-sm btn-ghost btn-back">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
         </Link>
       </PageHeader>
 
