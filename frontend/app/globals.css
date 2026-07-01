@@ -441,9 +441,17 @@ input[type="checkbox"]:not(.native):disabled, input[type="radio"]:not(.native):d
 .campaign-row-main { flex: 1; min-width: 160px; }
 .campaign-row-actions { display: flex; gap: 4px; flex-wrap: wrap; }
 .campaign-row-stats { display: flex; gap: 16px; align-items: center; font-size: 11px; color: var(--text-secondary); }
+.campaign-row-pill { flex-shrink: 0; }
+.campaign-row-bars { width: 50px; display: flex; flex-direction: column; gap: 2px; }
+
 @media (max-width: 640px) {
-  .campaign-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .campaign-row { flex-direction: column; align-items: flex-start; gap: 8px; padding: 10px 12px; }
   .campaign-row-main { min-width: 0; width: 100%; }
-  .campaign-row-stats { width: 100%; justify-content: space-between; }
-  .campaign-row-actions { width: 100%; justify-content: flex-start; }
+  .campaign-row-main-name { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .campaign-row-pill { order: -1; }
+  .campaign-row-stats { width: 100%; justify-content: flex-start; gap: 12px; }
+  .campaign-row-stats > div { text-align: left; min-width: 0; }
+  .campaign-row-bars { display: none; }
+  .campaign-row-actions { width: 100%; }
+  .campaign-row-actions .btn { font-size: 11px; padding: 4px 8px; }
 }

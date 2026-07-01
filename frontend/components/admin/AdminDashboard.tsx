@@ -243,7 +243,7 @@ export function AdminDashboard() {
             return (
               <div key={c.id} className="campaign-row">
                 <div className="campaign-row-main">
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <div className="campaign-row-main-name">
                     <Link
                       href={`/admin/campaigns/${c.id}`}
                       style={{ fontWeight: 700, color: "var(--text)", textDecoration: "none", fontSize: 14 }}
@@ -255,18 +255,17 @@ export function AdminDashboard() {
                         {new Date(c.last_sent_at).toLocaleDateString()}
                       </span>
                     )}
+                    <span className={`${STATUS_PILL[c.status] || "pill pill-neu"} campaign-row-pill`} style={{ fontSize: 10 }}>
+                      {STATUS_LABELS[c.status] || c.status}
+                    </span>
                   </div>
                   <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 300 }}>
                     {c.subject}
                   </div>
                 </div>
 
-                <span className={STATUS_PILL[c.status] || "pill pill-neu"} style={{ fontSize: 10 }}>
-                  {STATUS_LABELS[c.status] || c.status}
-                </span>
-
                 <div className="campaign-row-stats">
-                  <div style={{ textAlign: "right", minWidth: 80 }}>
+                  <div>
                     <div style={{ fontWeight: 600 }}>{c.sent_count} sent</div>
                     {c.sent_count > 0 && (
                       <div style={{ fontSize: 10, color: "var(--green)", fontWeight: 600 }}>
@@ -276,7 +275,7 @@ export function AdminDashboard() {
                     )}
                   </div>
                   {c.sent_count > 0 && (
-                    <div style={{ width: 50, display: "flex", flexDirection: "column", gap: 2 }}>
+                    <div className="campaign-row-bars">
                       <div style={{ height: 4, background: "var(--bg-dark)", borderRadius: 2, overflow: "hidden", border: "1px solid var(--border)" }}>
                         <div style={{ height: "100%", width: `${openRate}%`, background: "var(--green)", borderRadius: 1 }} />
                       </div>
