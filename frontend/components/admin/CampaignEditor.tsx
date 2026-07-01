@@ -519,7 +519,7 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
     const url = linkUrl.trim();
     const label = linkLabel.trim();
     const { from, to } = editor.state.selection;
-    if (from !== to) {
+    if (from !== to && from >= 0 && to >= 0) {
       editor.chain().focus().setLink({ href: url }).run();
     } else if (label) {
       editor.chain().focus().insertContent(`<a href="${url}">${label}</a>`).run();
@@ -716,9 +716,10 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
                       </button>
                       <button
                         onClick={() => {
-                          const selected = editor.state.selection.content().content.textBetween(0, 100).trim();
+                          const { from, to } = editor.state.selection;
+                          const selected = from !== to ? editor.state.doc.textBetween(from, to, " ").trim() : "";
                           const existingHref = editor.getAttributes("link").href || "";
-                          setLinkLabel(selected || "");
+                          setLinkLabel(selected);
                           setLinkUrl(existingHref);
                           setShowLinkDialog(true);
                         }}
