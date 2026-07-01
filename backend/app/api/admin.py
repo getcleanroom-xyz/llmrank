@@ -248,6 +248,7 @@ async def schedule_campaign(campaign_id: uuid.UUID, body: ScheduleRequest, admin
                 args=[str(campaign.id), base_url],
                 id=job_id,
                 replace_existing=True,
+                misfire_grace_time=300,
             )
         elif body.schedule_type == ScheduleType.once:
             scheduler.add_job(
@@ -256,6 +257,7 @@ async def schedule_campaign(campaign_id: uuid.UUID, body: ScheduleRequest, admin
                 args=[str(campaign.id), base_url],
                 id=job_id,
                 replace_existing=True,
+                misfire_grace_time=300,
             )
         elif body.schedule_type == ScheduleType.recurring and campaign.cron_expr:
             scheduler.add_job(
@@ -264,6 +266,7 @@ async def schedule_campaign(campaign_id: uuid.UUID, body: ScheduleRequest, admin
                 args=[str(campaign.id), base_url],
                 id=job_id,
                 replace_existing=True,
+                misfire_grace_time=300,
             )
     except Exception:
         logger.exception("Failed to register scheduler job for campaign %s", campaign.id)

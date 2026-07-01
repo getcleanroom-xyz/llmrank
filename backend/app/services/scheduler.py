@@ -11,7 +11,7 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-scheduler = AsyncIOScheduler()
+scheduler = AsyncIOScheduler(job_defaults={"misfire_grace_time": 300})
 
 
 async def send_campaign_job(campaign_id: str, base_url: str):
@@ -83,6 +83,7 @@ async def init_scheduler():
                             args=[str(campaign.id), settings.CORS_ORIGINS.split(",")[0].strip()],
                             id=job_id,
                             replace_existing=True,
+                            misfire_grace_time=300,
                         )
                     elif campaign.schedule_type == ScheduleType.once and campaign.scheduled_at:
                         scheduler.add_job(
@@ -91,6 +92,7 @@ async def init_scheduler():
                             args=[str(campaign.id), settings.CORS_ORIGINS.split(",")[0].strip()],
                             id=job_id,
                             replace_existing=True,
+                            misfire_grace_time=300,
                         )
                     elif campaign.schedule_type == ScheduleType.recurring and campaign.cron_expr:
                         scheduler.add_job(
@@ -99,6 +101,7 @@ async def init_scheduler():
                             args=[str(campaign.id), settings.CORS_ORIGINS.split(",")[0].strip()],
                             id=job_id,
                             replace_existing=True,
+                            misfire_grace_time=300,
                         )
                 except Exception:
                     logger.exception("Failed to register job for campaign %s", campaign.id)
