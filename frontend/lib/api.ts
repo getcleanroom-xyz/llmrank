@@ -85,6 +85,35 @@ export const getScans = (brandId: string) =>
 export const getScan = (brandId: string, scanId: string) =>
   apiFetch<Scan>(`/brands/${brandId}/scans/${scanId}`);
 
+export interface ScanDetailResult {
+  llm_name: string;
+  mentioned: boolean;
+  position: number | null;
+  sentiment: string;
+  score: number | null;
+  competitors_mentioned: { name: string; position: number }[];
+}
+
+export interface ScanDetailQuerySummary {
+  query_id: string;
+  query_text: string;
+  results: ScanDetailResult[];
+}
+
+export interface ScanDetail {
+  id: string;
+  brand_id: string;
+  status: string;
+  started_at: string | null;
+  completed_at: string | null;
+  visibility_score: number | null;
+  mention_rate: number | null;
+  query_summaries: ScanDetailQuerySummary[];
+}
+
+export const getScanResults = (brandId: string, scanId: string) =>
+  apiFetch<ScanDetail>(`/brands/${brandId}/scans/${scanId}/results`);
+
 // ─── Dashboard & Drilldown ─────────────────────────────────────────────────────
 
 export const getDashboard = (brandId: string) =>

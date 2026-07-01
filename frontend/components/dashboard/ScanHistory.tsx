@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useScans } from "@/lib/hooks";
 
 function timeAgo(date: string): string {
@@ -23,7 +24,12 @@ export function ScanHistory({ brandId }: { brandId: string }) {
     <div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {scans.map((scan) => (
-          <div key={scan.id} className="card" style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <Link
+            key={scan.id}
+            href={`/brands/${scan.brand_id}/scans/${scan.id}`}
+            className="card"
+            style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", textDecoration: "none", color: "var(--text)", cursor: "pointer" }}
+          >
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                 <span className={`pill ${scan.status === "completed" ? "pill-pos" : scan.status === "failed" ? "pill-neg" : scan.status === "running" ? "pill-gold" : "pill-neu"}`}>
@@ -57,7 +63,7 @@ export function ScanHistory({ brandId }: { brandId: string }) {
                 </div>
               </div>
             )}
-          </div>
+          </Link>
         ))}
       </div>
     </div>

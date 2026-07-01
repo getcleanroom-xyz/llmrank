@@ -263,6 +263,73 @@ async def get_scan(brand_id: uuid.UUID, scan_id: uuid.UUID, db: AsyncSession = D
     return scan
 
 
+@router.get("/brands/{brand_id}/scans/{scan_id}/results", tags=["Scans"])
+async def get_scan_results(brand_id: uuid.UUID, scan_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    """Return scan with grouped per-query results."""
+    from pydantic import BaseModel
+    from app.schemas.schemas import QueryResultOut, QuerySummary
+
+    result = await db.execute(
+        select(Scan).where(Scan.id == scan_id, Scan.brand_id == brand_id)
+    )
+    scan = result.scalar_one_or_none()
+    if not scan:
+        raise HTTPException(404, "Scan not found")
+
+    # Fetch all results for this scan
+    qr = await db.execute(
+        select(QueryResult).where(QueryResult.scan_id == scan_id)
+    )
+    results = qr.scalars().all()
+
+    # Group by query
+    query_map: dict[uuid.UUID, list] = {}
+    for r in results:
+        qid = r.query_id
+        if qid not in query_map:
+            query_map[qid] = []
+        query_map[qid].append(r)
+
+    # Build query summaries with results
+    summaries = []
+    for qid, qr_list in query_map.items():
+        # Get query text from MonitoredQuery
+        mq_result = await db.execute(select(MonitoredQuery).where(MonitoredQuery.id == qid))
+        mq = mq_result.scalar_one_or_none()
+        query_text = mq.query_text if mq else "Unknown query"
+
+        results_out = []
+        for r in qr_list:
+            results_out.append({
+                "llm_name": r.llm_name,
+                "mentioned": r.mentioned,
+                "position": r.position,
+                "sentiment": r.sentiment.value if hasattr(r.sentiment, "value") else r.sentiment,
+                "score": r.score,
+                "competitors_mentioned": [{"name": c.get("name", ""), "position": c.get("position", 0)} for c in (r.competitors_mentioned or [])],
+            })
+
+        summaries.append({
+            "query_id": str(qid),
+            "query_text": query_text,
+            "results": results_out,
+        })
+
+    # Sort by position of first result that mentions the brand
+    summaries.sort(key=lambda s: min((r["position"] or 999 for r in s["results"] if r["mentioned"]), default=999))
+
+    return {
+        "id": str(scan.id),
+        "brand_id": str(scan.brand_id),
+        "status": scan.status.value,
+        "started_at": scan.started_at.isoformat() if scan.started_at else None,
+        "completed_at": scan.completed_at.isoformat() if scan.completed_at else None,
+        "visibility_score": scan.visibility_score,
+        "mention_rate": scan.mention_rate,
+        "query_summaries": summaries,
+    }
+
+
 # ─── SSE: live scan progress ────────────────────────────────────────────────────
 
 @router.get("/brands/{brand_id}/scans/{scan_id}/stream", tags=["Scans"])
