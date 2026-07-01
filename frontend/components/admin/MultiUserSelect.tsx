@@ -123,10 +123,10 @@ export function MultiUserSelect({
               fontSize: 10,
               fontWeight: 600,
               padding: "2px 6px",
-              background: t.type === "manual" ? "var(--blue)" : "var(--primary)",
-              border: "1.5px solid var(--border)",
+              background: t.type === "manual" ? "var(--surface)" : "var(--primary)",
+              border: t.type === "manual" ? "1.5px dashed var(--border)" : "1.5px solid var(--border)",
               borderRadius: "var(--radius)",
-              color: t.type === "manual" ? "#fff" : "var(--text)",
+              color: "var(--text)",
             }}
           >
             {t.type === "manual" && (
@@ -237,16 +237,13 @@ export function MultiUserSelect({
                     background: "var(--bg-dark)",
                     border: "none",
                     cursor: "pointer",
-                    color: "var(--blue)",
+                    color: "var(--text)",
                     borderRadius: "var(--radius)",
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = "var(--primary)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = "var(--bg-dark)"; }}
                 >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="4" width="20" height="16" rx="2" />
-                    <polyline points="22,4 12,13 2,4" />
-                  </svg>
+                  <span style={{ fontWeight: 700, fontSize: 13 }}>+</span>
                   Add <strong>{search.trim()}</strong> as external recipient
                 </button>
               </div>
@@ -272,7 +269,7 @@ export function MultiUserSelect({
                   background: "none",
                   border: "none",
                   cursor: "pointer",
-                  color: "var(--blue)",
+                  color: "var(--text)",
                   borderRadius: "var(--radius)",
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-dark)"; }}

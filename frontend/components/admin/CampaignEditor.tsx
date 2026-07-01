@@ -713,7 +713,7 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
                             <button
                               className="btn btn-sm btn-ghost"
                               type="button"
-                              style={{ color: "var(--blue)" }}
+                              style={{ color: "var(--text)" }}
                               onClick={(e) => {
                                 const menu = (e.currentTarget.parentElement?.querySelector(".var-menu")) as HTMLElement;
                                 if (menu) menu.style.display = menu.style.display === "none" ? "flex" : "none";
@@ -873,7 +873,7 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
                   <StatRow
                     label="Click rate"
                     value={existing.opened_count > 0 ? `${Math.round((existing.clicked_count / existing.opened_count) * 100)}%` : "—"}
-                    highlight={existing.opened_count > 0 ? "var(--blue)" : undefined}
+                    highlight={existing.opened_count > 0 ? "var(--text)" : undefined}
                   />
                   {existing.scheduled_at && <StatRow label="Scheduled" value={new Date(existing.scheduled_at).toLocaleString()} />}
                   {existing.last_sent_at && <StatRow label="Last sent" value={new Date(existing.last_sent_at).toLocaleString()} />}
@@ -883,7 +883,7 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
                   <div style={{ marginTop: 10 }}>
                     <MiniBar label="Opened" value={existing.opened_count} max={existing.sent_count} color="var(--green)" />
                     <div style={{ height: 4 }} />
-                    <MiniBar label="Clicked" value={existing.clicked_count} max={existing.sent_count} color="var(--blue)" />
+                    <MiniBar label="Clicked" value={existing.clicked_count} max={existing.sent_count} color="var(--text-secondary)" />
                   </div>
                 )}
               </div>

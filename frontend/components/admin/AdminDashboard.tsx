@@ -291,7 +291,7 @@ export function AdminDashboard() {
                         <div style={{ height: "100%", width: `${openRate}%`, background: "var(--green)", borderRadius: 1 }} />
                       </div>
                       <div style={{ height: 4, background: "var(--bg-dark)", borderRadius: 2, overflow: "hidden", border: "1px solid var(--border)" }}>
-                        <div style={{ height: "100%", width: `${clickRate}%`, background: "var(--blue)", borderRadius: 1 }} />
+                        <div style={{ height: "100%", width: `${clickRate}%`, background: "var(--text-secondary)", borderRadius: 1 }} />
                       </div>
                     </div>
                   )}
