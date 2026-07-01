@@ -19,6 +19,9 @@ from app.models.models import User, Campaign, CampaignRecipient, CampaignLink
 from app.models.models import CampaignStatus, ScheduleType, AudienceType, RecipientStatus
 from app.api.auth import get_current_user
 from app.services.email_service import send_email, prepare_tracked_html
+from app.services.scheduler import scheduler, send_campaign_job
+from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.date import DateTrigger
 
 logger = logging.getLogger(__name__)
 
@@ -232,6 +235,39 @@ async def schedule_campaign(campaign_id: uuid.UUID, body: ScheduleRequest, admin
     campaign.next_send_at = campaign.scheduled_at
     await db.commit()
     await db.refresh(campaign)
+
+    # Register job with running APScheduler
+    base_url = settings.cors_origins_list[0] if settings.cors_origins_list else "https://llmrank.getcleanroom.xyz"
+    job_id = f"campaign_{campaign.id}"
+    try:
+        if scheduler.get_job(job_id):
+            scheduler.remove_job(job_id)
+        if body.schedule_type == ScheduleType.now:
+            scheduler.add_job(
+                send_campaign_job,
+                args=[str(campaign.id), base_url],
+                id=job_id,
+                replace_existing=True,
+            )
+        elif body.schedule_type == ScheduleType.once:
+            scheduler.add_job(
+                send_campaign_job,
+                trigger=DateTrigger(run_date=campaign.scheduled_at),
+                args=[str(campaign.id), base_url],
+                id=job_id,
+                replace_existing=True,
+            )
+        elif body.schedule_type == ScheduleType.recurring and campaign.cron_expr:
+            scheduler.add_job(
+                send_campaign_job,
+                trigger=CronTrigger.from_crontab(campaign.cron_expr),
+                args=[str(campaign.id), base_url],
+                id=job_id,
+                replace_existing=True,
+            )
+    except Exception:
+        logger.exception("Failed to register scheduler job for campaign %s", campaign.id)
+
     return _campaign_to_response(campaign)
 
 
@@ -247,6 +283,13 @@ async def cancel_campaign(campaign_id: uuid.UUID, admin: User = Depends(require_
     campaign.status = CampaignStatus.cancelled
     await db.commit()
     await db.refresh(campaign)
+
+    # Remove from scheduler
+    try:
+        scheduler.remove_job(f"campaign_{campaign.id}")
+    except Exception:
+        pass
+
     return _campaign_to_response(campaign)
 
 
