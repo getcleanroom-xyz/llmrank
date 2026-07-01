@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.models.models import Brand, MonitoredQuery, Scan, QueryResult, ScanStatus
 from app.services.llm_adapters import query_all_llms, SCAN_PROMPT_TEMPLATE
@@ -145,6 +145,20 @@ async def run_scan(
     scan.completed_at = _utcnow()
 
     logger.info("Scan %s committing: score=%.1f mention_rate=%.1f successful=%d", scan.id, visibility_score, mention_rate, total_successful)
+
+    # Keepalive: ping DB before final write to detect stale connections
+    # (Neon free tier closes idle connections after ~5 min; LLM calls can take that long)
+    try:
+        await db.execute(text("SELECT 1"))
+    except Exception:
+        logger.warning("Scan %s: connection stale after LLM calls, rolling back and retrying", scan.id)
+        await db.rollback()
+        # Re-run aggregate assignments after rollback (session state is preserved)
+        scan.visibility_score = visibility_score
+        scan.mention_rate = mention_rate
+        scan.status = ScanStatus.completed
+        scan.completed_at = _utcnow()
+
     await db.commit()
     await db.refresh(scan)
     logger.info("Scan %s committed successfully", scan.id)
