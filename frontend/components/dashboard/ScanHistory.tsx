@@ -42,7 +42,7 @@ function ExpandedScan({ scanId, brandId }: { scanId: string; brandId: string }) 
   if (!data || data.query_summaries.length === 0) return <div style={{ padding: "8px 0", fontSize: 11, color: "var(--text-muted)" }}>No query results</div>;
 
   return (
-    <div style={{ marginTop: 10, borderTop: "1.5px solid var(--border)", paddingTop: 10 }}>
+    <div style={{ marginTop: 10, borderTop: "1.5px solid var(--border)", paddingTop: 10 }} onClick={(e) => e.stopPropagation()}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
         <div style={{ textAlign: "center", padding: "6px 0" }}>
           <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>Visibility</div>
@@ -59,49 +59,60 @@ function ExpandedScan({ scanId, brandId }: { scanId: string; brandId: string }) 
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        {data.query_summaries.map((q) => (
-          <div key={q.query_id}>
-            <button
-              type="button"
-              onClick={() => setExpandedQuery(expandedQuery === q.query_id ? null : q.query_id)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                width: "100%",
-                padding: "6px 8px",
-                fontSize: 12,
-                fontWeight: 600,
-                background: expandedQuery === q.query_id ? "var(--bg-dark)" : "transparent",
-                border: "1px solid transparent",
-                borderRadius: "var(--radius)",
-                cursor: "pointer",
-                textAlign: "left",
-              }}
-            >
-              <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{q.query_text}</span>
-              <div style={{ display: "flex", gap: 4, alignItems: "center", flexShrink: 0, marginLeft: 8 }}>
-                {q.results.map((r) => (
-                  <PositionBadge key={r.llm_name} mentioned={r.mentioned} position={r.position} />
-                ))}
-              </div>
-            </button>
-            {expandedQuery === q.query_id && (
-              <div style={{ padding: "4px 8px 8px", display: "flex", flexDirection: "column", gap: 4 }}>
-                {q.results.map((r) => (
-                  <div key={r.llm_name} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}>
-                    <span style={{ textTransform: "capitalize", fontWeight: 600, minWidth: 60, color: "var(--text-secondary)" }}>{r.llm_name}</span>
-                    <PositionBadge mentioned={r.mentioned} position={r.position} />
-                    <span style={{ color: r.sentiment === "positive" ? "#166534" : r.sentiment === "negative" ? "#991B1B" : "var(--text-muted)", fontSize: 10 }}>{r.sentiment}</span>
-                    {r.score != null && r.score > 0 && (
-                      <span style={{ fontWeight: 700, color: r.score >= 70 ? "#166534" : r.score >= 40 ? "var(--text)" : "#991B1B" }}>{r.score}</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
+        {data.query_summaries.map((q) => {
+          const isOpen = expandedQuery === q.query_id;
+          return (
+            <div key={q.query_id}>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setExpandedQuery(isOpen ? null : q.query_id); }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  width: "100%",
+                  padding: "6px 8px",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  background: isOpen ? "var(--bg-dark)" : "transparent",
+                  border: "1px solid transparent",
+                  borderRadius: "var(--radius)",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  transition: "background 0.1s",
+                }}
+                onMouseEnter={(e) => { if (!isOpen) e.currentTarget.style.background = "var(--bg-dark)"; }}
+                onMouseLeave={(e) => { if (!isOpen) e.currentTarget.style.background = "transparent"; }}
+              >
+                <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{q.query_text}</span>
+                <div style={{ display: "flex", gap: 4, alignItems: "center", flexShrink: 0, marginLeft: 8 }}>
+                  {q.results.map((r) => (
+                    <PositionBadge key={r.llm_name} mentioned={r.mentioned} position={r.position} />
+                  ))}
+                </div>
+              </button>
+              {isOpen && (
+                <div style={{ padding: "4px 8px 8px", display: "flex", flexDirection: "column", gap: 4 }}>
+                  {q.results.map((r) => (
+                    <div key={r.llm_name} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, padding: "2px 0" }}>
+                      <span style={{ textTransform: "capitalize", fontWeight: 600, minWidth: 60, color: "var(--text-secondary)" }}>{r.llm_name}</span>
+                      <PositionBadge mentioned={r.mentioned} position={r.position} />
+                      <span style={{ color: r.sentiment === "positive" ? "#166534" : r.sentiment === "negative" ? "#991B1B" : "var(--text-muted)", fontSize: 10 }}>{r.sentiment}</span>
+                      {r.score != null && r.score > 0 && (
+                        <span style={{ fontWeight: 700, color: r.score >= 70 ? "#166534" : r.score >= 40 ? "var(--text)" : "#991B1B" }}>{r.score}</span>
+                      )}
+                      {r.competitors_mentioned.length > 0 && (
+                        <span style={{ fontSize: 10, color: "var(--text-muted)" }}>
+                          {r.competitors_mentioned.map((c) => c.name).join(", ")}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -124,14 +135,22 @@ export function ScanHistory({ brandId }: { brandId: string }) {
               key={scan.id}
               className="card"
               style={{
-                padding: "12px 14px",
-                cursor: "pointer",
+                padding: 0,
                 borderColor: isExpanded ? "var(--primary)" : undefined,
                 transition: "border-color 0.1s",
               }}
-              onClick={() => setExpandedId(isExpanded ? null : scan.id)}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <div
+                onClick={() => setExpandedId(isExpanded ? null : scan.id)}
+                style={{
+                  padding: "12px 14px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  flexWrap: "wrap",
+                  cursor: "pointer",
+                }}
+              >
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                     <span className={`pill ${scan.status === "completed" ? "pill-pos" : scan.status === "failed" ? "pill-neg" : scan.status === "running" ? "pill-gold" : "pill-neu"}`}>
@@ -172,7 +191,9 @@ export function ScanHistory({ brandId }: { brandId: string }) {
                 )}
               </div>
               {isExpanded && scan.status === "completed" && (
-                <ExpandedScan scanId={scan.id} brandId={brandId} />
+                <div style={{ padding: "0 14px 14px" }}>
+                  <ExpandedScan scanId={scan.id} brandId={brandId} />
+                </div>
               )}
             </div>
           );
