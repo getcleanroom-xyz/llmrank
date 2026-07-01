@@ -15,7 +15,7 @@ export const LLM_OPTIONS = [
   { id: "qwen", label: "Qwen 2.5 72B", provider: "Alibaba" },
 ];
 
-export function ScanControls({ brandId, latestScan, credits }: { brandId: string; latestScan: Scan | null; credits: CreditBalance | undefined }) {
+export function ScanControls({ brandId, latestScan, credits, onScanError }: { brandId: string; latestScan: Scan | null; credits: CreditBalance | undefined; onScanError?: (msg: string | null) => void }) {
   const triggerScan = useTriggerScan();
   const [scanError, setScanError] = useState<string | null>(null);
   const [selectedLLMs, setSelectedLLMs] = useState(["chatgpt", "llama"]);
@@ -36,6 +36,7 @@ export function ScanControls({ brandId, latestScan, credits }: { brandId: string
   const handleScan = async () => {
     if (triggerScan.isPending || selectedLLMs.length === 0 || isRunning) return;
     setScanError(null);
+    onScanError?.(null);
     setShowConfig(false);
     try {
       await triggerScan.mutateAsync({ brandId, llms: selectedLLMs });
@@ -43,8 +44,10 @@ export function ScanControls({ brandId, latestScan, credits }: { brandId: string
       const msg = e instanceof Error ? e.message : "Scan failed";
       if (msg.includes("402") || msg.includes("Insufficient credits")) {
         setScanError("Insufficient credits.");
+        onScanError?.("Insufficient credits.");
       } else {
         setScanError(msg);
+        onScanError?.(msg);
       }
     }
   };
@@ -89,8 +92,6 @@ export function ScanControls({ brandId, latestScan, credits }: { brandId: string
           Scan
         </button>
       </div>
-      {scanError && <div style={{ maxWidth: 1100, margin: "0 auto", padding: "4px var(--page-px) 0" }}><div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "5px 10px", fontSize: 11, color: "#991B1B", fontWeight: 600 }}>{scanError}</div></div>}
-      {isRunning && <div className="scan-progress"><div className="scan-progress-fill" /></div>}
     </>
   );
 }

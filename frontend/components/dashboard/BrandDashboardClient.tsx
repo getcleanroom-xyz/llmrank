@@ -46,11 +46,13 @@ function BrandDashboardPageInner() {
   }, [brandId, searchParams, router]);
 
   const error = loadError ? (loadError instanceof Error ? loadError.message : "Failed to load") : null;
+  const [scanError, setScanError] = useState<string | null>(null);
 
   if (isLoading) return <div className="page" style={{ display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "var(--text-muted)" }}>Loading...</div>;
   if (!data) return <div className="page" style={{ padding: "var(--page-px)" }}><div style={{ color: "var(--red)", fontWeight: 700, marginBottom: 8 }}>{error ?? "Brand not found."}</div></div>;
 
   const { brand, latest_scan, active_scan, visibility_score, mention_rate, llm_breakdown, competitor_share, query_summaries, score_history, top_competitor } = data;
+  const isScanRunning = active_scan?.status === "pending" || active_scan?.status === "running";
   const prev = score_history.length >= 2 ? score_history[score_history.length - 2] : null;
 
   const insights: { type: "tip" | "warning"; text: string }[] = [];
@@ -76,8 +78,8 @@ function BrandDashboardPageInner() {
       />
       <PageHeader>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
-          {(active_scan?.status === "pending" || active_scan?.status === "running") && (
-            <span className="pill pill-gold" style={{ fontSize: 10, flexShrink: 0 }}>Scanning...</span>
+          {isScanRunning && (
+            <span className="pill pill-gold" style={{ fontSize: 10, flexShrink: 0 }}>Scanning</span>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto" }}>
             {(active_scan ?? latest_scan)?.completed_at && (
@@ -85,10 +87,12 @@ function BrandDashboardPageInner() {
                 {new Date((active_scan ?? latest_scan)!.completed_at!).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
               </span>
             )}
-            <ScanControls brandId={brandId} latestScan={active_scan ?? latest_scan} credits={credits} />
+            <ScanControls brandId={brandId} latestScan={active_scan ?? latest_scan} credits={credits} onScanError={setScanError} />
           </div>
         </div>
       </PageHeader>
+      {isScanRunning && <div className="scan-progress" style={{ maxWidth: 1200, margin: "0 auto" }}><div className="scan-progress-fill" /></div>}
+      {scanError && <div style={{ maxWidth: 1200, margin: "0 auto", padding: "4px var(--page-px) 0" }}><div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "5px 10px", fontSize: 11, color: "#991B1B", fontWeight: 600 }}>{scanError}</div></div>}
       <div style={{ flex: 1, padding: "var(--gap) var(--page-px)", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
         {error && data && <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "8px 12px", marginBottom: 12, fontSize: 13, color: "#991B1B", fontWeight: 600 }}>{error}</div>}
 
