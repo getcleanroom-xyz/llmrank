@@ -55,6 +55,11 @@ function BrandDashboardPageInner() {
   const isScanRunning = active_scan?.status === "pending" || active_scan?.status === "running";
   const prev = score_history.length >= 2 ? score_history[score_history.length - 2] : null;
 
+  // Show queries even before first scan completes
+  const displayQueries = query_summaries.length > 0
+    ? query_summaries
+    : queries.map(q => ({ query_id: q.id, query_text: q.query_text, results: [] }));
+
   const insights: { type: "tip" | "warning"; text: string }[] = [];
   if (llm_breakdown.length > 0) {
     const low = llm_breakdown.find((l) => l.visibility_pct < 30);
@@ -130,7 +135,7 @@ function BrandDashboardPageInner() {
             <div className="dashboard-bottom-grid" style={{ marginBottom: "var(--gap)" }}>
               <div className="card dashboard-bottom-queries">
                 <div className="section-label" style={{ marginBottom: 10 }}>Queries</div>
-                <QueryChipsPanel queries={query_summaries} brandId={brandId} onManageQueries={() => setTab("queries")} />
+                <QueryChipsPanel queries={displayQueries} brandId={brandId} onManageQueries={() => setTab("queries")} />
               </div>
               <div className="card">
                 <div className="section-label" style={{ marginBottom: 10 }}>Score history</div>
@@ -165,7 +170,7 @@ function BrandDashboardPageInner() {
                     <div className="section-label">Monitored queries</div>
                     <button onClick={() => setTab("queries", { manage: "true" })} className="btn btn-primary btn-sm">Manage</button>
                   </div>
-                  <QueryChipsPanel queries={query_summaries} brandId={brandId} onManageQueries={() => setTab("queries", { manage: "true" })} />
+                  <QueryChipsPanel queries={displayQueries} brandId={brandId} onManageQueries={() => setTab("queries", { manage: "true" })} />
                 </div>
               </>
             )}
