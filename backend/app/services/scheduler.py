@@ -27,8 +27,16 @@ async def send_campaign_job(campaign_id: str, base_url: str):
             logger.exception("Campaign dispatch failed for %s", campaign_id)
 
 
+_initialized = False
+
+
 async def init_scheduler():
     """Initialize and start the APScheduler."""
+    global _initialized
+    if _initialized:
+        return
+    _initialized = True
+
     from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
     from sqlalchemy import create_engine
 
