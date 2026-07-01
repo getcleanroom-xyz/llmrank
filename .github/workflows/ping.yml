@@ -9,4 +9,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping API to prevent sleep
-        run: curl -sf https://llmrank.getcleanroom.xyz/health > /dev/null 2>&1 || true
+        run: curl -sf https://llmrank-0u8o.onrender.com/health > /dev/null 2>&1 || true
