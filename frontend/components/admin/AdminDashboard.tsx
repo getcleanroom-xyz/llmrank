@@ -241,18 +241,8 @@ export function AdminDashboard() {
             const clickRate = c.opened_count > 0 ? Math.round((c.clicked_count / c.opened_count) * 100) : 0;
 
             return (
-              <div
-                key={c.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  padding: "12px 16px",
-                  borderBottom: "1.5px solid var(--bg-dark)",
-                  flexWrap: "wrap",
-                }}
-              >
-                <div style={{ flex: 1, minWidth: 160 }}>
+              <div key={c.id} className="campaign-row">
+                <div className="campaign-row-main">
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <Link
                       href={`/admin/campaigns/${c.id}`}
@@ -275,7 +265,7 @@ export function AdminDashboard() {
                   {STATUS_LABELS[c.status] || c.status}
                 </span>
 
-                <div style={{ display: "flex", gap: 16, alignItems: "center", fontSize: 11, color: "var(--text-secondary)" }}>
+                <div className="campaign-row-stats">
                   <div style={{ textAlign: "right", minWidth: 80 }}>
                     <div style={{ fontWeight: 600 }}>{c.sent_count} sent</div>
                     {c.sent_count > 0 && (
@@ -297,7 +287,7 @@ export function AdminDashboard() {
                   )}
                 </div>
 
-                <div style={{ display: "flex", gap: 4 }}>
+                <div className="campaign-row-actions">
                   <Link href={`/admin/campaigns/${c.id}`} className="btn btn-sm btn-ghost">
                     Edit
                   </Link>

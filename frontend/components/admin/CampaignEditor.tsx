@@ -588,7 +588,7 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
           </div>
         )}
 
-        <div style={{ display: "grid", gap: "var(--gap)", gridTemplateColumns: "2fr 1fr" }}>
+        <div className="editor-grid">
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap)" }}>
             <div className="card" style={{ padding: "14px 16px" }}>
               <div style={{ display: "flex", gap: "var(--gap)", flexDirection: "column" }}>
