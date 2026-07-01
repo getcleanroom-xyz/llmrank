@@ -308,4 +308,4 @@ export const adminGetStats = () =>
   apiFetch<AdminStats>("/admin/stats");
 
 export const adminCloneCampaign = (id: string) =>
-  apiFetch<AdminCampaign>(`/admin/campaigns/${id}/clone`, { method: "POST" });
+  apiFetch<AdminCampaignDetail>(`/admin/campaigns/${id}/clone`, { method: "POST" });

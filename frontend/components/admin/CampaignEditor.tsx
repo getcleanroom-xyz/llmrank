@@ -366,8 +366,12 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
   const [templateVars, setTemplateVars] = useState<TemplateVar[]>(existing?.template_vars || []);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
-  const [manualEmails, setManualEmails] = useState<string[]>([]);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>(
+    (existing?.audience_config?.user_ids as string[]) || []
+  );
+  const [manualEmails, setManualEmails] = useState<string[]>(
+    (existing?.audience_config?.emails as string[]) || []
+  );
   const [showSource, setShowSource] = useState(false);
   const [sourceHtml, setSourceHtml] = useState(existing?.html_body || "");
   const [showPreview, setShowPreview] = useState(false);
@@ -529,7 +533,7 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
     setLinkLabel("");
   };
 
-  const editable = !existing || existing.status === "draft" || existing.status === "scheduled";
+  const editable = !existing || ["draft", "scheduled", "cancelled"].includes(existing.status);
   const isNew = !existing;
 
   if (!user) return null;
@@ -556,7 +560,7 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
         <button onClick={saveDraft} disabled={saving || !editable} className="btn btn-sm">
           {saving ? "Saving..." : "Save Draft"}
         </button>
-        {campaignId && (existing?.status === "draft" || existing?.status === "scheduled" || existing === undefined) && (
+        {campaignId && (!existing || ["draft", "scheduled", "cancelled"].includes(existing.status)) && (
           <button onClick={handlePreview} disabled={saving} className="btn btn-sm">
             Send Preview
           </button>

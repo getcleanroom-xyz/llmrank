@@ -170,8 +170,8 @@ async def update_campaign(campaign_id: uuid.UUID, body: CampaignUpdate, admin: U
     campaign = result.scalar_one_or_none()
     if not campaign:
         raise HTTPException(404, "Campaign not found")
-    if campaign.status != CampaignStatus.draft:
-        raise HTTPException(400, "Can only edit draft campaigns")
+    if campaign.status not in (CampaignStatus.draft, CampaignStatus.cancelled):
+        raise HTTPException(400, "Can only edit draft or cancelled campaigns")
 
     if body.name is not None:
         campaign.name = body.name
@@ -213,8 +213,8 @@ async def schedule_campaign(campaign_id: uuid.UUID, body: ScheduleRequest, admin
     campaign = result.scalar_one_or_none()
     if not campaign:
         raise HTTPException(404, "Campaign not found")
-    if campaign.status != CampaignStatus.draft:
-        raise HTTPException(400, "Can only schedule draft campaigns")
+    if campaign.status not in (CampaignStatus.draft, CampaignStatus.cancelled):
+        raise HTTPException(400, "Can only schedule draft or cancelled campaigns")
 
     campaign.schedule_type = body.schedule_type
 
@@ -337,7 +337,7 @@ async def upload_campaign_csv(
     if not campaign:
         raise HTTPException(404, "Campaign not found")
     if campaign.status != CampaignStatus.draft:
-        raise HTTPException(400, "Can only modify draft campaigns")
+        raise HTTPException(400, "Can only modify draft or cancelled campaigns")
 
     content = await file.read()
     text = content.decode("utf-8-sig")
@@ -371,8 +371,8 @@ async def build_campaign_audience(campaign_id: uuid.UUID, admin: User = Depends(
     campaign = result.scalar_one_or_none()
     if not campaign:
         raise HTTPException(404, "Campaign not found")
-    if campaign.status != CampaignStatus.draft:
-        raise HTTPException(400, "Can only modify draft campaigns")
+    if campaign.status not in (CampaignStatus.draft, CampaignStatus.cancelled):
+        raise HTTPException(400, "Can only modify draft or cancelled campaigns")
 
     await db.execute(delete(CampaignRecipient).where(CampaignRecipient.campaign_id == campaign.id))
 
@@ -422,7 +422,7 @@ async def build_campaign_audience(campaign_id: uuid.UUID, admin: User = Depends(
 
 # ─── Clone ─────────────────────────────────────────────────────────────────────
 
-@router.post("/campaigns/{campaign_id}/clone", response_model=CampaignResponse, status_code=201)
+@router.post("/campaigns/{campaign_id}/clone", response_model=CampaignDetailResponse, status_code=201)
 async def clone_campaign(campaign_id: uuid.UUID, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Campaign).where(Campaign.id == campaign_id))
     original = result.scalar_one_or_none()
@@ -445,7 +445,12 @@ async def clone_campaign(campaign_id: uuid.UUID, admin: User = Depends(require_a
     db.add(clone)
     await db.commit()
     await db.refresh(clone)
-    return _campaign_to_response(clone)
+    resp = _campaign_to_response(clone)
+    resp["html_body"] = clone.html_body
+    resp["from_email"] = clone.from_email
+    resp["audience_config"] = clone.audience_config
+    resp["template_vars"] = clone.template_vars
+    return resp
 
 
 # ─── Stats ────────────────────────────────────────────────────────────────────
