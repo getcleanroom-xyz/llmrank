@@ -1,8 +1,9 @@
 "use client";
 
-import { Suspense, useState, useCallback, lazy } from "react";
+import { Suspense, useState, useCallback, useEffect, lazy } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth";
 import { useDashboard, useCredits } from "@/lib/hooks";
 import type { DashboardData } from "@/types";
 import { KpiCard, ScoreRing, InsightRow } from "@/components/ui";
@@ -23,10 +24,19 @@ function BrandDashboardPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const tab = (searchParams.get("tab") as Tab) ?? "overview";
-  
+  const { user, loading: authLoading } = useAuth();
 
   const { data: dashResult, isLoading, error: loadError, refetch } = useDashboard(brandId);
   const { data: credits } = useCredits();
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace("/brands");
+    }
+  }, [user, authLoading, router]);
+
+  if (authLoading) return <div className="page" style={{ display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "var(--text-muted)", minHeight: "100vh" }}>Loading...</div>;
+  if (!user) return null;
 
   const data: DashboardData | null = dashResult?.dashboard ?? null;
   const queries = dashResult?.queries ?? [];

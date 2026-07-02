@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQueriesTable, useAddQuery, useDeleteQuery, useSuggestQueries } from "@/lib/hooks";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 
 function useDebounce(value: string, delay: number) {
   const [debounced, setDebounced] = useState(value);
@@ -41,6 +42,7 @@ export function QueriesTable({
   const [keywords, setKeywords] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; text: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const debouncedSearch = useDebounce(search, 300);
@@ -67,15 +69,16 @@ export function QueriesTable({
     }
   }, [brandId, addQuery]);
 
-  const handleDelete = useCallback(async (queryId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDelete = useCallback(async () => {
+    if (!deleteTarget) return;
     setError(null);
     try {
-      await deleteQuery.mutateAsync({ brandId, queryId });
+      await deleteQuery.mutateAsync({ brandId, queryId: deleteTarget.id });
+      setDeleteTarget(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete query");
     }
-  }, [brandId, deleteQuery]);
+  }, [brandId, deleteQuery, deleteTarget]);
 
   const handleSuggest = useCallback(async () => {
     setError(null);
@@ -321,7 +324,7 @@ export function QueriesTable({
                   </div>
 
                   <button
-                    onClick={(e) => handleDelete(q.id, e)}
+                    onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: q.id, text: q.query_text }); }}
                     title="Delete query"
                     style={{
                       width: 28,
@@ -414,6 +417,18 @@ export function QueriesTable({
           </>
         )}
       </div>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete query"
+        confirmLabel="Delete"
+        destructive
+        loading={deleteQuery.isPending}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      >
+        Are you sure you want to delete the query <strong>"{deleteTarget?.text}"</strong>? This will also remove all scan results for this query. This action cannot be undone.
+      </ConfirmDialog>
     </div>
   );
 }

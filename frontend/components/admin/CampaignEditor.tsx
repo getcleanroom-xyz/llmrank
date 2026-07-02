@@ -117,6 +117,7 @@ function TemplateVarManager({
   const [key, setKey] = useState("");
   const [label, setLabel] = useState("");
   const [defaultVal, setDefaultVal] = useState("");
+  const [removeTarget, setRemoveTarget] = useState<string | null>(null);
 
   const startAdd = () => {
     setEditing({ key: "", label: "", default_value: "" });
@@ -217,7 +218,7 @@ function TemplateVarManager({
                   Edit
                 </button>
                 <button
-                  onClick={() => removeVar(v.key)}
+                  onClick={() => setRemoveTarget(v.key)}
                   className="btn btn-sm btn-ghost"
                   type="button"
                   title="Remove"
@@ -289,6 +290,17 @@ function TemplateVarManager({
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={removeTarget !== null}
+        title="Remove template variable"
+        confirmLabel="Remove"
+        destructive
+        onConfirm={() => { if (removeTarget) { removeVar(removeTarget); setRemoveTarget(null); } }}
+        onCancel={() => setRemoveTarget(null)}
+      >
+        Are you sure you want to remove the template variable <strong>{`{{${removeTarget}}}`}</strong>? Any references to this variable in your email body will become broken when the campaign is saved.
+      </ConfirmDialog>
     </div>
   );
 }

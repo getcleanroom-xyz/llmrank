@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQueries, useAddQuery, useDeleteQuery, useSuggestQueries } from "@/lib/hooks";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 
 export function QueryManager({
   brandId,
@@ -23,6 +24,7 @@ export function QueryManager({
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [showSuggest, setShowSuggest] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; text: string } | null>(null);
 
   const handleAdd = async (text: string) => {
     if (!text.trim()) return;
@@ -46,10 +48,12 @@ export function QueryManager({
     }
   };
 
-  const handleDelete = async (queryId: string) => {
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
     setError(null);
     try {
-      await deleteQuery.mutateAsync({ brandId, queryId });
+      await deleteQuery.mutateAsync({ brandId, queryId: deleteTarget.id });
+      setDeleteTarget(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete query");
     }
@@ -129,7 +133,7 @@ export function QueryManager({
               {/* eslint-enable react/no-unescaped-entities */}
             </span>
             <button
-              onClick={() => handleDelete(q.id)}
+              onClick={() => setDeleteTarget({ id: q.id, text: q.query_text })}
               style={{
                 fontSize: 11,
                 padding: "3px 8px",
@@ -276,6 +280,18 @@ export function QueryManager({
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete query"
+        confirmLabel="Delete"
+        destructive
+        loading={deleteQuery.isPending}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      >
+        Are you sure you want to delete the query <strong>&quot;{deleteTarget?.text}&quot;</strong>? This will also remove all scan results for this query. This action cannot be undone.
+      </ConfirmDialog>
     </div>
   );
 }
