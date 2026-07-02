@@ -46,6 +46,25 @@ class QuerySuggestResponse(BaseModel):
     suggested_queries: list[str]
 
 
+class QueryTableItem(BaseModel):
+    id: UUID
+    query_text: str
+    is_active: bool
+    created_at: datetime
+    result_count: int = 0
+    last_scan_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+class QueryTableResponse(BaseModel):
+    items: list[QueryTableItem]
+    total: int
+    page: int
+    per_page: int
+    pages: int
+
+
 # Scan schemas
 class ScanCreate(BaseModel):
     llms: list[str] = Field(default=["chatgpt", "llama"])

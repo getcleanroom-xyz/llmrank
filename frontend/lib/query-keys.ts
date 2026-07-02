@@ -1,6 +1,7 @@
 export const queryKeys = {
   brands: ["brands"] as const,
   queries: (brandId: string) => ["queries", brandId] as const,
+  queriesTable: (brandId: string, page: number, perPage: number, q: string) => ["queriesTable", brandId, page, perPage, q] as const,
   scans: (brandId: string) => ["scans", brandId] as const,
   dashboard: (brandId: string) => ["dashboard", brandId] as const,
   drilldown: (brandId: string, queryId: string) => ["drilldown", brandId, queryId] as const,

@@ -17,6 +17,7 @@ from app.models.models import User, Brand, MonitoredQuery, Scan, QueryResult, Sc
 from app.schemas.schemas import (
     BrandCreate, BrandOut,
     QueryCreate, QueryOut, QuerySuggestRequest, QuerySuggestResponse,
+    QueryTableItem, QueryTableResponse,
     ScanCreate, ScanOut,
     QueryResultOut, DashboardOut, QueryDrilldownOut,
     LLMBreakdown, CompetitorShareItem, QuerySummary, DrilldownInsight,
@@ -118,6 +119,68 @@ async def delete_query(request: Request, brand_id: uuid.UUID, query_id: uuid.UUI
         raise HTTPException(404, "Query not found")
     await db.delete(query)
     await db.commit()
+
+
+@router.get("/brands/{brand_id}/queries/table", response_model=QueryTableResponse, tags=["Queries"])
+async def list_queries_table(
+    brand_id: uuid.UUID,
+    page: int = 1,
+    per_page: int = 20,
+    q: str = "",
+    db: AsyncSession = Depends(get_db),
+):
+    # count total matching
+    count_query = select(func.count(MonitoredQuery.id)).where(MonitoredQuery.brand_id == brand_id)
+    if q:
+        count_query = count_query.where(MonitoredQuery.query_text.ilike(f"%{q}%"))
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+
+    pages = max(1, (total + per_page - 1) // per_page)
+    page = max(1, min(page, pages))
+
+    # fetch page
+    stmt = (
+        select(MonitoredQuery)
+        .where(MonitoredQuery.brand_id == brand_id)
+    )
+    if q:
+        stmt = stmt.where(MonitoredQuery.query_text.ilike(f"%{q}%"))
+    stmt = stmt.order_by(MonitoredQuery.created_at.desc()).offset((page - 1) * per_page).limit(per_page)
+    result = await db.execute(stmt)
+    queries = result.scalars().all()
+
+    # get result counts and last scan per query
+    qids = [mq.id for mq in queries]
+    items: list[QueryTableItem] = []
+    if qids:
+        counts_result = await db.execute(
+            select(QueryResult.query_id, func.count(QueryResult.id), func.max(QueryResult.created_at))
+            .where(QueryResult.query_id.in_(qids))
+            .group_by(QueryResult.query_id)
+        )
+        counts = {row[0]: (row[1], row[2]) for row in counts_result}
+
+        for mq in queries:
+            cnt, last_at = counts.get(mq.id, (0, None))
+            items.append(QueryTableItem(
+                id=mq.id,
+                query_text=mq.query_text,
+                is_active=mq.is_active,
+                created_at=mq.created_at,
+                result_count=cnt,
+                last_scan_at=last_at,
+            ))
+    else:
+        for mq in queries:
+            items.append(QueryTableItem(
+                id=mq.id,
+                query_text=mq.query_text,
+                is_active=mq.is_active,
+                created_at=mq.created_at,
+            ))
+
+    return QueryTableResponse(items=items, total=total, page=page, per_page=per_page, pages=pages)
 
 
 @router.post("/brands/{brand_id}/queries/suggest", response_model=QuerySuggestResponse, tags=["Queries"])

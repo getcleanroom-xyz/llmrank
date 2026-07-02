@@ -71,6 +71,26 @@ export const suggestQueries = (brandId: string, brand_name: string, domain: stri
     body: JSON.stringify({ brand_name, domain, keywords }),
   });
 
+export interface QueriesTableItem {
+  id: string;
+  query_text: string;
+  is_active: boolean;
+  created_at: string;
+  result_count: number;
+  last_scan_at: string | null;
+}
+
+export interface QueriesTableResponse {
+  items: QueriesTableItem[];
+  total: number;
+  page: number;
+  per_page: number;
+  pages: number;
+}
+
+export const getQueriesTable = (brandId: string, page: number = 1, per_page: number = 20, q: string = "") =>
+  apiFetch<QueriesTableResponse>(`/brands/${brandId}/queries/table?page=${page}&per_page=${per_page}&q=${encodeURIComponent(q)}`);
+
 // ─── Scans ─────────────────────────────────────────────────────────────────────
 
 export const triggerScan = (brandId: string, llms: string[]) =>

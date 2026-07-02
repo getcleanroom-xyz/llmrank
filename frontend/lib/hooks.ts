@@ -55,8 +55,10 @@ export function useAddQuery() {
   return useMutation({
     mutationFn: ({ brandId, query_text }: { brandId: string; query_text: string }) =>
       api.addQuery(brandId, query_text),
-    onSuccess: (_data, variables) =>
-      qc.invalidateQueries({ queryKey: queryKeys.queries(variables.brandId) }),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: queryKeys.queries(variables.brandId) });
+      qc.invalidateQueries({ queryKey: ["queriesTable", variables.brandId] });
+    },
   });
 }
 
@@ -65,8 +67,18 @@ export function useDeleteQuery() {
   return useMutation({
     mutationFn: ({ brandId, queryId }: { brandId: string; queryId: string }) =>
       api.deleteQuery(brandId, queryId),
-    onSuccess: (_data, variables) =>
-      qc.invalidateQueries({ queryKey: queryKeys.queries(variables.brandId) }),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: queryKeys.queries(variables.brandId) });
+      qc.invalidateQueries({ queryKey: ["queriesTable", variables.brandId] });
+    },
+  });
+}
+
+export function useQueriesTable(brandId: string, page: number = 1, perPage: number = 20, q: string = "") {
+  return useQuery({
+    queryKey: queryKeys.queriesTable(brandId, page, perPage, q),
+    queryFn: () => api.getQueriesTable(brandId, page, perPage, q),
+    placeholderData: (prev) => prev,
   });
 }
 

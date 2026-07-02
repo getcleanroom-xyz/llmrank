@@ -11,7 +11,7 @@ import { ScanControls } from "@/components/dashboard/DashboardHeader";
 import { LLMBreakdownTable } from "@/components/dashboard/LLMBreakdownTable";
 import { CompetitorShare } from "@/components/dashboard/CompetitorShare";
 import { QueryChipsPanel } from "@/components/dashboard/QueryChipsPanel";
-import { QueryManager } from "@/components/dashboard/QueryManager";
+import { QueriesTable } from "@/components/dashboard/QueriesTable";
 
 const ScoreHistoryChart = lazy(() => import("@/components/dashboard/ScoreHistoryChart").then(m => ({ default: m.ScoreHistoryChart })));
 const ScanHistory = lazy(() => import("@/components/dashboard/ScanHistory").then(m => ({ default: m.ScanHistory })));
@@ -23,7 +23,7 @@ function BrandDashboardPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const tab = (searchParams.get("tab") as Tab) ?? "overview";
-  const manage = searchParams.get("manage") === "true";
+  
 
   const { data: dashResult, isLoading, error: loadError, refetch } = useDashboard(brandId);
   const { data: credits } = useCredits();
@@ -31,17 +31,9 @@ function BrandDashboardPageInner() {
   const data: DashboardData | null = dashResult?.dashboard ?? null;
   const queries = dashResult?.queries ?? [];
 
-  const setTab = useCallback((t: Tab, extras?: Record<string, string>) => {
+  const setTab = useCallback((t: Tab) => {
     const p = new URLSearchParams(searchParams.toString());
     p.set("tab", t);
-    if (extras) {
-      for (const [k, v] of Object.entries(extras)) {
-        if (v) p.set(k, v);
-        else p.delete(k);
-      }
-    } else {
-      p.delete("manage");
-    }
     router.replace(`/brands/${brandId}?${p.toString()}`);
   }, [brandId, searchParams, router]);
 
@@ -154,26 +146,8 @@ function BrandDashboardPageInner() {
         )}
 
         {tab === "queries" && (
-          <div style={{ maxWidth: 640 }}>
-            {manage ? (
-              <div className="card">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                  <div className="section-label">Manage queries</div>
-                  <button onClick={() => setTab("queries")} className="btn btn-ghost btn-sm">Done</button>
-                </div>
-                <QueryManager brandId={brandId} brandName={brand.name} domain={brand.domain} />
-              </div>
-            ) : (
-              <>
-                <div className="card" style={{ marginBottom: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                    <div className="section-label">Monitored queries</div>
-                    <button onClick={() => setTab("queries", { manage: "true" })} className="btn btn-primary btn-sm">Manage</button>
-                  </div>
-                  <QueryChipsPanel queries={displayQueries} brandId={brandId} onManageQueries={() => setTab("queries", { manage: "true" })} />
-                </div>
-              </>
-            )}
+          <div style={{ maxWidth: 900 }}>
+            <QueriesTable brandId={brandId} brandName={brand.name} domain={brand.domain} />
           </div>
         )}
 

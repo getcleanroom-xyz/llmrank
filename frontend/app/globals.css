@@ -509,3 +509,26 @@ input[type="checkbox"]:not(.native):disabled, input[type="radio"]:not(.native):d
     padding: 1px 5px !important;
   }
 }
+
+/* ─── Queries Table responsive ─── */
+.queries-table-header {
+  display: flex !important;
+}
+.queries-table-mobile {
+  display: none !important;
+}
+.queries-table-desktop {
+  display: flex !important;
+}
+
+@media (max-width: 640px) {
+  .queries-table-header {
+    display: none !important;
+  }
+  .queries-table-mobile {
+    display: block !important;
+  }
+  .queries-table-desktop {
+    display: none !important;
+  }
+}
