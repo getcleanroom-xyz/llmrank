@@ -106,8 +106,8 @@ async def flutterwave_webhook(request: Request, db: AsyncSession = Depends(get_d
     status = charge_data.get("status")
     meta = charge_data.get("meta", {})
 
-    if status != "succeeded":
-        return {"status": "ignored", "status": status}
+    if status != "successful":
+        return {"status": "ignored", "charge_status": status}
 
     # Extract user_id and package from meta
     user_id_str = meta.get("user_id")
@@ -170,7 +170,7 @@ async def verify_payment(
     if not result["verified"]:
         raise HTTPException(400, "Payment verification failed")
 
-    if result["status"] == "succeeded":
+    if result["status"] == "successful":
         # Grant credits (fallback in case webhook hasn't fired yet)
         meta = result.get("meta", {})
         package_key = meta.get("package_key")
