@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useVerifyPayment } from "@/lib/hooks";
 
@@ -14,10 +14,14 @@ type State =
 function CreditsSuccessPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const verifyPayment = useVerifyPayment();
+  const { mutateAsync: verifyPayment } = useVerifyPayment();
   const [state, setState] = useState<State>({ status: "loading" });
+  const hasRun = useRef(false);
 
   useEffect(() => {
+    if (hasRun.current) return;
+    hasRun.current = true;
+
     const status = searchParams.get("status");
     const transactionId = searchParams.get("transaction_id");
 
@@ -27,7 +31,7 @@ function CreditsSuccessPageInner() {
       return;
     }
 
-    verifyPayment.mutateAsync(transactionId)
+    verifyPayment(transactionId)
       .then((res: Record<string, unknown>) => {
         const s = res.status as string;
         if (s === "successful") {
@@ -41,7 +45,8 @@ function CreditsSuccessPageInner() {
       .catch((err) => {
         setState({ status: "error", message: err instanceof Error ? err.message : "Verification failed" });
       });
-  }, [searchParams, verifyPayment]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <main className="page" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100dvh", padding: "0 var(--page-px)" }}>
