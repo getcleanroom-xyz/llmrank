@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useVerifyPayment } from "@/lib/hooks";
 
@@ -11,7 +11,7 @@ type State =
   | { status: "failed"; reason: string }
   | { status: "error"; message: string };
 
-export default function CreditsSuccessPage() {
+function CreditsSuccessPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const verifyPayment = useVerifyPayment();
@@ -45,22 +45,22 @@ export default function CreditsSuccessPage() {
 
   return (
     <main className="page" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100dvh", padding: "0 var(--page-px)" }}>
-      <div className="card" style={{ maxWidth: 400, width: "100%", padding: 32, textAlign: "center" }}>
+      <div className="card" style={{ maxWidth: 420, width: "100%", padding: 32, textAlign: "center" }}>
         {state.status === "loading" && (
           <>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
-            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Verifying payment...</h2>
-            <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>Please wait while we confirm your payment.</p>
+            <div className="section-label" style={{ marginBottom: 12, fontSize: 12 }}>Verifying payment</div>
+            <div className="skeleton" style={{ height: 4, marginBottom: 16 }} />
+            <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>Please wait while we confirm your payment with Flutterwave.</p>
           </>
         )}
 
         {state.status === "success" && (
           <>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>✅</div>
-            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Payment successful!</h2>
+            <div style={{ fontSize: 40, fontWeight: 800, color: "#166534", marginBottom: 8 }}>OK</div>
+            <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>Payment successful</h2>
             <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 20 }}>
               {state.credits > 0
-                ? `Credits granted: ${state.credits.toLocaleString()}. You can now start scanning.`
+                ? `${state.credits.toLocaleString()} credits granted. You can now start scanning.`
                 : "Your credits have been added. You can now start scanning."}
             </p>
             <button className="btn btn-primary" onClick={() => router.push("/brands")}>
@@ -71,10 +71,10 @@ export default function CreditsSuccessPage() {
 
         {state.status === "already_credited" && (
           <>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>ℹ️</div>
-            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Already credited</h2>
+            <div style={{ fontSize: 40, fontWeight: 800, color: "var(--primary)", marginBottom: 8 }}>OK</div>
+            <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>Already credited</h2>
             <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 20 }}>
-              This payment has already been processed.
+              This payment has already been processed and credits were granted.
             </p>
             <button className="btn btn-primary" onClick={() => router.push("/brands")}>
               Go to Dashboard
@@ -82,19 +82,47 @@ export default function CreditsSuccessPage() {
           </>
         )}
 
-        {(state.status === "failed" || state.status === "error") && (
+        {state.status === "failed" && (
           <>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>❌</div>
-            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Payment failed</h2>
+            <div style={{ fontSize: 40, fontWeight: 800, color: "#991B1B", marginBottom: 8 }}>!</div>
+            <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>Payment not confirmed</h2>
             <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 20 }}>
-              {state.status === "failed" ? state.reason : state.message}
+              {state.reason}
             </p>
-            <button className="btn btn-secondary" onClick={() => router.push("/brands")}>
+            <button className="btn" onClick={() => router.push("/brands")}>
+              Back to Dashboard
+            </button>
+          </>
+        )}
+
+        {state.status === "error" && (
+          <>
+            <div style={{ fontSize: 40, fontWeight: 800, color: "#991B1B", marginBottom: 8 }}>!</div>
+            <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>Something went wrong</h2>
+            <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 20 }}>
+              {state.message}
+            </p>
+            <button className="btn" onClick={() => router.push("/brands")}>
               Back to Dashboard
             </button>
           </>
         )}
       </div>
     </main>
+  );
+}
+
+export default function CreditsSuccessPage() {
+  return (
+    <Suspense fallback={
+      <main className="page" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100dvh", padding: "0 var(--page-px)" }}>
+        <div className="card" style={{ maxWidth: 420, width: "100%", padding: 32, textAlign: "center" }}>
+          <div className="section-label" style={{ marginBottom: 12, fontSize: 12 }}>Loading</div>
+          <div className="skeleton" style={{ height: 4, marginBottom: 16 }} />
+        </div>
+      </main>
+    }>
+      <CreditsSuccessPageInner />
+    </Suspense>
   );
 }

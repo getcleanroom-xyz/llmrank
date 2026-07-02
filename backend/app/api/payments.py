@@ -155,12 +155,14 @@ async def verify_payment(
         raise HTTPException(400, "Payment verification failed")
 
     if result["status"] == "succeeded":
-        # Check if already credited
+        # Check if already credited via webhook (desc contains reference like [llmrank_...])
         from app.models.models import CreditTransaction
+        tx_ref = result.get("tx_ref", "")
         existing = await db.execute(
             select(CreditTransaction).where(
                 CreditTransaction.user_id == user.id,
-                CreditTransaction.description.contains(transaction_id),
+                CreditTransaction.type == "payment",
+                CreditTransaction.description.contains(tx_ref),
             )
         )
         if existing.scalar_one_or_none():
