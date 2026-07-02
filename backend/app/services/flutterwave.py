@@ -143,7 +143,7 @@ async def grant_credits_from_payment(
     wallet = await grant_credits(
         db,
         amount=credits_to_grant,
-        description=f"Payment: ${amount} ({package['label']}) → {credits_to_grant} credits [{reference}]",
+        description=f"Payment: ${amount} ({package['label']}) → {credits_to_grant} credits [txn:{charge_id}]",
         tx_type="payment",
         user_id=user_id,
     )

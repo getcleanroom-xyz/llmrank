@@ -3,11 +3,13 @@ import uuid
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.config import settings
-from app.models.models import User
+from app.core.rate_limit import limiter
+from app.models.models import User, CreditTransaction
 from app.api.auth import get_current_user
 from app.services.flutterwave import (
     CREDIT_PACKAGES,
@@ -142,32 +144,33 @@ async def flutterwave_webhook(request: Request, db: AsyncSession = Depends(get_d
 
 
 @router.get("/verify/{transaction_id}")
+@limiter.limit("30/minute")
 async def verify_payment(
+    request: Request,
     transaction_id: str,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Verify a Flutterwave transaction by ID (call this after redirect).
     Grants credits if the payment succeeded and hasn't been processed yet."""
+
+    # Check DB first: if credits already granted for this txn, skip Flutterwave call
+    existing = await db.execute(
+        select(CreditTransaction).where(
+            CreditTransaction.user_id == user.id,
+            CreditTransaction.type == "payment",
+            CreditTransaction.description.contains(f"[txn:{transaction_id}]"),
+        )
+    )
+    if existing.scalar_one_or_none():
+        return {"status": "already_credited", "message": "Credits already granted"}
+
     result = await verify_flutterwave_charge(transaction_id)
 
     if not result["verified"]:
         raise HTTPException(400, "Payment verification failed")
 
     if result["status"] == "succeeded":
-        # Check if already credited via webhook (desc contains reference like [llmrank_...])
-        from app.models.models import CreditTransaction
-        tx_ref = result.get("tx_ref", "")
-        existing = await db.execute(
-            select(CreditTransaction).where(
-                CreditTransaction.user_id == user.id,
-                CreditTransaction.type == "payment",
-                CreditTransaction.description.contains(tx_ref),
-            )
-        )
-        if existing.scalar_one_or_none():
-            return {"status": "already_credited", "message": "Credits already granted"}
-
         # Grant credits (fallback in case webhook hasn't fired yet)
         meta = result.get("meta", {})
         package_key = meta.get("package_key")
