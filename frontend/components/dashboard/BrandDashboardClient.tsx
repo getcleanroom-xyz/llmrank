@@ -281,9 +281,7 @@ function BrandDashboardPageInner() {
         )}
 
         {tab === "queries" && (
-          <div style={{ maxWidth: 900 }}>
-            <QueriesTable brandId={brandId} brandName={brand.name} domain={brand.domain} />
-          </div>
+          <QueriesTable brandId={brandId} brandName={brand.name} domain={brand.domain} />
         )}
 
         {tab === "scans" && (

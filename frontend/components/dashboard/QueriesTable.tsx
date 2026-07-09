@@ -25,6 +25,14 @@ function timeAgo(date: string): string {
   return `${days}d ago`;
 }
 
+const CARD_COLORS = [
+  { bg: "#FFF9DB", acc: "var(--primary)", rot: "-0.3deg" },
+  { bg: "#DBEAFF", acc: "#3B82F6", rot: "0.4deg" },
+  { bg: "#E6F9ED", acc: "#22C55E", rot: "-0.35deg" },
+  { bg: "#F3E8FF", acc: "#A855F7", rot: "0.3deg" },
+  { bg: "#FFE8DB", acc: "#F97316", rot: "-0.25deg" },
+];
+
 export function QueriesTable({
   brandId,
   brandName,
@@ -93,6 +101,8 @@ export function QueriesTable({
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
   const pages = data?.pages ?? 1;
+  const scanned = items.filter((q) => q.result_count > 0).length;
+  const lastAt = items.find((q) => q.last_scan_at)?.last_scan_at ?? null;
 
   return (
     <div>
@@ -103,59 +113,59 @@ export function QueriesTable({
         </div>
       )}
 
-      {/* Hero heading */}
-      <div style={{ marginBottom: 16 }}>
-        <h1 style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: "clamp(24px, 3.5vw, 34px)", fontWeight: 700, margin: "0 0 2px", lineHeight: 1, transform: "rotate(-0.3deg)" }}>
-          Queries
-        </h1>
-        <svg width="50%" height="6" viewBox="0 0 120 6" preserveAspectRatio="none" style={{ display: "block", marginBottom: 4 }}>
-          <path d="M0 3 Q8 0 16 4 Q24 6 32 2 Q40 0 48 5 Q56 6 64 2 Q72 0 80 4 Q88 6 96 2 Q104 0 112 4 Q120 3 120 2" fill="none" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-        <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600 }}>
-          {total} {total === 1 ? "query" : "queries"} monitored
-        </span>
+      {/* Hero row: heading + stat pills */}
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, flexWrap: "wrap", marginBottom: 16 }}>
+        <div>
+          <h1 style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: "clamp(24px, 3.5vw, 34px)", fontWeight: 700, margin: "0 0 2px", lineHeight: 1, transform: "rotate(-0.3deg)" }}>
+            Queries
+          </h1>
+          <svg width="160" height="6" viewBox="0 0 160 6" preserveAspectRatio="none" style={{ display: "block" }}>
+            <path d="M0 3 Q10 0 20 5 Q30 8 40 3 Q50 0 60 6 Q70 8 80 2 Q90 0 100 5 Q110 8 120 3 Q130 0 140 5 Q150 8 160 3" fill="none" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          {[
+            { val: total, label: "total", bg: "#FFF9DB", acc: "var(--primary)" },
+            { val: scanned, label: "scanned", bg: "#E6F9ED", acc: "#22C55E" },
+            { val: lastAt ? timeAgo(lastAt) : "never", label: "last scan", bg: "#DBEAFF", acc: "#3B82F6" },
+          ].map((s, i) => (
+            <div key={s.label} style={{ background: s.bg, border: "2px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow-sm)", padding: "8px 14px", transform: `rotate(${i % 2 === 0 ? "-0.2deg" : "0.2deg"})`, textAlign: "center" }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: s.acc, lineHeight: 1 }}>{s.val}</div>
+              <div style={{ fontSize: 9, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", marginTop: 1 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Search + Add card */}
-      <div style={{ position: "relative", background: "#FFF9DB", border: "2px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "3px 3px 0 #1A1A1A", padding: "16px 18px 12px", marginBottom: 14, transform: "rotate(-0.2deg)" }}>
-        <svg width="18" height="22" viewBox="0 0 18 22" fill="none" style={{ position: "absolute", top: -10, left: 16 }}>
+      {/* Search + Add — spread across columns */}
+      <div style={{ position: "relative", background: "#FFF9DB", border: "2px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "3px 3px 0 #1A1A1A", padding: "16px 18px 12px", marginBottom: 16, transform: "rotate(-0.15deg)" }}>
+        <svg width="18" height="22" viewBox="0 0 18 22" fill="none" style={{ position: "absolute", top: -10, right: 20 }}>
           <ellipse cx="9" cy="4.5" rx="4.5" ry="4.5" fill="#EF4444" stroke="#1A1A1A" strokeWidth="1.5" />
           <rect x="7" y="9" width="4" height="7" rx="1" fill="#DC2626" stroke="#1A1A1A" strokeWidth="1.5" />
         </svg>
 
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
-          <div style={{ flex: 1, minWidth: 160, position: "relative" }}>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search..."
-              style={{ width: "100%", background: "var(--surface)", border: "1.5px solid var(--border)", borderRadius: "var(--radius)", padding: "8px 12px 8px 32px", fontSize: 13, color: "var(--text)", outline: "none" }}
-            />
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 180, position: "relative" }}>
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search queries..."
+              style={{ width: "100%", background: "var(--surface)", border: "1.5px solid var(--border)", borderRadius: "var(--radius)", padding: "8px 12px 8px 32px", fontSize: 13, color: "var(--text)", outline: "none" }} />
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
               <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
           </div>
-          <input
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAdd(input)}
-            placeholder="Add a query..."
-            style={{ flex: 1, minWidth: 140, background: "var(--surface)", border: "1.5px solid var(--border)", borderRadius: "var(--radius)", padding: "8px 12px", fontSize: 13, color: "var(--text)", outline: "none" }}
-          />
+          <input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAdd(input)} placeholder="Add a query..."
+            style={{ flex: 1, minWidth: 160, background: "var(--surface)", border: "1.5px solid var(--border)", borderRadius: "var(--radius)", padding: "8px 12px", fontSize: 13, color: "var(--text)", outline: "none" }} />
           <button onClick={() => handleAdd(input)} disabled={addQuery.isPending || !input.trim()} className="btn btn-primary btn-sm">
             {addQuery.isPending ? "..." : "Add"}
           </button>
         </div>
 
-        {/* AI suggestions */}
         <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
           <button onClick={() => setShowSuggest((s) => !s)} style={{ fontWeight: 600, background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 16 }}>
             {showSuggest ? "hide AI suggestions" : "+ AI suggestions"}
           </button>
           {showSuggest && (
             <>
-              <input value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="keywords, comma, separated"
+              <input value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="keywords, comma separated"
                 style={{ flex: 1, minWidth: 120, background: "var(--surface)", border: "1.5px solid var(--border)", borderRadius: "var(--radius)", padding: "5px 8px", fontSize: 12, color: "var(--text)", outline: "none" }} />
               <button onClick={handleSuggest} disabled={suggestQueries.isPending} className="btn btn-sm">{suggestQueries.isPending ? "..." : "Generate"}</button>
             </>
@@ -174,96 +184,93 @@ export function QueriesTable({
         )}
       </div>
 
-      {/* Query cards */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
-        {isLoading ? (
-          <div style={{ textAlign: "center", padding: 24, color: "var(--text-muted)", fontSize: 13, fontWeight: 600 }}>Loading...</div>
-        ) : items.length === 0 ? (
-          <div className="card" style={{ textAlign: "center", padding: "32px 20px" }}>
-            <div style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 22, color: "var(--text-muted)", marginBottom: 4 }}>
-              {search ? "Nothing found" : "No queries yet"}
-            </div>
-            <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
-              {search ? "Try a different search term." : "Add your first query above."}
-            </p>
+      {/* Query cards grid */}
+      {isLoading ? (
+        <div style={{ textAlign: "center", padding: 32, color: "var(--text-muted)", fontSize: 13, fontWeight: 600 }}>Loading queries...</div>
+      ) : items.length === 0 ? (
+        <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
+          <div style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 24, color: "var(--text-muted)", marginBottom: 4 }}>
+            {search ? "Nothing found" : "No queries yet"}
           </div>
-        ) : (
-          items.map((q, i) => (
-            <div
-              key={q.id}
-              className="card"
-              onClick={() => router.push(`/brands/${brandId}/queries/${q.id}`)}
-              style={{
-                padding: "12px 16px",
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                cursor: "pointer",
-                transform: `rotate(${i % 2 === 0 ? "-0.12deg" : "0.12deg"})`,
-                borderLeft: q.result_count > 0 ? "4px solid var(--primary)" : "4px solid var(--bg-dark)",
-                transition: "box-shadow 0.15s, transform 0.15s",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "var(--shadow-hover)"; e.currentTarget.style.transform = `rotate(0deg) translate(-1px, -1px)`; }}
-              onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "var(--shadow)"; e.currentTarget.style.transform = `rotate(${i % 2 === 0 ? "-0.12deg" : "0.12deg"})`; }}
-            >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {q.query_text}
-                </div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>
-                    {q.result_count > 0 ? `${q.result_count} result${q.result_count !== 1 ? "s" : ""}` : "no results"}
-                  </span>
-                  {q.last_scan_at && (
-                    <>
-                      <span style={{ color: "var(--text-muted)", fontSize: 10 }}>&middot;</span>
-                      <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>
-                        last scan {timeAgo(q.last_scan_at)}
-                      </span>
-                    </>
-                  )}
-                  <span style={{ color: "var(--text-muted)", fontSize: 10 }}>&middot;</span>
-                  <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>
-                    added {timeAgo(q.created_at)}
-                  </span>
-                </div>
-              </div>
-
-              <button
-                onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: q.id, text: q.query_text }); }}
-                title="Delete"
-                style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: "transparent", border: "1.5px solid transparent", borderRadius: "var(--radius)", color: "var(--text-muted)", cursor: "pointer", fontSize: 14, lineHeight: 1 }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--red)"; e.currentTarget.style.color = "#991B1B"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-muted)"; }}
-              >
-                x
-              </button>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Pagination */}
-      {pages > 1 && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}
-            className="btn btn-sm btn-ghost" style={{ opacity: page <= 1 ? 0.3 : 1, cursor: page <= 1 ? "not-allowed" : "pointer" }}>Prev</button>
-          {Array.from({ length: Math.min(pages, 7) }, (_, i) => {
-            let n: number;
-            if (pages <= 7) n = i + 1;
-            else if (page <= 4) n = i + 1;
-            else if (page >= pages - 3) n = pages - 6 + i;
-            else n = page - 3 + i;
-            return (
-              <button key={n} onClick={() => setPage(n)} className="btn btn-sm"
-                style={{ minWidth: 32, fontWeight: n === page ? 800 : 500, background: n === page ? "var(--primary)" : "var(--bg-dark)", color: n === page ? "#0A0A0B" : "var(--text)" }}>
-                {n}
-              </button>
-            );
-          })}
-          <button onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={page >= pages}
-            className="btn btn-sm btn-ghost" style={{ opacity: page >= pages ? 0.3 : 1, cursor: page >= pages ? "not-allowed" : "pointer" }}>Next</button>
+          <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
+            {search ? "Try a different search term." : "Add your first query above."}
+          </p>
         </div>
+      ) : (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 10, marginBottom: 14 }}>
+            {items.map((q, i) => {
+              const c = CARD_COLORS[i % CARD_COLORS.length];
+              return (
+                <div
+                  key={q.id}
+                  className="card"
+                  onClick={() => router.push(`/brands/${brandId}/queries/${q.id}`)}
+                  style={{
+                    background: c.bg,
+                    padding: "14px 16px",
+                    cursor: "pointer",
+                    transform: `rotate(${c.rot})`,
+                    transition: "box-shadow 0.15s, transform 0.15s",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "var(--shadow-hover)"; e.currentTarget.style.transform = "rotate(0deg) translate(-1px, -1px)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "var(--shadow)"; e.currentTarget.style.transform = `rotate(${c.rot})`; }}
+                >
+                  <div style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                    {q.query_text}
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                      {q.result_count > 0 ? (
+                        <span style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 600 }}>
+                          {q.result_count} result{q.result_count !== 1 ? "s" : ""}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>unscanned</span>
+                      )}
+                      {q.last_scan_at && <span style={{ fontSize: 10, color: "var(--text-muted)" }}>scanned {timeAgo(q.last_scan_at)}</span>}
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: q.id, text: q.query_text }); }}
+                      title="Delete"
+                      style={{ width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: "transparent", border: "1.5px solid transparent", borderRadius: "var(--radius)", color: "var(--text-muted)", cursor: "pointer", fontSize: 12, lineHeight: 1 }}
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--red)"; e.currentTarget.style.color = "#991B1B"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-muted)"; }}
+                    >
+                      x
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {pages > 1 && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}
+                className="btn btn-sm btn-ghost" style={{ opacity: page <= 1 ? 0.3 : 1, cursor: page <= 1 ? "not-allowed" : "pointer" }}>Prev</button>
+              {Array.from({ length: Math.min(pages, 7) }, (_, i) => {
+                let n: number;
+                if (pages <= 7) n = i + 1;
+                else if (page <= 4) n = i + 1;
+                else if (page >= pages - 3) n = pages - 6 + i;
+                else n = page - 3 + i;
+                return (
+                  <button key={n} onClick={() => setPage(n)} className="btn btn-sm"
+                    style={{ minWidth: 32, fontWeight: n === page ? 800 : 500, background: n === page ? "var(--primary)" : "var(--bg-dark)", color: n === page ? "#0A0A0B" : "var(--text)" }}>
+                    {n}
+                  </button>
+                );
+              })}
+              <button onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={page >= pages}
+                className="btn btn-sm btn-ghost" style={{ opacity: page >= pages ? 0.3 : 1, cursor: page >= pages ? "not-allowed" : "pointer" }}>Next</button>
+            </div>
+          )}
+        </>
       )}
 
       <ConfirmDialog
@@ -275,7 +282,7 @@ export function QueriesTable({
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
       >
-        Are you sure you want to delete the query <strong>&quot;{deleteTarget?.text}&quot;</strong>? This will also remove all scan results for this query. This action cannot be undone.
+        Delete <strong>&quot;{deleteTarget?.text}&quot;</strong>? This will also remove all scan results for this query. This cannot be undone.
       </ConfirmDialog>
     </div>
   );
