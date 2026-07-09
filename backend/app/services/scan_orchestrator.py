@@ -304,22 +304,18 @@ async def generate_query_suggestions(brand_name: str, domain: str, keywords: lis
     content_signal = combined if has_useful_content else f"Brand name: {brand_name} | Domain: {domain}\n\n{web_context}".strip()
     content_label = "crawled website content" if has_useful_content else ("brand signals + web search results" if web_context else "brand signals (name, domain)")
 
-    prompt = f"""You are an SEO expert. Based EXCLUSIVELY on the following information about {brand_name} ({domain}), generate 12 realistic search queries that potential customers would ask an AI assistant.
+    prompt = f"""You are an SEO expert. Below is crawled content from the website of {brand_name} ({domain}). Based EXCLUSIVELY on what this company actually offers, generate 12 search queries that potential customers would ask an AI assistant.
 
+CRAWLED CONTENT FROM {brand_name}:
 {content_signal}{keyword_block}
 
 CRITICAL RULES:
-- Only generate queries about what {brand_name} actually offers — do NOT invent features or products not mentioned in the context
-- If the context says this is a social network, DON'T generate e-commerce or project management queries
+- {brand_name} is the company these queries are for — every query must be about something {brand_name} actually does
+- Do NOT generate queries for a different type of company — if {brand_name} is a social network, the queries are about networking, not e-commerce
+- Only use products/services/features that appear in the crawled content above
 - Natural, conversational questions a real user would ask
 - Do NOT include the brand name in the query
-- Return ONLY a JSON array of strings, no explanation
-
-Example: ["best professional networking platform", "how to find jobs through networking", ...]"""
-
-    # Fallback if context is too thin — just use brand name + domain directly without web noise
-    if not has_useful_content and not web_context:
-        prompt = f"""Generate 10 search queries that someone might ask ChatGPT when looking for a service like {brand_name} ({domain}). Consider what this company is known for. Return ONLY a JSON array of strings, no explanation. Do NOT include the brand name."""
+- Return ONLY a JSON array of strings, no explanation"""
 
     for model_key in ["llama", "chatgpt", "gemini"]:
         try:
