@@ -19,6 +19,20 @@ const ScanHistory = lazy(() => import("@/components/dashboard/ScanHistory").then
 
 type Tab = "overview" | "queries" | "scans";
 
+function ScribbleUnderline({ color = "var(--primary)", width = "100%", style }: { color?: string; width?: string; style?: React.CSSProperties }) {
+  return (
+    <svg width={width} height="6" viewBox="0 0 120 6" preserveAspectRatio="none" style={{ display: "block", ...style }}>
+      <path
+        d="M0 3 Q8 0 16 4 Q24 6 32 2 Q40 0 48 5 Q56 6 64 2 Q72 0 80 4 Q88 6 96 2 Q104 0 112 4 Q120 5 120 3"
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function BrandDashboardPageInner() {
   const { brandId } = useParams<{ brandId: string }>();
   const searchParams = useSearchParams();
@@ -57,7 +71,6 @@ function BrandDashboardPageInner() {
   const isScanRunning = active_scan?.status === "pending" || active_scan?.status === "running";
   const prev = score_history.length >= 2 ? score_history[score_history.length - 2] : null;
 
-  // Show queries even before first scan completes
   const displayQueries = query_summaries.length > 0
     ? query_summaries
     : queries.map(q => ({ query_id: q.id, query_text: q.query_text, results: [] }));
@@ -103,18 +116,34 @@ function BrandDashboardPageInner() {
       <div style={{ flex: 1, padding: "var(--gap) var(--page-px)", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
         {error && data && <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "8px 12px", marginBottom: 12, fontSize: 13, color: "#991B1B", fontWeight: 600 }}>{error}</div>}
 
+        {/* Tab bar */}
         <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", marginBottom: 16 }}>
-          <div role="tablist" style={{ display: "flex", gap: 4, minWidth: "max-content" }}>
-            {(["overview", "queries", "scans"] as Tab[]).map((t) => (
-              <button key={t} role="tab" aria-selected={t === tab} onClick={() => setTab(t)} className={`tab ${t === tab ? "tab-active" : ""}`}>{t}</button>
-            ))}
+          <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: "max-content" }}>
+            <div
+              style={{
+                fontFamily: "var(--font-hand), Caveat, cursive",
+                fontSize: 20,
+                fontWeight: 700,
+                color: "var(--text-muted)",
+                marginRight: 8,
+                transform: "rotate(-0.5deg)",
+                flexShrink: 0,
+              }}
+            >
+              {brand.name}
+            </div>
+            <div role="tablist" style={{ display: "flex", gap: 4 }}>
+              {(["overview", "queries", "scans"] as Tab[]).map((t) => (
+                <button key={t} role="tab" aria-selected={t === tab} onClick={() => setTab(t)} className={`tab ${t === tab ? "tab-active" : ""}`}>{t}</button>
+              ))}
+            </div>
           </div>
         </div>
 
         {tab === "overview" && (
           <>
             <div className="grid-4" style={{ marginBottom: "var(--gap)" }}>
-              <div className="card" style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px" }}>
+              <div className="card" style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", transform: "rotate(-0.3deg)" }}>
                 <ScoreRing score={visibility_score} size={48} stroke={4} />
                 <div>
                   <div className="section-label" style={{ marginBottom: 2 }}>Visibility</div>
@@ -130,24 +159,50 @@ function BrandDashboardPageInner() {
             </div>
 
             <div className="grid-2" style={{ marginBottom: "var(--gap)" }}>
-              <div className="card"><div className="section-label" style={{ marginBottom: 10 }}>LLM breakdown</div><LLMBreakdownTable data={llm_breakdown} /></div>
-              <div className="card"><div className="section-label" style={{ marginBottom: 10 }}>Competitor share</div><CompetitorShare items={competitor_share} brandName={brand.name} brandScore={mention_rate} /></div>
+              <div className="card" style={{ transform: "rotate(-0.2deg)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <div className="section-label" style={{ marginBottom: 0 }}>LLM breakdown</div>
+                  <svg width="30" height="8" viewBox="0 0 30 8" fill="none">
+                    <path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+                  </svg>
+                </div>
+                <LLMBreakdownTable data={llm_breakdown} />
+              </div>
+              <div className="card" style={{ transform: "rotate(0.2deg)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <div className="section-label" style={{ marginBottom: 0 }}>Competitor share</div>
+                  <svg width="30" height="8" viewBox="0 0 30 8" fill="none">
+                    <path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+                  </svg>
+                </div>
+                <CompetitorShare items={competitor_share} brandName={brand.name} brandScore={mention_rate} />
+              </div>
             </div>
 
             <div className="dashboard-bottom-grid" style={{ marginBottom: "var(--gap)" }}>
-              <div className="card dashboard-bottom-queries">
-                <div className="section-label" style={{ marginBottom: 10 }}>Queries</div>
+              <div className="card dashboard-bottom-queries" style={{ transform: "rotate(-0.2deg)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <div className="section-label" style={{ marginBottom: 0 }}>Queries</div>
+                  <svg width="30" height="8" viewBox="0 0 30 8" fill="none">
+                    <path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5" stroke="#22C55E" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+                  </svg>
+                </div>
                 <QueryChipsPanel queries={displayQueries} brandId={brandId} onManageQueries={() => setTab("queries")} />
               </div>
-              <div className="card">
+              <div className="card" style={{ transform: "rotate(0.2deg)" }}>
                 <div className="section-label" style={{ marginBottom: 10 }}>Score history</div>
                 <Suspense fallback={<div className="skeleton" style={{ height: 150 }} />}>
                   <ScoreHistoryChart data={score_history} />
                 </Suspense>
               </div>
               {insights.length > 0 && (
-                <div className="card" style={{ borderColor: "var(--primary)" }}>
-                  <div className="section-label" style={{ marginBottom: 10 }}>Insights</div>
+                <div className="card" style={{ borderColor: "var(--primary)", transform: "rotate(0.3deg)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                    <div className="section-label" style={{ marginBottom: 0 }}>Insights</div>
+                    <svg width="30" height="8" viewBox="0 0 30 8" fill="none">
+                      <path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+                    </svg>
+                  </div>
                   {insights.map((ins, i) => <div key={i} style={i === insights.length - 1 ? { borderBottom: "none" } : {}}><InsightRow type={ins.type} text={ins.text} /></div>)}
                 </div>
               )}
@@ -163,7 +218,21 @@ function BrandDashboardPageInner() {
 
         {tab === "scans" && (
           <div>
-            <div className="section-label" style={{ marginBottom: 12 }}>Scan history</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+              <h2
+                style={{
+                  fontFamily: "var(--font-hand), Caveat, cursive",
+                  fontSize: "clamp(22px, 3vw, 28px)",
+                  fontWeight: 700,
+                  margin: 0,
+                  lineHeight: 1,
+                  transform: "rotate(-0.3deg)",
+                }}
+              >
+                Scan history
+              </h2>
+              <ScribbleUnderline color="var(--primary)" width="100px" />
+            </div>
             <Suspense fallback={<div className="skeleton" style={{ height: 200 }} />}>
               <ScanHistory brandId={brandId} />
             </Suspense>

@@ -9,7 +9,7 @@ import { AppHeader, PageHeader } from "@/components/AppHeader";
 import { ScoreRing } from "@/components/ui";
 
 function PositionBadge({ mentioned, position }: { mentioned: boolean; position: number | null }) {
-  if (!mentioned) return <span className="pill pill-neg" style={{ fontSize: 10 }}>—</span>;
+  if (!mentioned) return <span className="pill pill-neg" style={{ fontSize: 10 }}>&ndash;</span>;
   if (position === null || position === undefined) return <span className="pill pill-neu" style={{ fontSize: 10 }}>?</span>;
   const cls = position <= 2 ? "pill pill-pos" : position <= 4 ? "pill pill-neu" : "pill pill-neg";
   return <span className={cls} style={{ fontSize: 10 }}>#{position}</span>;
@@ -171,7 +171,7 @@ export default function ScanDetailPage() {
             <div style={{ fontSize: 13, fontWeight: 600 }}>
               {data.started_at && data.completed_at
                 ? `${Math.round((new Date(data.completed_at).getTime() - new Date(data.started_at).getTime()) / 1000)}s`
-                : "—"}
+                : "\u2013"}
             </div>
             <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
               {data.completed_at ? new Date(data.completed_at).toLocaleString() : "In progress"}

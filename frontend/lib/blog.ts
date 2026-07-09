@@ -16,7 +16,7 @@ export const BLOG_POSTS: BlogPost[] = [
     tags: ["AI visibility", "ChatGPT", "brand monitoring", "GEO"],
     content: `I typed "best project management tools" into ChatGPT last month.
 
-We sell project management software. Not the biggest company, but we've been around for 4 years. Good reviews. Reasonable amount of backlinks. Our SEO is fine — we rank on page 1 for a bunch of terms.
+We sell project management software. Not the biggest company, but we've been around for 4 years. Good reviews. Reasonable amount of backlinks. Our SEO is fine. We rank on page 1 for a bunch of terms.
 
 ChatGPT named six tools. We weren't one of them.
 
@@ -40,7 +40,7 @@ Someone searching "best project management tool under $50/month" on Google is do
 
 I didn't hire an agency. Didn't spend any money on tools. Here's exactly what we did:
 
-**Step 1: Find the gaps.** We ran 20 queries through ChatGPT and Gemini — the exact questions our customers told us they search for before buying. Recorded whether we were mentioned, in what position, alongside which competitors. We showed up in 3 out of 20. Three.
+**Step 1: Find the gaps.** We ran 20 queries through ChatGPT and Gemini, the exact questions our customers told us they search for before buying. Recorded whether we were mentioned, in what position, alongside which competitors. We showed up in 3 out of 20. Three.
 
 **Step 2: Fix the basics.** Our website had lazy descriptions on the key pages. No structured data. Some important pages weren't being crawled regularly because our sitemap was out of date. Fixed all of that in an afternoon. Not exciting work, but necessary.
 
@@ -72,7 +72,7 @@ If you haven't checked how your company shows up in AI models yet, do it this we
     date: "2026-06-24",
     summary: "Search is splitting into two tracks: traditional search engines and AI answer engines. If you're only optimizing for one, you're losing ground every month.",
     tags: ["SEO", "AI search", "answer engines", "GEO", "search trends"],
-    content: `A friend of mine runs a DTC supplement brand. They've been doing about $2M in annual revenue, almost all of it from organic Google traffic. Their SEO is meticulous — Claude Hopkins-level attention to keyword research, content clusters, backlink quality. They've got it dialed in.
+    content: `A friend of mine runs a DTC supplement brand. They've been doing about $2M in annual revenue, almost all of it from organic Google traffic. Their SEO is meticulous. Claude Hopkins-level attention to keyword research, content clusters, backlink quality. They've got it dialed in.
 
 Last month he called me and said revenue was down 18% year over year. Traffic was holding steady. Rankings hadn't moved. Conversion rate on Google traffic was the same. But fewer people were buying.
 
@@ -104,13 +104,13 @@ I've spent my career doing SEO and the mental model for AI visibility is differe
 
 **Structured content wins.** AI models extract information better from content that's clearly organized. Tables. Bullet points that aren't just keyword-stuffed. Honest comparisons. These formats survive training data better than flowing prose.
 
-**Category-defining pages are the new cornerstone content.** A page that explains your entire category — not just your product — gets referenced by AI models because it's useful when answering broad questions. "What is X?" pages, comparison pages, and data-driven analyses all punch above their weight in AI visibility.
+**Category-defining pages are the new cornerstone content.** A page that explains your entire category, not just your product, gets referenced by AI models because it's useful when answering broad questions. "What is X?" pages, comparison pages, and data-driven analyses all punch above their weight in AI visibility.
 
-**Traditional on-page SEO still matters but not for the reasons you think.** Title tags and headers help AI models understand what your page is about during training. Good metadata helps make your page easier to parse and reference. Not for ranking — for comprehension.
+**Traditional on-page SEO still matters but not for the reasons you think.** Title tags and headers help AI models understand what your page is about during training. Good metadata helps make your page easier to parse and reference. Not for ranking, for comprehension.
 
 ## What to do about it right now
 
-If you have a content team, split your effort. 70% traditional SEO (still a massive channel and will be for years). 30% AI visibility work — structuring your best content for AI comprehension, getting mentions in authoritative sources in your category, and tracking whether your brand actually shows up when people ask AI models about your space.
+If you have a content team, split your effort. 70% traditional SEO (still a massive channel and will be for years). 30% AI visibility work: structuring your best content for AI comprehension, getting mentions in authoritative sources in your category, and tracking whether your brand actually shows up when people ask AI models about your space.
 
 If you're running a company and you haven't checked your AI visibility yet, do it today. Search for your product category on ChatGPT and Gemini. See if you're mentioned. See who is. You'll either be relieved or you'll have a new problem to solve, and both outcomes are useful.`,
   },
@@ -136,13 +136,13 @@ Tools like Google's Structured Data Markup Helper make this a copy-paste job. No
 
 ## 2. Write a comparison page that's actually honest
 
-Every brand publishes "Us vs. Competitor X" pages that read like sales brochures. The reason those don't get traction is that AI models can detect balance — they've been trained on enough content to recognize when something is pure marketing and devalue it accordingly.
+Every brand publishes "Us vs. Competitor X" pages that read like sales brochures. The reason those don't get traction is that AI models can detect balance. They've been trained on enough content to recognize when something is pure marketing and devalue it accordingly.
 
 Write one comparison page (or fix your existing one) that treats your competitors fairly. List their strengths honestly. Acknowledge where they might be better than you. Then make your case for why you're the right choice for a specific audience.
 
 Here's why this works: AI models pull from training data that includes millions of comparison articles. The ones that get referenced most often are balanced, specific, and include concrete details (pricing, feature comparisons, use-case recommendations). A comparison page that admits your competitor does X better but argues that Y matters more for your customer is more useful to an AI model than one that pretends you're the best at everything.
 
-This takes about two hours to write and it compounds — once the page is in training data, every subsequent model version that trains on fresh data will include it.
+This takes about two hours to write and it compounds. Once the page is in training data, every subsequent model version that trains on fresh data will include it.
 
 ## 3. Get mentioned on review sites and forums that matter in your space
 
@@ -150,9 +150,9 @@ This is the most underrated AI visibility tactic and also the simplest to explai
 
 AI models train on large text corpora that include review sites (G2, Capterra, Trustpilot), forums (Reddit, specialized communities), and editorial publications in each category. If your brand is discussed in those places, especially with specific, quotable language, the model stores that as part of its factual basis about your company.
 
-Here's what to do: pick 3 places where your market discusses products like yours. Make sure your brand is present and accurately described. Not with fake reviews — with real outreach. Ask an actual customer to leave a review if they had a good experience. Reply to Reddit threads about your category with useful information (not "check out my product!" but genuine help that includes your perspective as someone building in the space).
+Here's what to do: pick 3 places where your market discusses products like yours. Make sure your brand is present and accurately described. Not with fake reviews. With real outreach. Ask an actual customer to leave a review if they had a good experience. Reply to Reddit threads about your category with useful information. Not "check out my product!" but genuine help that includes your perspective as someone building in the space.
 
-The value of being mentioned with specific, positive language in these sources accumulates over time. Every model retrain picks it up. And unlike Google rankings, which refresh constantly, AI training data updates on a cycle — which means the mentions you earn today will still be paying dividends six months from now.
+The value of being mentioned with specific, positive language in these sources accumulates over time. Every model retrain picks it up. And unlike Google rankings, which refresh constantly, AI training data updates on a cycle. The mentions you earn today will still be paying dividends six months from now.
 
 ## One more thing
 
@@ -174,7 +174,7 @@ She got it immediately. Because the concept is simple even if the acronym sounds
 
 ## What GEO actually is
 
-Generative engine optimization (GEO) is the practice of improving how your brand, products, and content appear in AI-generated responses from models like ChatGPT, Gemini, Claude, and others. Same basic idea as SEO — you want to show up when people look for things in your category — but the mechanics are different because AI models don't work like search engines.
+Generative engine optimization (GEO) is the practice of improving how your brand, products, and content appear in AI-generated responses from models like ChatGPT, Gemini, Claude, and others. Same basic idea as SEO. You want to show up when people look for things in your category. But the mechanics are different because AI models don't work like search engines.
 
 A search engine crawls pages, indexes them, and ranks them based on a few hundred signals. An AI model reads text during training, stores patterns and facts, and generates responses by assembling information it has encoded. It doesn't "look up" your page in real time (usually). Your visibility depends on whether your content got processed during training and how it got encoded relative to competing information.
 

@@ -316,7 +316,7 @@ export function QueriesTable({
                     </div>
                     <div style={{ flex: 1, textAlign: "center", fontSize: 13, fontWeight: 600, color: q.result_count > 0 ? "var(--text)" : "var(--text-muted)" }}>{q.result_count}</div>
                     <div style={{ flex: 1, textAlign: "center", fontSize: 12, color: q.last_scan_at ? "var(--text-secondary)" : "var(--text-muted)" }}>
-                      {q.last_scan_at ? timeAgo(q.last_scan_at) : "—"}
+                      {q.last_scan_at ? timeAgo(q.last_scan_at) : "\u2013"}
                     </div>
                     <div style={{ flex: 1, textAlign: "center", fontSize: 11, color: "var(--text-muted)" }}>
                       {timeAgo(q.created_at)}

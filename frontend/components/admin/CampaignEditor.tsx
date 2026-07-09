@@ -905,12 +905,12 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
                   <StatRow label="Sent" value={String(existing.sent_count)} />
                   <StatRow
                     label="Open rate"
-                    value={existing.sent_count > 0 ? `${Math.round((existing.opened_count / existing.sent_count) * 100)}%` : "—"}
+                    value={existing.sent_count > 0 ? `${Math.round((existing.opened_count / existing.sent_count) * 100)}%` : "\u2013"}
                     highlight={existing.sent_count > 0 ? "var(--green)" : undefined}
                   />
                   <StatRow
                     label="Click rate"
-                    value={existing.opened_count > 0 ? `${Math.round((existing.clicked_count / existing.opened_count) * 100)}%` : "—"}
+                    value={existing.opened_count > 0 ? `${Math.round((existing.clicked_count / existing.opened_count) * 100)}%` : "\u2013"}
                     highlight={existing.opened_count > 0 ? "var(--text)" : undefined}
                   />
                   {existing.scheduled_at && <StatRow label="Scheduled" value={new Date(existing.scheduled_at).toLocaleString()} />}

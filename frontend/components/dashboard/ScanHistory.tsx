@@ -17,7 +17,7 @@ function timeAgo(date: string): string {
 }
 
 function PositionBadge({ mentioned, position }: { mentioned: boolean; position: number | null }) {
-  if (!mentioned) return <span className="pill pill-neg" style={{ fontSize: 9 }}>—</span>;
+  if (!mentioned) return <span className="pill pill-neg" style={{ fontSize: 9 }}>&ndash;</span>;
   if (position === null || position === undefined) return <span className="pill pill-neu" style={{ fontSize: 9 }}>?</span>;
   const cls = position <= 2 ? "pill pill-pos" : position <= 4 ? "pill pill-neu" : "pill pill-neg";
   return <span className={cls} style={{ fontSize: 9 }}>#{position}</span>;
@@ -46,11 +46,11 @@ function ExpandedScan({ scanId, brandId }: { scanId: string; brandId: string }) 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
         <div style={{ textAlign: "center", padding: "6px 0" }}>
           <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>Visibility</div>
-          <div style={{ fontSize: 18, fontWeight: 800 }}>{data.visibility_score ?? "—"}</div>
+          <div style={{ fontSize: 18, fontWeight: 800 }}>{data.visibility_score ?? "\u2013"}</div>
         </div>
         <div style={{ textAlign: "center", padding: "6px 0" }}>
           <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>Mention Rate</div>
-          <div style={{ fontSize: 18, fontWeight: 800 }}>{data.mention_rate ?? "—"}%</div>
+          <div style={{ fontSize: 18, fontWeight: 800 }}>{data.mention_rate ?? "\u2013"}%</div>
         </div>
         <div style={{ textAlign: "center", padding: "6px 0" }}>
           <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>Queries</div>

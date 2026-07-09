@@ -5,7 +5,7 @@ export const dynamic = "force-static";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://llmrank.getcleanroom.xyz"),
-  title: "LLMRank — Track How AI Models Rank Your Brand",
+  title: "LLMRank | Track How AI Models Rank Your Brand",
   description:
     "See exactly how your brand appears in ChatGPT, Gemini, Claude, and other AI models. Free visibility tracking, competitor monitoring, and actionable insights to rank higher in AI search results.",
   keywords: [
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     "AI search optimization",
   ],
   openGraph: {
-    title: "LLMRank — Track How AI Models Rank Your Brand",
+    title: "LLMRank | Track How AI Models Rank Your Brand",
     description:
       "See exactly how your brand appears in ChatGPT, Gemini, Claude, and more. Know what AI tells people about your company.",
     url: "https://llmrank.getcleanroom.xyz",
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "LLMRank — Track How AI Models Rank Your Brand",
+    title: "LLMRank | Track How AI Models Rank Your Brand",
     description:
       "See exactly how your brand appears in ChatGPT, Gemini, Claude, and more. Free to start.",
   },
@@ -50,17 +50,17 @@ const STEPS = [
   {
     step: "1",
     title: "Add your brand",
-    desc: "Enter your brand name and domain. Takes about 10 seconds.",
+    desc: "Name and domain. Ten seconds.",
   },
   {
     step: "2",
     title: "We run the queries",
-    desc: "We ask ChatGPT, Gemini, Claude, and others the actual questions your customers are searching for. Real queries, real answers.",
+    desc: "The actual questions people ask AI about your category. Real queries, real answers.",
   },
   {
     step: "3",
     title: "See your ranking",
-    desc: "Check which AI models mention you. Where do you rank? What sentiment? Who's your competition taking the top spots?",
+    desc: "Which models mention you. Where. With what sentiment. Who's beating you.",
   },
 ];
 
@@ -73,54 +73,27 @@ const STEP_COLORS = [
 const FEATURES = [
   {
     title: "Visibility Score",
-    desc: "One number that tells you exactly how visible your brand is across every major AI model. Track it over time.",
+    desc: "One number. All models. Track it over time.",
   },
   {
     title: "Per-Model Breakdown",
-    desc: "ChatGPT might love you while Claude ignores you. See the breakdown for each model so you know where to focus.",
+    desc: "ChatGPT might love you while Claude ignores you. Know the difference.",
   },
   {
     title: "Competitor Intelligence",
-    desc: "See which competitors are getting mentioned ahead of you, how often, and in what context. Stop guessing.",
+    desc: "Who's getting mentioned instead of you. How often. In what context.",
   },
   {
     title: "Per-Query Drilldown",
-    desc: "Click any tracked question to see the exact AI response, word for word. Know what your customers are hearing about you.",
+    desc: "Click any query. Read the exact AI response. Word for word.",
   },
   {
     title: "AI-Suggested Queries",
-    desc: "Not sure what questions to track? We'll suggest the ones your market is actually asking the AIs.",
+    desc: "Not sure what to track? We'll tell you what your market is asking.",
   },
   {
-    title: "Actionable Insights",
-    desc: "No fluff. We tell you exactly what to fix based on your gaps — publish a comparison page, add structured data, claim your profiles.",
-  },
-];
-
-const FAQS = [
-  {
-    q: "How does LLMRank track my brand in AI models?",
-    a: "We run your chosen queries — the same questions people ask ChatGPT, Gemini, and others — across multiple AI models on a schedule. Each response gets analyzed for whether your brand was mentioned, at what position, with what sentiment, and which competitors showed up instead. You get a dashboard with scores, trends, and specific recommendations.",
-  },
-  {
-    q: "Which AI models do you monitor?",
-    a: "Currently: ChatGPT (GPT-4o), Gemini, Claude, Llama (3.3 and smaller), DeepSeek, Mistral, and Qwen. We add new models as they gain adoption. If there's one you want that we don't cover yet, tell us — we're fast about adding them.",
-  },
-  {
-    q: "Is there a free plan?",
-    a: "Yes. You start with 500 free credits, which covers several full scans. No credit card needed. You only pay when you need more credits for higher-volume or premium-model monitoring.",
-  },
-  {
-    q: "What's the difference between this and regular SEO?",
-    a: "Regular SEO tools tell you where you rank on Google. But when someone asks ChatGPT 'what's the best project management tool,' Google rankings don't matter — the AI's training data and retrieval patterns do. LLMRank measures AI-native visibility, which is increasingly where buying decisions start.",
-  },
-  {
-    q: "How do I improve my AI visibility?",
-    a: "The playbook is different from traditional SEO. Structured data helps. Being mentioned in authoritative sources helps more. Comparison content and category-defining pages work well. We give you specific, ranked recommendations based on your actual gaps — not generic advice.",
-  },
-  {
-    q: "Can I track my competitors too?",
-    a: "Competitor tracking is built in. When you scan a query, we automatically detect competing brands mentioned in the AI responses and show you who's taking your spotlight and at what frequency. You don't need to configure anything.",
+    title: "Actionable Fixes",
+    desc: "Publish a comparison page. Add structured data. Claim your profiles. We tell you exactly what to do.",
   },
 ];
 
@@ -137,19 +110,6 @@ const structuredData = {
     price: "0",
     priceCurrency: "USD",
   },
-};
-
-const faqStructuredData = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: FAQS.map((f) => ({
-    "@type": "Question",
-    name: f.q,
-    acceptedAnswer: {
-      "@type": "Answer",
-      text: f.a,
-    },
-  })),
 };
 
 function ScribbleUnderline({ color = "var(--primary)", width = "100%", style }: { color?: string; width?: string; style?: React.CSSProperties }) {
@@ -182,17 +142,13 @@ export default function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }}
-      />
 
       <LandingHeader />
 
       <div style={{ flex: 1, maxWidth: 720, margin: "0 auto", padding: "0 var(--page-px)", width: "100%" }}>
 
-        {/* ── Hero ── */}
-        <header style={{ paddingTop: "clamp(40px, 10vh, 80px)", paddingBottom: 36 }}>
+        {/* Hero */}
+        <header style={{ paddingTop: "clamp(44px, 10vh, 80px)", paddingBottom: 40 }}>
           <div
             style={{
               fontFamily: "var(--font-hand), Caveat, cursive",
@@ -208,48 +164,75 @@ export default function HomePage() {
 
           <h1
             style={{
-              fontSize: "clamp(30px, 6vw, 50px)",
+              fontSize: "clamp(32px, 6vw, 52px)",
               fontWeight: 800,
               color: "var(--text)",
               margin: "0 0 8px",
-              lineHeight: 1.1,
+              lineHeight: 1.08,
               letterSpacing: "-0.03em",
             }}
           >
-            Know what{" "}
+            What does{" "}
             <span style={{ background: "var(--primary)", padding: "0 4px", border: "2px solid var(--border)", display: "inline-block" }}>
-              AI tells people
+              ChatGPT
             </span>{" "}
-            about your brand
+            say<br />about your brand?
           </h1>
 
-          <ScribbleUnderline color="var(--primary)" width="85%" style={{ marginBottom: 14 }} />
+          <ScribbleUnderline color="var(--primary)" width="75%" style={{ marginBottom: 16 }} />
 
           <p
             style={{
               fontSize: 15,
               color: "var(--text-secondary)",
-              margin: "0 0 22px",
+              margin: "0 0 24px",
               lineHeight: 1.6,
-              maxWidth: 540,
+              maxWidth: 500,
               fontFamily: "var(--font-serif), Georgia, serif",
             }}
           >
-            Every day, people ask ChatGPT and other AI models about products like yours. Do you know what the AI is telling them?
-            LLMRank shows you exactly how AI models rank your brand &mdash; and how to rank better.
+            Your customers are asking AI models about products like yours every day.
+            If you don&apos;t know what the AI is telling them, you&apos;re flying blind.
           </p>
+
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <LandingCTA variant="primary" />
             <LandingCTA variant="secondary" />
           </div>
+
+          {/* Stat banner */}
+          <div
+            style={{
+              marginTop: 28,
+              display: "flex",
+              gap: 16,
+              flexWrap: "wrap",
+              background: "var(--surface)",
+              border: "2px solid var(--border)",
+              borderRadius: "var(--radius)",
+              padding: "12px 18px",
+              boxShadow: "3px 3px 0 #1A1A1A",
+              transform: "rotate(-0.2deg)",
+            }}
+          >
+            <div style={{ fontFamily: "var(--font-sans), Inter, sans-serif" }}>
+              <span style={{ fontSize: 24, fontWeight: 800, color: "var(--primary)" }}>600M+</span>
+              <span style={{ fontSize: 11, color: "var(--text-muted)", marginLeft: 4, fontWeight: 600 }}>monthly ChatGPT users</span>
+            </div>
+            <div style={{ color: "var(--text-muted)", fontWeight: 700, fontSize: 14 }}>|</div>
+            <div style={{ fontFamily: "var(--font-sans), Inter, sans-serif" }}>
+              <span style={{ fontSize: 24, fontWeight: 800, color: "#22C55E" }}>41%</span>
+              <span style={{ fontSize: 11, color: "var(--text-muted)", marginLeft: 4, fontWeight: 600 }}>of under-35s start product research on AI</span>
+            </div>
+          </div>
         </header>
 
-        {/* ── Supported LLMs ── */}
+        {/* Supported LLMs */}
         <section style={{ paddingBottom: 24, borderBottom: "2px solid var(--border)", marginBottom: 28 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-            <div className="section-label" style={{ marginBottom: 0 }}>AI Models We Monitor</div>
-            <svg width="40" height="10" viewBox="0 0 40 10" fill="none">
-              <path d="M0 5 Q6 2 12 6 Q18 9 24 4 Q30 1 40 7" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" fill="none" />
+            <div className="section-label" style={{ marginBottom: 0 }}>We monitor</div>
+            <svg width="30" height="10" viewBox="0 0 30 10" fill="none">
+              <path d="M0 5 Q5 2 10 6 Q15 9 20 4 Q25 1 30 7" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" fill="none" />
             </svg>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -261,10 +244,21 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ── How it works ── */}
+        {/* How it works */}
         <section id="how-it-works" style={{ paddingBottom: 36 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-            <h2 className="section-label" style={{ marginBottom: 0 }}>How It Works</h2>
+            <h2
+              style={{
+                fontFamily: "var(--font-hand), Caveat, cursive",
+                fontSize: "clamp(24px, 3.5vw, 30px)",
+                fontWeight: 700,
+                margin: 0,
+                lineHeight: 1,
+                transform: "rotate(-0.4deg)",
+              }}
+            >
+              How it works
+            </h2>
             <svg width="40" height="10" viewBox="0 0 40 10" fill="none">
               <path d="M0 5 Q6 2 12 6 Q18 9 24 4 Q30 1 40 7" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" fill="none" />
             </svg>
@@ -278,12 +272,22 @@ export default function HomePage() {
                 style={{
                   background: STEP_COLORS[i].bg,
                   position: "relative",
-                  transform: `rotate(${i === 0 ? "-0.5deg" : i === 1 ? "0.3deg" : "-0.3deg"})`,
+                  transform: `rotate(${i === 0 ? "-0.6deg" : i === 1 ? "0.4deg" : "-0.4deg"})`,
                   padding: "18px 16px",
                 }}
               >
                 <PushPin />
-                <div style={{ fontSize: "clamp(32px, 5vw, 40px)", fontFamily: "var(--font-hand), Caveat, cursive", fontWeight: 700, color: STEP_COLORS[i].accent, marginBottom: 4, marginTop: 4, lineHeight: 1 }}>
+                <div
+                  style={{
+                    fontSize: "clamp(32px, 5vw, 40px)",
+                    fontFamily: "var(--font-hand), Caveat, cursive",
+                    fontWeight: 700,
+                    color: STEP_COLORS[i].accent,
+                    marginBottom: 4,
+                    marginTop: 4,
+                    lineHeight: 1,
+                  }}
+                >
                   {item.step}.
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{item.title}</div>
@@ -295,10 +299,21 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ── Features ── */}
+        {/* Features */}
         <section style={{ paddingBottom: 36 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-            <h2 className="section-label" style={{ marginBottom: 0 }}>What You Get</h2>
+            <h2
+              style={{
+                fontFamily: "var(--font-hand), Caveat, cursive",
+                fontSize: "clamp(24px, 3.5vw, 30px)",
+                fontWeight: 700,
+                margin: 0,
+                lineHeight: 1,
+                transform: "rotate(-0.3deg)",
+              }}
+            >
+              What you get
+            </h2>
             <svg width="40" height="10" viewBox="0 0 40 10" fill="none">
               <path d="M0 5 Q6 2 12 6 Q18 9 24 4 Q30 1 40 7" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" fill="none" />
             </svg>
@@ -322,36 +337,12 @@ export default function HomePage() {
             ))}
           </div>
 
-          {/* Scribble doodle between sections */}
-          <div style={{ textAlign: "center", margin: "28px 0 8px", fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 18, color: "var(--text-muted)", opacity: 0.4 }}>
+          <div style={{ textAlign: "center", margin: "28px 0 8px", fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 18, color: "var(--text-muted)", opacity: 0.35 }}>
             ~ ~ ~
           </div>
         </section>
 
-        {/* ── FAQ ── */}
-        <section style={{ paddingBottom: 36 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-            <h2 className="section-label" style={{ marginBottom: 0 }}>Common Questions</h2>
-            <svg width="40" height="10" viewBox="0 0 40 10" fill="none">
-              <path d="M0 5 Q6 2 12 6 Q18 9 24 4 Q30 1 40 7" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" fill="none" />
-            </svg>
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {FAQS.map((faq, i) => (
-              <details key={i} className="card" style={{ padding: "12px 16px", cursor: "pointer", transform: `rotate(${i % 2 === 0 ? "-0.2deg" : "0.2deg"})` }}>
-                <summary style={{ fontSize: 14, fontWeight: 700, marginBottom: 0 }}>
-                  {faq.q}
-                </summary>
-                <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6, marginTop: 10 }}>
-                  {faq.a}
-                </p>
-              </details>
-            ))}
-          </div>
-        </section>
-
-        {/* ── Bottom CTA ── */}
+        {/* Bottom CTA */}
         <section style={{ paddingBottom: 48 }}>
           <div
             style={{
@@ -375,9 +366,9 @@ export default function HomePage() {
                 lineHeight: 1.1,
               }}
             >
-              Start tracking your AI visibility
+              Ready to find out?
             </h2>
-            <ScribbleUnderline color="var(--primary)" width="180px" style={{ margin: "6px auto 12px" }} />
+            <ScribbleUnderline color="var(--primary)" width="140px" style={{ margin: "6px auto 12px" }} />
             <p
               style={{
                 fontSize: 14,
@@ -388,7 +379,7 @@ export default function HomePage() {
                 fontFamily: "var(--font-serif), Georgia, serif",
               }}
             >
-              Free to start. No credit card. Takes under a minute. Stop guessing what AI says about your brand and start knowing.
+              Free. No credit card. Takes under a minute.
             </p>
             <LandingCTA variant="primary" />
           </div>
@@ -411,7 +402,7 @@ export default function HomePage() {
             Blog
           </a>
         </div>
-        llm<span style={{ color: "var(--primary)" }}>rank</span> &mdash; AI visibility tracking
+        llm<span style={{ color: "var(--primary)" }}>rank</span> · AI visibility tracking
       </footer>
     </main>
   );

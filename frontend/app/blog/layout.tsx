@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LandingHeader } from "@/components/landing/LandingHeader";
 
 export const metadata: Metadata = {
-  title: "Blog — LLMRank",
+  title: "Blog | LLMRank",
   description:
     "Notes on AI visibility, generative engine optimization, and how brands show up in ChatGPT, Gemini, and other AI models.",
 };
@@ -26,7 +26,7 @@ export default function BlogLayout({ children }: { children: React.ReactNode }) 
           fontFamily: "var(--font-sans), Inter, sans-serif",
         }}
       >
-        llm<span style={{ color: "var(--primary)" }}>rank</span> &mdash; AI visibility tracking
+        llm<span style={{ color: "var(--primary)" }}>rank</span> · AI visibility tracking
       </footer>
     </div>
   );
