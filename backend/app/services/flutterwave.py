@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import base64
 import time
+import random
 import logging
 from datetime import datetime, timezone
 
@@ -149,14 +150,17 @@ async def create_flutterwave_charge(
 
 
 async def _get_or_create_customer(user: User, headers: dict, base: str) -> str:
-    """Create a Flutterwave v4 customer."""
+    """Create a Flutterwave v4 customer with a random plausible name."""
+    first = _random_name(4, 7)
+    last = _random_name(5, 9)
+
     async with httpx.AsyncClient(timeout=15) as client:
         response = await client.post(
             f"{base}/customers",
             headers=headers,
             json={
                 "email": user.email,
-                "name": {"first": "LLMRank", "last": "Customer"},
+                "name": {"first": first, "last": last},
                 "phone": {"country_code": "1", "number": "0000000000"},
             },
         )
@@ -166,6 +170,21 @@ async def _get_or_create_customer(user: User, headers: dict, base: str) -> str:
             raise ValueError(data.get("message", "Failed to create customer"))
 
         return data["data"]["id"]
+
+
+_CONSONANTS = "bcdfghjklmnpqrstvwxyz"
+_VOWELS = "aeiou"
+
+
+def _random_name(min_len: int, max_len: int) -> str:
+    length = random.randint(min_len, max_len)
+    name = ""
+    for i in range(length):
+        if i % 2 == 0:
+            name += random.choice(_CONSONANTS)
+        else:
+            name += random.choice(_VOWELS)
+    return name.capitalize()
 
 
 async def verify_flutterwave_charge(transaction_id: str) -> dict:
