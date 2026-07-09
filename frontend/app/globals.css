@@ -649,3 +649,11 @@ input[type="checkbox"]:not(.native):disabled, input[type="radio"]:not(.native):d
   transform: rotate(0deg) translate(-1px, -1px) !important;
   box-shadow: 4px 4px 0 #1A1A1A, 6px 6px 0 var(--primary) !important;
 }
+
+/* FAQ board card open state */
+.faq-note[open] {
+  box-shadow: 4px 4px 0 #1A1A1A !important;
+}
+.faq-note[open] > summary {
+  border-bottom: 2px solid var(--border);
+}

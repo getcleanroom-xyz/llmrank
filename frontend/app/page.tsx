@@ -97,6 +97,155 @@ const FEATURES = [
   },
 ];
 
+const NOTE_COLORS = [
+  { bg: "#FFF9DB", accent: "var(--primary)", rot: "-0.6deg" },
+  { bg: "#DBEAFF", accent: "#3B82F6", rot: "0.5deg" },
+  { bg: "#E6F9ED", accent: "#22C55E", rot: "-0.4deg" },
+  { bg: "#F3E8FF", accent: "#A855F7", rot: "0.7deg" },
+  { bg: "#FFE8DB", accent: "#F97316", rot: "-0.5deg" },
+  { bg: "#FFF9DB", accent: "var(--primary)", rot: "0.3deg" },
+];
+
+const Q_AND_A = [
+  {
+    q: "How do I know if I'm even showing up in AI?",
+    a: "Run a scan. Pick a few questions your customers actually ask, and we'll check every major AI model for whether you're mentioned, where, with what sentiment. You'll know in minutes.",
+  },
+  {
+    q: "Which models do you check?",
+    a: "ChatGPT (GPT-4o), Gemini, Claude, Llama 3.3, DeepSeek, Mistral, Qwen. We add new ones as they get traction.",
+  },
+  {
+    q: "Is there a free plan?",
+    a: "500 free credits when you sign up. That covers several full scans. No card needed. Pay only if you need more.",
+  },
+  {
+    q: "How is this different from SEO tools?",
+    a: "SEO tools track Google. This tracks AI models. Different thing. When someone asks ChatGPT for recommendations, your Google rank doesn't come up. Your training data presence does.",
+  },
+  {
+    q: "What can I actually do to improve my AI visibility?",
+    a: "Structured data on your site. Getting mentioned in the sources AI trains on. Publishing comparison pages. We'll tell you exactly what to do based on your gaps.",
+  },
+  {
+    q: "Can I see what my competitors are doing?",
+    a: "Built in. Every scan auto-detects competing brands in the AI responses. You'll know who's getting mentioned instead of you and how often.",
+  },
+];
+
+const faqStructuredData = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: Q_AND_A.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: f.a,
+    },
+  })),
+};
+
+function FAQBoard() {
+  return (
+    <section style={{ paddingBottom: 40 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
+        <h2
+          style={{
+            fontFamily: "var(--font-hand), Caveat, cursive",
+            fontSize: "clamp(24px, 3.5vw, 30px)",
+            fontWeight: 700,
+            margin: 0,
+            lineHeight: 1,
+            transform: "rotate(-0.4deg)",
+          }}
+        >
+          Questions people ask us
+        </h2>
+        <svg width="40" height="10" viewBox="0 0 40 10" fill="none">
+          <path d="M0 5 Q6 2 12 6 Q18 9 24 4 Q30 1 40 7" stroke="#A855F7" strokeWidth="2" strokeLinecap="round" fill="none" />
+        </svg>
+      </div>
+
+      {/* Bulletin board container */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+          gap: 18,
+        }}
+      >
+        {Q_AND_A.map((item, i) => {
+          const c = NOTE_COLORS[i % NOTE_COLORS.length];
+
+          return (
+            <details
+              key={i}
+              className="faq-note"
+              style={{
+                background: c.bg,
+                border: "2px solid var(--border)",
+                borderRadius: "var(--radius)",
+                boxShadow: "3px 3px 0 #1A1A1A",
+                transform: `rotate(${c.rot})`,
+                transition: "transform 0.15s, box-shadow 0.15s",
+                cursor: "default",
+                position: "relative",
+              }}
+            >
+              <summary
+                style={{
+                  padding: "16px 18px 14px",
+                  cursor: "pointer",
+                  listStyle: "none",
+                  outline: "none",
+                }}
+              >
+                <svg width="18" height="22" viewBox="0 0 18 22" fill="none" style={{ position: "absolute", top: -10, left: 16, zIndex: 2 }}>
+                  <ellipse cx="9" cy="4.5" rx="4.5" ry="4.5" fill="#EF4444" stroke="#1A1A1A" strokeWidth="1.5" />
+                  <rect x="7" y="9" width="4" height="7" rx="1" fill="#DC2626" stroke="#1A1A1A" strokeWidth="1.5" />
+                </svg>
+                <div
+                  style={{
+                    fontFamily: "var(--font-hand), Caveat, cursive",
+                    fontSize: "clamp(18px, 2.5vw, 22px)",
+                    fontWeight: 700,
+                    lineHeight: 1.25,
+                    marginTop: 4,
+                  }}
+                >
+                  {item.q}
+                </div>
+              </summary>
+
+              <div
+                style={{
+                  padding: "0 18px 16px",
+                  fontSize: 13,
+                  color: "var(--text-secondary)",
+                  lineHeight: 1.6,
+                  fontFamily: "var(--font-serif), Georgia, serif",
+                }}
+              >
+                <svg width="100%" height="6" viewBox="0 0 120 6" preserveAspectRatio="none" style={{ display: "block", marginBottom: 10 }}>
+                  <path
+                    d="M0 3 Q8 0 16 4 Q24 6 32 2 Q40 0 48 5 Q56 6 64 2 Q72 0 80 4 Q88 6 96 2 Q104 0 112 4 Q120 3 120 2"
+                    fill="none"
+                    stroke={c.accent}
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                {item.a}
+              </div>
+            </details>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 const structuredData = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
@@ -198,32 +347,6 @@ export default function HomePage() {
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <LandingCTA variant="primary" />
             <LandingCTA variant="secondary" />
-          </div>
-
-          {/* Stat banner */}
-          <div
-            style={{
-              marginTop: 28,
-              display: "flex",
-              gap: 16,
-              flexWrap: "wrap",
-              background: "var(--surface)",
-              border: "2px solid var(--border)",
-              borderRadius: "var(--radius)",
-              padding: "12px 18px",
-              boxShadow: "3px 3px 0 #1A1A1A",
-              transform: "rotate(-0.2deg)",
-            }}
-          >
-            <div style={{ fontFamily: "var(--font-sans), Inter, sans-serif" }}>
-              <span style={{ fontSize: 24, fontWeight: 800, color: "var(--primary)" }}>600M+</span>
-              <span style={{ fontSize: 11, color: "var(--text-muted)", marginLeft: 4, fontWeight: 600 }}>monthly ChatGPT users</span>
-            </div>
-            <div style={{ color: "var(--text-muted)", fontWeight: 700, fontSize: 14 }}>|</div>
-            <div style={{ fontFamily: "var(--font-sans), Inter, sans-serif" }}>
-              <span style={{ fontSize: 24, fontWeight: 800, color: "#22C55E" }}>41%</span>
-              <span style={{ fontSize: 11, color: "var(--text-muted)", marginLeft: 4, fontWeight: 600 }}>of under-35s start product research on AI</span>
-            </div>
           </div>
         </header>
 
@@ -341,6 +464,9 @@ export default function HomePage() {
             ~ ~ ~
           </div>
         </section>
+
+        {/* Q&A - Bulletin board of sticky notes */}
+        <FAQBoard />
 
         {/* Bottom CTA */}
         <section style={{ paddingBottom: 48 }}>
