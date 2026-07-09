@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Source_Serif_4 } from "next/font/google";
+import { Inter, Source_Serif_4, Caveat } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -19,6 +19,12 @@ const sourceSerif = Source_Serif_4({
   variable: "--font-serif",
 });
 
+const caveat = Caveat({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-hand",
+});
+
 export const metadata: Metadata = {
   title: "LLMRank",
   description: "Track how AI models rank your brand.",
@@ -27,7 +33,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${sourceSerif.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${inter.variable} ${sourceSerif.variable} ${caveat.variable}`} suppressHydrationWarning>
       <body className={inter.className}>
         <Providers>
           <AuthProvider>

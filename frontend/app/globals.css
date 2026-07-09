@@ -645,7 +645,7 @@ input[type="checkbox"]:not(.native):disabled, input[type="radio"]:not(.native):d
 }
 
 /* Blog index card hover */
-.blog-index-card:hover {
-  box-shadow: var(--shadow-hover) !important;
-  transform: translate(-1px, -1px);
+.blog-note-card:hover {
+  transform: rotate(0deg) translate(-1px, -1px) !important;
+  box-shadow: 4px 4px 0 #1A1A1A, 6px 6px 0 var(--primary) !important;
 }
