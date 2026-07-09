@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { LandingHeader, LandingCTA } from "@/components/landing/LandingHeader";
 import { FlashcardStack } from "@/components/landing/FlashcardStack";
+import Link from "next/link";
 
 export const dynamic = "force-static";
 
@@ -416,9 +417,9 @@ export default function HomePage() {
         }}
       >
         <div style={{ marginBottom: 4 }}>
-          <a href="/blog" style={{ color: "var(--text-muted)", textDecoration: "underline", fontWeight: 600 }}>
+          <Link href="/blog" style={{ color: "var(--text-muted)", textDecoration: "underline", fontWeight: 600 }}>
             Blog
-          </a>
+          </Link>
         </div>
         llm<span style={{ color: "var(--primary)" }}>rank</span> · AI visibility tracking
       </footer>
