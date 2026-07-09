@@ -7,15 +7,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text
 
 from app.models.models import Brand, MonitoredQuery, Scan, QueryResult, ScanStatus
-from app.services.llm_adapters import query_all_llms, SCAN_PROMPT_TEMPLATE
+from app.services.llm_adapters import query_llm, OpenRouterAdapter, MODEL_REGISTRY
 from app.services.ranking_engine import rank_response
-from app.services.insight_engine import generate_insights_for_query
 
 logger = logging.getLogger(__name__)
 
 
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
 async def _keepalive_ping(db: AsyncSession, scan_id: uuid.UUID, stop_event: asyncio.Event):
-    """Periodically ping DB to keep connection alive during long scans."""
     while not stop_event.is_set():
         try:
             await asyncio.wait_for(stop_event.wait(), timeout=30)
@@ -26,15 +28,41 @@ async def _keepalive_ping(db: AsyncSession, scan_id: uuid.UUID, stop_event: asyn
         try:
             await db.execute(text("SELECT 1"))
         except Exception:
-            logger.warning("Keepalive ping failed for scan %s (connection may be stale)", scan_id)
+            logger.warning("Keepalive ping failed for scan %s", scan_id)
             break
 
-logger = logging.getLogger(__name__)
+
+def _make_prompt(query_text: str) -> str:
+    return f"""You are a helpful assistant. A user is asking for recommendations.
+
+User question: {query_text}
+
+Please list the best options with your reasoning."""
 
 
-def _utcnow() -> datetime:
-    """Return naive UTC datetime compatible with TIMESTAMP WITHOUT TIME ZONE columns."""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+async def _fire_all_llms(
+    queries: list[MonitoredQuery],
+    llm_names: list[str],
+    client,
+) -> list[tuple[str, str, str, str | None]]:
+    """Fire every (query, llm) pair concurrently. Returns [(query_id, llm_name, response, error), ...]."""
+
+    async def _call(q_id: str, q_text: str, llm: str):
+        prompt = _make_prompt(q_text)
+        adapter = OpenRouterAdapter(llm, client=client)
+        try:
+            response = await adapter.query(prompt)
+            return (q_id, llm, response, None)
+        except Exception as e:
+            return (q_id, llm, "", str(e))
+
+    tasks = [
+        _call(str(q.id), q.query_text, llm)
+        for q in queries
+        for llm in llm_names
+    ]
+    results = await asyncio.gather(*tasks, return_exceptions=False)
+    return results
 
 
 async def run_scan(
@@ -43,26 +71,14 @@ async def run_scan(
     llm_names: list[str] | None = None,
     scan_id: uuid.UUID | None = None,
 ) -> Scan:
-    """
-    Orchestrate a full scan for a brand:
-    1. Update existing scan record (or create new)
-    2. Load brand + active queries
-    3. Fire queries concurrently across all LLMs
-    4. Run ranking engine on each response
-    5. Persist results
-    6. Compute aggregate scores
-    7. Mark scan complete
-    """
     if llm_names is None:
         llm_names = ["chatgpt", "llama"]
 
-    # Load brand
     brand_result = await db.execute(select(Brand).where(Brand.id == brand_id))
     brand = brand_result.scalar_one_or_none()
     if not brand:
         raise ValueError(f"Brand {brand_id} not found")
 
-    # Load active queries
     queries_result = await db.execute(
         select(MonitoredQuery)
         .where(MonitoredQuery.brand_id == brand_id, MonitoredQuery.is_active == True)
@@ -71,93 +87,78 @@ async def run_scan(
     if not queries:
         raise ValueError("No active queries for this brand")
 
-    # Use existing scan record or create new one
     if scan_id:
         scan_result = await db.execute(select(Scan).where(Scan.id == scan_id))
         scan = scan_result.scalar_one_or_none()
         if scan:
-            logger.info("Found existing scan %s, updating to running", scan_id)
             scan.status = ScanStatus.running
             scan.started_at = _utcnow()
         else:
-            logger.warning("Scan %s not found in DB, creating new record", scan_id)
-            scan = Scan(
-                id=scan_id,
-                brand_id=brand_id,
-                status=ScanStatus.running,
-                started_at=_utcnow(),
-            )
+            scan = Scan(id=scan_id, brand_id=brand_id, status=ScanStatus.running, started_at=_utcnow())
             db.add(scan)
     else:
-        logger.info("No scan_id provided, creating new scan record")
-        scan = Scan(
-            id=uuid.uuid4(),
-            brand_id=brand_id,
-            status=ScanStatus.running,
-            started_at=_utcnow(),
-        )
+        scan = Scan(id=uuid.uuid4(), brand_id=brand_id, status=ScanStatus.running, started_at=_utcnow())
         db.add(scan)
     await db.flush()
-    logger.info("Scan %s flushed (status=running), processing %d queries with %d LLMs", scan.id, len(queries), len(llm_names))
 
-    total_scores = []
-    total_mentioned = 0
-    total_successful = 0
+    logger.info("Scan %s: firing %d queries × %d LLMs = %d calls in parallel",
+                 scan.id, len(queries), len(llm_names), len(queries) * len(llm_names))
 
-    # Start keepalive ping to prevent connection timeout during long LLM calls
     stop_event = asyncio.Event()
     keepalive_task = asyncio.create_task(_keepalive_ping(db, scan.id, stop_event))
 
-    # Process each query
-    for query in queries:
-        # Fire all LLMs concurrently for this query
-        llm_responses = await query_all_llms(query.query_text, llm_names)
+    # Fire ALL LLMs for ALL queries concurrently using a shared httpx client
+    import httpx as _httpx
+    async with _httpx.AsyncClient(timeout=45) as client:
+        raw_results = await _fire_all_llms(queries, llm_names, client)
 
-        query_results = []
-        for llm_name, (response_text, error) in llm_responses.items():
-            if error or not response_text:
-                # Record failed result — stored but excluded from aggregates
-                result = QueryResult(
-                    id=uuid.uuid4(),
-                    scan_id=scan.id,
-                    query_id=query.id,
-                    llm_name=llm_name,
-                    raw_response=f"[Error: {error}]" if error else "[Empty response]",
-                    mentioned=False,
-                    position=None,
-                    sentiment="not_mentioned",
-                    competitors_mentioned=[],
-                    annotated_response=None,
-                    score=None,  # None signals "not applicable", not 0
-                )
-            else:
-                ranking = rank_response(brand.name, brand.domain, response_text)
-                result = QueryResult(
-                    id=uuid.uuid4(),
-                    scan_id=scan.id,
-                    query_id=query.id,
-                    llm_name=llm_name,
-                    raw_response=response_text,
-                    mentioned=ranking.mentioned,
-                    position=ranking.position,
-                    sentiment=ranking.sentiment,
-                    competitors_mentioned=ranking.competitors,
-                    annotated_response=ranking.annotated_spans,
-                    score=ranking.score,
-                )
+    # Stop keepalive
+    stop_event.set()
+    keepalive_task.cancel()
+    try:
+        await keepalive_task
+    except asyncio.CancelledError:
+        pass
 
-            db.add(result)
-            query_results.append(result)
+    # Process all results
+    all_results: list[QueryResult] = []
+    total_scores: list[float] = []
+    total_mentioned = 0
+    total_successful = 0
 
-            # Only count successful results in aggregates
-            if not error and response_text:
-                total_successful += 1
-                if result.mentioned:
-                    total_mentioned += 1
-                if result.score is not None:
-                    total_scores.append(result.score)
+    for q_id, llm_name, response_text, error in raw_results:
+        if error or not response_text:
+            result = QueryResult(
+                id=uuid.uuid4(), scan_id=scan.id,
+                query_id=uuid.UUID(q_id), llm_name=llm_name,
+                raw_response=f"[Error: {error}]" if error else "[Empty response]",
+                mentioned=False, position=None, sentiment="not_mentioned",
+                competitors_mentioned=[], annotated_response=None, score=None,
+            )
+        else:
+            ranking = rank_response(brand.name, brand.domain, response_text)
+            result = QueryResult(
+                id=uuid.uuid4(), scan_id=scan.id,
+                query_id=uuid.UUID(q_id), llm_name=llm_name,
+                raw_response=response_text,
+                mentioned=ranking.mentioned, position=ranking.position,
+                sentiment=ranking.sentiment,
+                competitors_mentioned=ranking.competitors,
+                annotated_response=ranking.annotated_spans,
+                score=ranking.score,
+            )
 
-    # Compute aggregate scores from successful results only
+        all_results.append(result)
+        if not error and response_text:
+            total_successful += 1
+            if result.mentioned:
+                total_mentioned += 1
+            if result.score is not None:
+                total_scores.append(result.score)
+
+    # Batch insert all results
+    db.add_all(all_results)
+
     visibility_score = round(sum(total_scores) / len(total_scores), 1) if total_scores else 0.0
     mention_rate = round((total_mentioned / total_successful) * 100, 1) if total_successful > 0 else 0.0
 
@@ -166,26 +167,14 @@ async def run_scan(
     scan.status = ScanStatus.completed
     scan.completed_at = _utcnow()
 
-    # Stop keepalive ping — we're done with LLM calls
-    stop_event.set()
-    keepalive_task.cancel()
-    try:
-        await keepalive_task
-    except asyncio.CancelledError:
-        pass
-
-    logger.info("Scan %s committing: score=%.1f mention_rate=%.1f successful=%d", scan.id, visibility_score, mention_rate, total_successful)
+    logger.info("Scan %s: score=%.1f mention_rate=%.1f successful=%d/%d",
+                 scan.id, visibility_score, mention_rate, total_successful, len(all_results))
     await db.commit()
     await db.refresh(scan)
-    logger.info("Scan %s committed successfully", scan.id)
     return scan
 
 
 async def generate_query_suggestions(brand_name: str, domain: str, keywords: list[str]) -> list[str]:
-    """
-    Crawl the brand's website starting from the landing page, following internal links
-    to build a rich content profile. Generates domain-aware query suggestions.
-    """
     import json, re
     from urllib.parse import urljoin, urlparse
     import httpx as _httpx
@@ -197,7 +186,6 @@ async def generate_query_suggestions(brand_name: str, domain: str, keywords: lis
     parsed_base = urlparse(BASE_URL)
     base_domain = parsed_base.netloc
 
-    # Priority paths to crawl if found as links
     PRIORITY_PATHS = ["/about", "/product", "/products", "/pricing", "/features", "/solutions", "/docs", "/use-cases", "/customers"]
 
     visited: set[str] = set()
@@ -221,14 +209,12 @@ async def generate_query_suggestions(brand_name: str, domain: str, keywords: lis
                 continue
             full = urljoin(base_url, link)
             if is_internal(full) and full not in visited:
-                # Strip fragments and trailing slashes for dedup
                 clean = urlparse(full)._replace(fragment="").geturl().rstrip("/")
                 urls.append(clean)
         return urls
 
     try:
         async with _httpx.AsyncClient(timeout=8, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0 (compatible; LLMRank/1.0)"}) as client:
-            # Crawl starting from landing page
             to_visit = [BASE_URL.rstrip("/")]
             all_links: list[str] = []
 
@@ -237,7 +223,6 @@ async def generate_query_suggestions(brand_name: str, domain: str, keywords: lis
                 if url in visited:
                     continue
                 visited.add(url)
-
                 try:
                     resp = await client.get(url)
                     if resp.status_code != 200:
@@ -246,14 +231,12 @@ async def generate_query_suggestions(brand_name: str, domain: str, keywords: lis
                     text = extract_text(html)
                     if len(text) > 100:
                         all_content.append(f"[{urlparse(url).path or '/'}] {text}")
-                    # Collect links for next pages
                     links = extract_links(html, url)
                     all_links.extend(links)
                 except Exception as e:
                     logger.debug("Failed to crawl %s: %s", url, e)
                     continue
 
-            # Add priority pages if not yet visited
             if len(visited) < MAX_PAGES:
                 for path in PRIORITY_PATHS:
                     if len(visited) >= MAX_PAGES:
@@ -270,60 +253,45 @@ async def generate_query_suggestions(brand_name: str, domain: str, keywords: lis
                                     visited.add(candidate)
                         except Exception:
                             pass
-
     except Exception as e:
         logger.warning("Failed to crawl %s: %s", BASE_URL, e)
 
-    # Combine all content, respect total limit
     combined = "\n\n".join(all_content)[:MAX_TOTAL_CONTENT]
-    logger.info("Crawled %d pages from %s (%d chars of content)", len(visited), base_domain, len(combined))
+    logger.info("Crawled %d pages from %s (%d chars)", len(visited), base_domain, len(combined))
 
     keyword_block = f"\n\nContext keywords: {', '.join(keywords)}" if keywords else ""
     has_useful_content = len(combined) >= 300
 
-    # Web search for thin-content / SPA sites to get more context about the brand
     async def _web_search_context(query: str, max_results: int = 5) -> list[str]:
         snippets: list[str] = []
         try:
-            _httpx_client = _httpx.AsyncClient(timeout=10, follow_redirects=False)
-            async with _httpx_client as client:
+            async with _httpx.AsyncClient(timeout=10, follow_redirects=False) as client:
                 resp = await client.post(
                     "https://html.duckduckgo.com/html/",
                     data={"q": query},
                     headers={
-                        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
                         "Content-Type": "application/x-www-form-urlencoded",
                         "Accept": "text/html",
                     },
                 )
                 if resp.status_code == 200:
-                    # Extract result snippets from DuckDuckGo HTML response
-                    snippets = re.findall(
-                        r'<a[^>]*class="result__snippet"[^>]*>(.*?)</a>',
-                        resp.text,
-                        re.DOTALL | re.IGNORECASE,
-                    )
+                    snippets = re.findall(r'<a[^>]*class="result__snippet"[^>]*>(.*?)</a>', resp.text, re.DOTALL | re.IGNORECASE)
                     if not snippets:
-                        snippets = re.findall(
-                            r'class="result__snippet"[^>]*>(.*?)</(?:a|span|div)>',
-                            resp.text,
-                            re.DOTALL | re.IGNORECASE,
-                        )
+                        snippets = re.findall(r'class="result__snippet"[^>]*>(.*?)</(?:a|span|div)>', resp.text, re.DOTALL | re.IGNORECASE)
                     snippets = [re.sub(r"<[^>]+>", "", s).strip() for s in snippets]
                     snippets = [s for s in snippets if len(s) > 15][:max_results]
         except Exception as e:
-            logger.warning("Web search failed for '%s': %s", query, e)
+            logger.warning("Web search failed: %s", e)
         return snippets
 
     web_context = ""
     if not has_useful_content:
-        # Try web search for brand context
         search_results = await _web_search_context(f"{brand_name} {domain}")
         if search_results:
             web_context = "Web search context:\n" + "\n".join(f"- {s}" for s in search_results)
             logger.info("Got %d web search snippets for %s", len(search_results), domain)
         else:
-            # Fallback: extract meta description
             try:
                 async with _httpx.AsyncClient(timeout=5, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0"}) as c:
                     r = await c.get(BASE_URL)
@@ -336,7 +304,7 @@ async def generate_query_suggestions(brand_name: str, domain: str, keywords: lis
     content_signal = combined if has_useful_content else f"Brand name: {brand_name} | Domain: {domain}\n\n{web_context}".strip()
     content_label = "crawled website content" if has_useful_content else ("brand signals + web search results" if web_context else "brand signals (name, domain)")
 
-    prompt = f"""You are an SEO expert. Based on the following {content_label}, generate 12 realistic search queries that potential customers would ask an AI assistant (like ChatGPT or Google Gemini) when looking for the products, services, or tools this company offers.
+    prompt = f"""You are an SEO expert. Based on the following {content_label}, generate 12 realistic search queries that potential customers would ask an AI assistant when looking for the products, services, or tools this company offers.
 
 {content_signal}{keyword_block}
 
@@ -344,13 +312,10 @@ Requirements:
 - Queries must be directly relevant to what this company actually does/sells
 - Natural, conversational questions a real user would ask
 - Mix of: "best X for Y", "X vs Y", "how to do Z", "tool for Z", "alternatives to X"
-- Do NOT include the brand name — these are queries where the brand SHOULD appear organically
+- Do NOT include the brand name
 - Return ONLY a JSON array of strings, no explanation
 
 Example: ["best project management tool for startups", "how to organize team tasks efficiently", ...]"""
-
-    # Generate via OpenRouter
-    from app.services.llm_adapters import OpenRouterAdapter
 
     for model_key in ["llama", "chatgpt", "gemini"]:
         try:

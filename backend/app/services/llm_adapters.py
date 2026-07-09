@@ -59,11 +59,12 @@ class OpenRouterAdapter(LLMAdapter):
 
     BASE_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-    def __init__(self, model_key: str):
+    def __init__(self, model_key: str, client = None):
         model = MODEL_REGISTRY[model_key]
         self.name = model_key
         self.model_id = model["id"]
         self.label = model["label"]
+        self._client = client  # optional shared httpx client
 
     async def query(self, prompt: str) -> str:
         if not settings.OPENROUTER_API_KEY:
@@ -82,11 +83,10 @@ class OpenRouterAdapter(LLMAdapter):
             "max_tokens": 1024,
         }
 
-        async with httpx.AsyncClient(timeout=30) as client:
+        async def _post(client):
             resp = await client.post(self.BASE_URL, headers=headers, json=payload)
             resp.raise_for_status()
             data = resp.json()
-
             choices = data.get("choices")
             if not choices:
                 raise ValueError(f"{self.label} returned no choices")
@@ -94,6 +94,12 @@ class OpenRouterAdapter(LLMAdapter):
             if not content:
                 raise ValueError(f"{self.label} returned empty content")
             return content
+
+        if self._client:
+            return await _post(self._client)
+        else:
+            async with httpx.AsyncClient(timeout=30) as client:
+                return await _post(client)
 
 
 # ─── Adapter Factory ──────────────────────────────────────────────────────────
