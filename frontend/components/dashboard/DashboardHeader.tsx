@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useTriggerScan } from "@/lib/hooks";
 import type { Brand, Scan } from "@/types";
 import type { CreditBalance } from "@/lib/api";
@@ -17,6 +18,7 @@ export const LLM_OPTIONS = [
 
 export function ScanControls({ brandId, latestScan, credits, onScanError }: { brandId: string; latestScan: Scan | null; credits: CreditBalance | undefined; onScanError?: (msg: string | null) => void }) {
   const triggerScan = useTriggerScan();
+  const router = useRouter();
   const [scanError, setScanError] = useState<string | null>(null);
   const [selectedLLMs, setSelectedLLMs] = useState(["chatgpt", "llama"]);
   const [showConfig, setShowConfig] = useState(false);
@@ -60,7 +62,7 @@ export function ScanControls({ brandId, latestScan, credits, onScanError }: { br
   return (
     <>
       <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-        <button className="btn btn-ghost btn-sm" style={{ fontSize: 11, padding: "3px 6px", lineHeight: "20px" }} onClick={() => window.location.reload()}>
+        <button className="btn btn-ghost btn-sm" style={{ fontSize: 11, padding: "3px 6px", lineHeight: "20px" }} onClick={() => router.refresh()}>
           Refresh
         </button>
         <div style={{ position: "relative" }} ref={configRef}>

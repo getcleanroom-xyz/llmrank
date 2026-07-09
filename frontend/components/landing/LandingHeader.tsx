@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 
 export function LandingCTA({ variant = "primary" }: { variant?: "primary" | "secondary" }) {
   const { user, openAuthModal } = useAuth();
+  const router = useRouter();
 
   if (variant === "secondary") {
     return (
@@ -19,7 +21,7 @@ export function LandingCTA({ variant = "primary" }: { variant?: "primary" | "sec
 
   return (
     <button
-      onClick={() => (user ? (window.location.href = "/brands") : openAuthModal("register"))}
+      onClick={() => (user ? router.push("/brands") : openAuthModal("register"))}
       className="btn btn-primary"
     >
       {user ? "Go to Dashboard" : "Start tracking for free"}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useAdminCampaigns, useAdminStats, useAdminDeleteCampaign, useAdminCancelCampaign, useAdminCloneCampaign } from "@/lib/hooks";
 import { AppHeader, PageHeader } from "@/components/AppHeader";
@@ -33,6 +34,7 @@ type ConfirmAction =
 
 export function AdminDashboard() {
   const { user } = useAuth();
+  const router = useRouter();
   const { data: campaigns = [], isLoading, error: loadError, refetch } = useAdminCampaigns();
   const { data: stats } = useAdminStats();
   const deleteCampaign = useAdminDeleteCampaign();
@@ -68,7 +70,7 @@ export function AdminDashboard() {
   const handleClone = async (id: string) => {
     try {
       const cloned = await cloneCampaign.mutateAsync(id);
-      window.location.href = `/admin/campaigns/${cloned.id}`;
+      router.push(`/admin/campaigns/${cloned.id}`);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Clone failed");
     }
