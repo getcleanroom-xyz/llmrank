@@ -187,7 +187,7 @@ export default function HomePage() {
 
       <LandingHeader />
 
-      <div style={{ flex: 1, maxWidth: 1200, margin: "0 auto", padding: "0 var(--page-px)", width: "100%" }}>
+      <div style={{ flex: 1, maxWidth: 720, margin: "0 auto", padding: "0 var(--page-px)", width: "100%" }}>
 
         {/* Hero */}
         <header style={{ paddingTop: "clamp(44px, 10vh, 80px)", paddingBottom: 40 }}>
