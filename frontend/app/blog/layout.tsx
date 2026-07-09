@@ -11,7 +11,7 @@ export default function BlogLayout({ children }: { children: React.ReactNode }) 
   return (
     <div className="page" style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       <LandingHeader />
-      <div style={{ flex: 1, maxWidth: 740, margin: "0 auto", padding: "0 var(--page-px)", width: "100%" }}>
+      <div style={{ flex: 1, maxWidth: 1200, margin: "0 auto", padding: "0 var(--page-px)", width: "100%" }}>
         {children}
       </div>
       <footer
