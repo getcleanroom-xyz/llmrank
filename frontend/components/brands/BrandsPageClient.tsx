@@ -185,7 +185,7 @@ function BrandsPageInner() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {paginated.map((b, i) => (
-                <div key={b.id} className="card" style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, transform: `rotate(${i % 2 === 0 ? "-0.15deg" : "0.15deg"})` }}>
+                <div key={b.id} className="card" style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, transform: `rotate(${i % 2 === 0 ? "-0.15deg" : "0.15deg"})`, borderTop: `4px solid ${["var(--primary)", "#3B82F6", "#22C55E", "#A855F7"][i % 4]}` }}>
                   <div style={{ width: 36, height: 36, borderRadius: "var(--radius)", background: "var(--primary)", border: "1.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0, boxShadow: "var(--shadow-sm)" }}>
                     {b.name.slice(0, 2).toUpperCase()}
                   </div>

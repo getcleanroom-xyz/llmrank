@@ -162,6 +162,53 @@ class QueryDrilldownOut(BaseModel):
     insights: list[DrilldownInsight]
 
 
+# LLM drilldown
+class LLMQueryResultItem(BaseModel):
+    query_id: UUID
+    query_text: str
+    mentioned: bool
+    position: Optional[int]
+    sentiment: str
+    score: Optional[float]
+    competitors_mentioned: list[CompetitorMention]
+
+    model_config = {"from_attributes": True}
+
+
+class LLMDrilldownOut(BaseModel):
+    llm_name: str
+    scanned_at: datetime
+    total_queries: int
+    times_mentioned: int
+    visibility_pct: float
+    avg_position: Optional[float]
+    avg_score: float
+    queries: list[LLMQueryResultItem]
+
+
+# Competitor drilldown
+class CompetitorQueryResult(BaseModel):
+    query_id: UUID
+    query_text: str
+    llm_name: str
+    competitor_position: int
+    brand_mentioned: bool
+    brand_position: Optional[int]
+    score: Optional[float]
+
+    model_config = {"from_attributes": True}
+
+
+class CompetitorDrilldownOut(BaseModel):
+    competitor_name: str
+    scanned_at: datetime
+    mention_pct: float
+    total_appearances: int
+    total_queries: int
+    beats_brand_count: int
+    queries: list[CompetitorQueryResult]
+
+
 # Credit schemas
 class CreditBalanceOut(BaseModel):
     balance: int

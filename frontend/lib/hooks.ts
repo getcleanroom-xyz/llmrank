@@ -123,6 +123,20 @@ export function useQueryDrilldown(brandId: string, queryId: string) {
   });
 }
 
+export function useLLMDrilldown(brandId: string, llmName: string) {
+  return useQuery({
+    queryKey: queryKeys.llmDrilldown(brandId, llmName),
+    queryFn: () => api.getLLMDrilldown(brandId, llmName),
+  });
+}
+
+export function useCompetitorDrilldown(brandId: string, competitorName: string) {
+  return useQuery({
+    queryKey: queryKeys.competitorDrilldown(brandId, competitorName),
+    queryFn: () => api.getCompetitorDrilldown(brandId, competitorName),
+  });
+}
+
 // ─── Credits ─────────────────────────────────────────────────────────────────
 
 export function useCredits() {

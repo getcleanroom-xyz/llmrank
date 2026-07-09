@@ -141,6 +141,7 @@ export function AdminDashboard() {
                       position: "relative",
                       overflow: "hidden",
                       paddingTop: 20,
+                      transform: `rotate(${i % 2 === 0 ? "-0.2deg" : "0.2deg"})`,
                     }}
                   >
                     <div

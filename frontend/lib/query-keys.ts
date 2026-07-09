@@ -5,6 +5,8 @@ export const queryKeys = {
   scans: (brandId: string) => ["scans", brandId] as const,
   dashboard: (brandId: string) => ["dashboard", brandId] as const,
   drilldown: (brandId: string, queryId: string) => ["drilldown", brandId, queryId] as const,
+  llmDrilldown: (brandId: string, llmName: string) => ["llmDrilldown", brandId, llmName] as const,
+  competitorDrilldown: (brandId: string, competitorName: string) => ["competitorDrilldown", brandId, competitorName] as const,
   credits: ["credits"] as const,
   creditPackages: ["creditPackages"] as const,
   user: ["user"] as const,

@@ -142,6 +142,53 @@ export const getDashboard = (brandId: string) =>
 export const getQueryDrilldown = (brandId: string, queryId: string) =>
   apiFetch<QueryDrilldown>(`/brands/${brandId}/queries/${queryId}/drilldown`);
 
+export interface LLMQueryResultItem {
+  query_id: string;
+  query_text: string;
+  mentioned: boolean;
+  position: number | null;
+  sentiment: string;
+  score: number | null;
+  competitors_mentioned: { name: string; position: number }[];
+}
+
+export interface LLMDrilldownData {
+  llm_name: string;
+  scanned_at: string;
+  total_queries: number;
+  times_mentioned: number;
+  visibility_pct: number;
+  avg_position: number | null;
+  avg_score: number;
+  queries: LLMQueryResultItem[];
+}
+
+export const getLLMDrilldown = (brandId: string, llmName: string) =>
+  apiFetch<LLMDrilldownData>(`/brands/${brandId}/llms/${encodeURIComponent(llmName)}`);
+
+export interface CompetitorQueryResultItem {
+  query_id: string;
+  query_text: string;
+  llm_name: string;
+  competitor_position: number;
+  brand_mentioned: boolean;
+  brand_position: number | null;
+  score: number | null;
+}
+
+export interface CompetitorDrilldownData {
+  competitor_name: string;
+  scanned_at: string;
+  mention_pct: number;
+  total_appearances: number;
+  total_queries: number;
+  beats_brand_count: number;
+  queries: CompetitorQueryResultItem[];
+}
+
+export const getCompetitorDrilldown = (brandId: string, competitorName: string) =>
+  apiFetch<CompetitorDrilldownData>(`/brands/${brandId}/competitors/${encodeURIComponent(competitorName)}`);
+
 // ─── Credits ───────────────────────────────────────────────────────────────────
 
 export interface CreditBalance {

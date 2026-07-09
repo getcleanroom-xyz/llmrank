@@ -21,6 +21,8 @@ from app.schemas.schemas import (
     ScanCreate, ScanOut,
     QueryResultOut, DashboardOut, QueryDrilldownOut,
     LLMBreakdown, CompetitorShareItem, QuerySummary, DrilldownInsight,
+    LLMDrilldownOut, LLMQueryResultItem,
+    CompetitorDrilldownOut, CompetitorQueryResult, CompetitorMention,
     CreditBalanceOut, CreditGrantRequest, CreditTransactionOut,
 )
 from app.services.scan_orchestrator import run_scan, generate_query_suggestions
@@ -666,6 +668,150 @@ async def get_query_drilldown(
         overall_sentiment=overall_sentiment,
         results=[QueryResultOut.model_validate(r) for r in results],  # Show all results (including errors) in the UI
         insights=insights,
+    )
+
+
+# ─── LLM drilldown ──────────────────────────────────────────────────────────────
+
+@router.get("/brands/{brand_id}/llms/{llm_name}", response_model=LLMDrilldownOut, tags=["Dashboard"])
+async def get_llm_drilldown(
+    brand_id: uuid.UUID,
+    llm_name: str,
+    db: AsyncSession = Depends(get_db),
+):
+    # Get latest completed scan
+    scan_result = await db.execute(
+        select(Scan)
+        .where(Scan.brand_id == brand_id, Scan.status == ScanStatus.completed)
+        .order_by(desc(Scan.started_at))
+        .limit(1)
+    )
+    latest_scan = scan_result.scalar_one_or_none()
+    if not latest_scan:
+        raise HTTPException(404, "No completed scan found")
+
+    # Get all results for this LLM in the latest scan
+    results_result = await db.execute(
+        select(QueryResult)
+        .where(QueryResult.scan_id == latest_scan.id, QueryResult.llm_name == llm_name)
+    )
+    results = results_result.scalars().all()
+
+    if not results:
+        raise HTTPException(404, f"No results for LLM '{llm_name}'")
+
+    mentioned = [r for r in results if r.mentioned]
+    positions = [r.position for r in mentioned if r.position]
+    scores = [r.score for r in results if r.score is not None]
+
+    # Get query texts
+    qids = list({r.query_id for r in results})
+    queries_result = await db.execute(
+        select(MonitoredQuery).where(MonitoredQuery.id.in_(qids))
+    )
+    query_map = {q.id: q for q in queries_result.scalars().all()}
+
+    queries_out = []
+    for r in results:
+        q = query_map.get(r.query_id)
+        queries_out.append(LLMQueryResultItem(
+            query_id=r.query_id,
+            query_text=q.query_text if q else "(unknown)",
+            mentioned=r.mentioned,
+            position=r.position,
+            sentiment=r.sentiment.value if hasattr(r.sentiment, "value") else r.sentiment,
+            score=r.score,
+            competitors_mentioned=[CompetitorMention(name=c.get("name", ""), position=c.get("position", 0)) for c in (r.competitors_mentioned or [])],
+        ))
+
+    queries_out.sort(key=lambda x: (x.position or 999))
+
+    return LLMDrilldownOut(
+        llm_name=llm_name,
+        scanned_at=latest_scan.completed_at or latest_scan.started_at,
+        total_queries=len(results),
+        times_mentioned=len(mentioned),
+        visibility_pct=round(len(mentioned) / len(results) * 100, 1) if results else 0,
+        avg_position=round(sum(positions) / len(positions), 1) if positions else None,
+        avg_score=round(sum(scores) / len(scores), 1) if scores else 0,
+        queries=queries_out,
+    )
+
+
+# ─── Competitor drilldown ───────────────────────────────────────────────────────
+
+@router.get("/brands/{brand_id}/competitors/{competitor_name}", response_model=CompetitorDrilldownOut, tags=["Dashboard"])
+async def get_competitor_drilldown(
+    brand_id: uuid.UUID,
+    competitor_name: str,
+    db: AsyncSession = Depends(get_db),
+):
+    # Get latest completed scan
+    scan_result = await db.execute(
+        select(Scan)
+        .where(Scan.brand_id == brand_id, Scan.status == ScanStatus.completed)
+        .order_by(desc(Scan.started_at))
+        .limit(1)
+    )
+    latest_scan = scan_result.scalar_one_or_none()
+    if not latest_scan:
+        raise HTTPException(404, "No completed scan found")
+
+    # Get ALL results from the latest scan
+    all_results = await db.execute(
+        select(QueryResult).where(QueryResult.scan_id == latest_scan.id)
+    )
+    all_results = all_results.scalars().all()
+
+    total_queries = len({r.query_id for r in all_results})
+
+    # Filter to results where this competitor is mentioned
+    comp_results = []
+    for r in all_results:
+        comps = r.competitors_mentioned or []
+        for c in comps:
+            if c.get("name", "").lower() == competitor_name.lower():
+                comp_results.append((r, c.get("position", 0)))
+                break
+
+    if not comp_results:
+        raise HTTPException(404, f"No mentions found for competitor '{competitor_name}'")
+
+    # Get query texts
+    qids = list({r.query_id for r, _ in comp_results})
+    queries_query = await db.execute(
+        select(MonitoredQuery).where(MonitoredQuery.id.in_(qids))
+    )
+    query_map = {q.id: q for q in queries_query.scalars().all()}
+
+    beats_count = 0
+    queries_out = []
+    for r, comp_pos in comp_results:
+        q = query_map.get(r.query_id)
+        brand_pos = r.position if r.mentioned else None
+        if r.mentioned and brand_pos is not None and comp_pos < brand_pos:
+            beats_count += 1
+
+        queries_out.append(CompetitorQueryResult(
+            query_id=r.query_id,
+            query_text=q.query_text if q else "(unknown)",
+            llm_name=r.llm_name,
+            competitor_position=comp_pos,
+            brand_mentioned=r.mentioned,
+            brand_position=brand_pos,
+            score=r.score,
+        ))
+
+    queries_out.sort(key=lambda x: x.competitor_position)
+
+    return CompetitorDrilldownOut(
+        competitor_name=competitor_name,
+        scanned_at=latest_scan.completed_at or latest_scan.started_at,
+        mention_pct=round(len(comp_results) / len(all_results) * 100, 1) if all_results else 0,
+        total_appearances=len(comp_results),
+        total_queries=total_queries,
+        beats_brand_count=beats_count,
+        queries=queries_out,
     )
 
 
