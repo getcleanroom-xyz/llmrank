@@ -149,30 +149,18 @@ async def create_flutterwave_charge(
 
 
 async def _get_or_create_customer(user: User, headers: dict, base: str) -> str:
-    """Find existing customer by email or create one."""
+    """Create a Flutterwave v4 customer."""
     async with httpx.AsyncClient(timeout=15) as client:
-        # Try to find by email
-        response = await client.get(
-            f"{base}/customers",
-            headers=headers,
-            params={"email": user.email},
-        )
-        data = response.json()
-        customers = data.get("data", []) if isinstance(data.get("data"), list) else []
-        if customers:
-            return customers[0]["id"]
-
-        # Create new customer
         response = await client.post(
             f"{base}/customers",
             headers=headers,
             json={
                 "email": user.email,
                 "name": {
-                    "first": user.display_name or "",
+                    "first": user.display_name or "User",
                     "last": "",
                 },
-                "phone": {"country_code": "1", "number": ""},
+                "phone": {"country_code": "1", "number": "0000000000"},
             },
         )
         data = response.json()
