@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import ReactMarkdown from "react-markdown";
 import { getBlogPost, getAllBlogPosts } from "@/lib/blog";
+import { BlogPostContent } from "@/components/blog/BlogPostContent";
 
 export const dynamic = "force-static";
 
@@ -15,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const post = getBlogPost(slug);
   if (!post) return { title: "Not Found" };
   return {
-    title: `${post.title} — LLMRank Blog`,
+    title: `${post.title} — LLMRank`,
     description: post.summary,
     openGraph: {
       title: post.title,
@@ -32,69 +33,23 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
+function readingTime(text: string): number {
+  const words = text.trim().split(/\s+/).length;
+  return Math.max(1, Math.round(words / 200));
+}
+
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const post = getBlogPost(slug);
   if (!post) notFound();
 
+  const allPosts = getAllBlogPosts();
+  const morePosts = allPosts.filter((p) => p.slug !== post.slug).slice(0, 2);
+  const minutes = readingTime(post.content);
+
   return (
     <main>
-      <article>
-        <header style={{ paddingTop: "clamp(32px, 6vh, 60px)", paddingBottom: 24 }}>
-          <Link
-            href="/blog"
-            style={{
-              fontSize: 12,
-              color: "var(--text-muted)",
-              textDecoration: "none",
-              fontWeight: 600,
-              display: "inline-block",
-              marginBottom: 16,
-            }}
-          >
-            &larr; All posts
-          </Link>
-          <h1
-            style={{
-              fontSize: "clamp(24px, 5vw, 36px)",
-              fontWeight: 800,
-              margin: "0 0 8px",
-              lineHeight: 1.2,
-              letterSpacing: "-0.02em",
-            }}
-          >
-            {post.title}
-          </h1>
-          <div
-            style={{
-              display: "flex",
-              gap: 10,
-              alignItems: "center",
-              flexWrap: "wrap",
-              marginBottom: 12,
-            }}
-          >
-            <span style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 600 }}>
-              {new Date(post.date).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </span>
-            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-              {post.tags.map((tag) => (
-                <span key={tag} className="pill pill-neu" style={{ fontSize: 10 }}>
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
-        </header>
-
-        <div className="md-content" style={{ paddingBottom: 40, maxWidth: 680 }}>
-          <ReactMarkdown>{post.content}</ReactMarkdown>
-        </div>
-      </article>
+      <BlogPostContent post={post} minutes={minutes} morePosts={morePosts} />
     </main>
   );
 }

@@ -44,6 +44,18 @@ export function LandingHeader() {
           <div style={{ flex: 1, minWidth: 0 }} />
 
           <div className="app-header-actions">
+            <Link
+              href="/blog"
+              style={{
+                fontSize: 12,
+                color: "var(--text-secondary)",
+                textDecoration: "none",
+                fontWeight: 700,
+                padding: "4px 8px",
+              }}
+            >
+              Blog
+            </Link>
             {user ? (
               <Link href="/brands" className="btn btn-primary btn-sm" style={{ textDecoration: "none" }}>
                 Dashboard

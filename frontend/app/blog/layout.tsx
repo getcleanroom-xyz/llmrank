@@ -11,18 +11,19 @@ export default function BlogLayout({ children }: { children: React.ReactNode }) 
   return (
     <div className="page" style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       <LandingHeader />
-      <div style={{ flex: 1, maxWidth: 720, margin: "0 auto", padding: "0 var(--page-px)", width: "100%" }}>
+      <div style={{ flex: 1, maxWidth: 740, margin: "0 auto", padding: "0 var(--page-px)", width: "100%" }}>
         {children}
       </div>
       <footer
         style={{
-          padding: "16px var(--page-px)",
+          padding: "20px var(--page-px)",
           borderTop: "2px solid var(--border)",
           marginTop: "auto",
           fontSize: 12,
           color: "var(--text-muted)",
           fontWeight: 600,
           textAlign: "center",
+          fontFamily: "var(--font-sans), Inter, sans-serif",
         }}
       >
         llm<span style={{ color: "var(--primary)" }}>rank</span> &mdash; AI visibility tracking
