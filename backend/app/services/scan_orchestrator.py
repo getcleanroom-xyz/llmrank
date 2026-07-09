@@ -304,16 +304,25 @@ async def generate_query_suggestions(brand_name: str, domain: str, keywords: lis
     content_signal = combined if has_useful_content else f"Brand name: {brand_name} | Domain: {domain}\n\n{web_context}".strip()
     content_label = "crawled website content" if has_useful_content else ("brand signals + web search results" if web_context else "brand signals (name, domain)")
 
-    prompt = f"""You are an SEO expert. Below is crawled content from the website of {brand_name} ({domain}). Based EXCLUSIVELY on what this company actually offers, generate 12 search queries that potential customers would ask an AI assistant.
+    prompt = f"""You are a Generative Engine Optimization (GEO) and Answer Engine Optimization (AEO) expert. Your job is to understand how people ask AI models like ChatGPT, Gemini, and Claude for recommendations — which is very different from how they search Google.
+
+Below is crawled content from the website of {brand_name} ({domain}). Based EXCLUSIVELY on what this company actually offers, generate 12 conversational questions that real people would type into an AI assistant when researching this type of product or service.
 
 CRAWLED CONTENT FROM {brand_name}:
 {content_signal}{keyword_block}
 
+GEO/AEO QUERY PATTERNS (people don't keyword-stuff AI prompts like they do Google):
+- "what's the best X for Y" (comparative, seeking a named recommendation)
+- "I need a tool that does X and Y" (scenario-based)
+- "who competes with X" (alternatives research)
+- "how do I do X" (problem-first, solution-seeking)
+- "what should I use for X" (open-ended discovery)
+
 CRITICAL RULES:
 - {brand_name} is the company these queries are for — every query must be about something {brand_name} actually does
-- Do NOT generate queries for a different type of company — if {brand_name} is a social network, the queries are about networking, not e-commerce
+- If {brand_name} is a social network, queries are about networking, hiring, professional growth — NOT e-commerce or project management
 - Only use products/services/features that appear in the crawled content above
-- Natural, conversational questions a real user would ask
+- Queries must sound like a human talking to an AI, not a keyword search
 - Do NOT include the brand name in the query
 - Return ONLY a JSON array of strings, no explanation"""
 
