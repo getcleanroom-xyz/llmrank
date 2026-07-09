@@ -303,9 +303,5 @@ function BrandDashboardPageInner() {
 }
 
 export function BrandDashboardClient() {
-  return (
-    <Suspense fallback={<div className="page" style={{ display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "var(--text-muted)", minHeight: "100vh" }}>Loading...</div>}>
-      <BrandDashboardPageInner />
-    </Suspense>
-  );
+  return <BrandDashboardPageInner />;
 }

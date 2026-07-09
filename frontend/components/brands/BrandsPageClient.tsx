@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
@@ -280,9 +280,5 @@ function BrandsPageInner() {
 }
 
 export function BrandsPageClient() {
-  return (
-    <Suspense fallback={<div className="page" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "var(--text-muted)", minHeight: "100vh" }}>Loading...</div>}>
-      <BrandsPageInner />
-    </Suspense>
-  );
+  return <BrandsPageInner />;
 }
