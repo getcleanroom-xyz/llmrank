@@ -120,6 +120,22 @@ export function QueriesTable({
 
       {/* Search + Add row */}
       <div className="card" style={{ marginBottom: 12, overflow: "visible" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+          <div
+            style={{
+              fontFamily: "var(--font-hand), Caveat, cursive",
+              fontSize: 22,
+              fontWeight: 700,
+              transform: "rotate(-0.3deg)",
+              flex: 1,
+            }}
+          >
+            Queries
+          </div>
+          <svg width="50" height="8" viewBox="0 0 50 8" fill="none">
+            <path d="M0 4 Q8 1 16 5 Q24 7 32 3 Q40 1 50 5" stroke="#22C55E" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+          </svg>
+        </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
           <div style={{ flex: 1, minWidth: 160, position: "relative" }}>
             <input

@@ -148,9 +148,28 @@ export default function ScanDetailPage() {
       </PageHeader>
 
       <div style={{ maxWidth: 800, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
+        {/* Scan heading */}
+        <div style={{ marginBottom: 18 }}>
+          <h1
+            style={{
+              fontFamily: "var(--font-hand), Caveat, cursive",
+              fontSize: "clamp(24px, 3.5vw, 32px)",
+              fontWeight: 700,
+              margin: "0 0 2px",
+              lineHeight: 1.15,
+              transform: "rotate(-0.3deg)",
+            }}
+          >
+            Scan detail
+          </h1>
+          <svg width="120" height="6" viewBox="0 0 120 6" preserveAspectRatio="none" style={{ display: "block" }}>
+            <path d="M0 3 Q8 0 16 4 Q24 6 32 2 Q40 0 48 5 Q56 6 64 2 Q72 0 80 4 Q88 6 96 2 Q104 0 112 4 Q120 3 120 2" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </div>
+
         {/* Summary cards */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "var(--gap)", marginBottom: "var(--gap)" }}>
-          <div className="card" style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px" }}>
+          <div className="card" style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", transform: "rotate(-0.3deg)" }}>
             <ScoreRing score={data.visibility_score ?? 0} size={48} stroke={4} />
             <div>
               <div className="section-label" style={{ marginBottom: 2 }}>Visibility</div>
@@ -159,14 +178,14 @@ export default function ScanDetailPage() {
               </div>
             </div>
           </div>
-          <div className="card" style={{ padding: "14px 16px" }}>
+          <div className="card" style={{ padding: "14px 16px", transform: "rotate(0.2deg)" }}>
             <div className="section-label" style={{ marginBottom: 4 }}>Mention Rate</div>
             <div style={{ fontSize: 24, fontWeight: 700, lineHeight: 1 }}>{mentionRate}%</div>
             <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
               {data.query_summaries.filter((q) => q.results.some((r) => r.mentioned)).length}/{data.query_summaries.length} queries
             </div>
           </div>
-          <div className="card" style={{ padding: "14px 16px" }}>
+          <div className="card" style={{ padding: "14px 16px", transform: "rotate(-0.2deg)" }}>
             <div className="section-label" style={{ marginBottom: 4 }}>Duration</div>
             <div style={{ fontSize: 13, fontWeight: 600 }}>
               {data.started_at && data.completed_at
@@ -181,7 +200,12 @@ export default function ScanDetailPage() {
 
         {/* Per-query results */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <div className="section-label">Query Results ({data.query_summaries.length})</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="section-label">Query Results ({data.query_summaries.length})</span>
+            <svg width="30" height="8" viewBox="0 0 30 8" fill="none">
+              <path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5" stroke="#22C55E" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+            </svg>
+          </div>
           <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
             {data.query_summaries.length} queries tested
           </span>

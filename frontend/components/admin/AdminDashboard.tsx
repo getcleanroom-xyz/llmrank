@@ -97,6 +97,22 @@ export function AdminDashboard() {
       </PageHeader>
 
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
+        <h1
+          style={{
+            fontFamily: "var(--font-hand), Caveat, cursive",
+            fontSize: "clamp(28px, 4vw, 36px)",
+            fontWeight: 700,
+            margin: "0 0 2px",
+            lineHeight: 1,
+            transform: "rotate(-0.4deg)",
+          }}
+        >
+          Admin
+        </h1>
+        <svg width="100" height="7" viewBox="0 0 100 7" preserveAspectRatio="none" style={{ display: "block", marginBottom: "var(--gap)" }}>
+          <path d="M0 4 Q7 1 14 5 Q21 7 28 2 Q35 0 42 5 Q49 7 56 3 Q63 1 70 5 Q77 7 84 2 Q91 0 100 5" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+
         {error && (
           <div className="card" style={{ marginBottom: "var(--gap)", color: "var(--red)", fontSize: 12, fontWeight: 600 }}>
             {error}

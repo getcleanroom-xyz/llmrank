@@ -134,11 +134,12 @@ export function ScanHistory({ brandId }: { brandId: string }) {
             <div
               key={scan.id}
               className="card"
-              style={{
-                padding: 0,
-                borderColor: isExpanded ? "var(--primary)" : undefined,
-                transition: "border-color 0.1s",
-              }}
+                style={{
+                  padding: 0,
+                  borderColor: isExpanded ? "var(--primary)" : undefined,
+                  transition: "border-color 0.1s, transform 0.15s",
+                  transform: `rotate(${scans.indexOf(scan) % 2 === 0 ? "-0.15deg" : "0.15deg"})`,
+                }}
             >
               <div
                 onClick={() => setExpandedId(isExpanded ? null : scan.id)}

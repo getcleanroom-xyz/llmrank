@@ -68,23 +68,42 @@ function QueryDrilldownInner() {
       </PageHeader>
 
       <div style={{ flex: 1, maxWidth: 1100, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
+        {/* Query title */}
+        <div style={{ marginBottom: 14 }}>
+          <h1
+            style={{
+              fontFamily: "var(--font-hand), Caveat, cursive",
+              fontSize: "clamp(24px, 3.5vw, 32px)",
+              fontWeight: 700,
+              margin: "0 0 2px",
+              lineHeight: 1.15,
+              transform: "rotate(-0.3deg)",
+            }}
+          >
+            {data.query_text}
+          </h1>
+          <svg width="60%" height="6" viewBox="0 0 120 6" preserveAspectRatio="none" style={{ display: "block" }}>
+            <path d="M0 3 Q8 0 16 4 Q24 6 32 2 Q40 0 48 5 Q56 6 64 2 Q72 0 80 4 Q88 6 96 2 Q104 0 112 4 Q120 3 120 2" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </div>
+
         <div className="grid-4" style={{ marginBottom: 16 }}>
-          <div className="card" style={{ padding: "12px 14px" }}>
+          <div className="card" style={{ padding: "12px 14px", transform: "rotate(-0.3deg)" }}>
             <div className="section-label" style={{ marginBottom: 4 }}>Position</div>
             <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>{data.avg_position ? `#${data.avg_position}` : "-"}</div>
             <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4, fontWeight: 600 }}>{data.avg_position && data.avg_position <= 2 ? "Strong" : data.avg_position ? "Room to improve" : "Not ranked"}</div>
           </div>
-          <div className="card" style={{ padding: "12px 14px" }}>
+          <div className="card" style={{ padding: "12px 14px", transform: "rotate(0.3deg)" }}>
             <div className="section-label" style={{ marginBottom: 4 }}>Coverage</div>
             <div style={{ fontSize: 24, fontWeight: 800, color: coveragePct >= 60 ? "#166534" : coveragePct >= 30 ? "var(--text)" : "#991B1B", lineHeight: 1 }}>{coveragePct}%</div>
             <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4, fontWeight: 600 }}>{data.llms_mentioned}/{data.total_llms} models</div>
           </div>
-          <div className="card" style={{ padding: "12px 14px" }}>
+          <div className="card" style={{ padding: "12px 14px", transform: "rotate(-0.2deg)" }}>
             <div className="section-label" style={{ marginBottom: 4 }}>Rival</div>
             <div style={{ fontSize: 24, fontWeight: 800, color: data.top_competitor ? "#991B1B" : "var(--text-muted)", lineHeight: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{data.top_competitor ?? "-"}</div>
             <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4, fontWeight: 600 }}>{data.top_competitor ? "Most-cited" : "None"}</div>
           </div>
-          <div className="card" style={{ padding: "12px 14px" }}>
+          <div className="card" style={{ padding: "12px 14px", transform: "rotate(0.2deg)" }}>
             <div className="section-label" style={{ marginBottom: 4 }}>Sentiment</div>
             <div style={{ fontSize: 24, fontWeight: 800, color: sentimentColor, lineHeight: 1, textTransform: "capitalize" }}>{data.overall_sentiment}</div>
             <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4, fontWeight: 600 }}>{data.overall_sentiment === "positive" ? "Favorable" : data.overall_sentiment === "negative" ? "Unfavorable" : "Mixed"}</div>
@@ -93,6 +112,9 @@ function QueryDrilldownInner() {
 
         <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
           <span className="section-label">Responses</span>
+          <svg width="30" height="8" viewBox="0 0 30 8" fill="none">
+            <path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+          </svg>
           <div style={{ display: "flex", gap: 6, marginLeft: "auto", flexWrap: "wrap" }}>
             <span className="span-brand" style={{ fontSize: 10, padding: "1px 5px" }}>Brand</span>
             <span className="span-competitor" style={{ fontSize: 10, padding: "1px 5px" }}>Competitor</span>
@@ -114,8 +136,13 @@ function QueryDrilldownInner() {
         )}
 
         {data.insights.length > 0 && (
-          <div className="card" style={{ borderColor: "var(--primary)" }}>
-            <div className="section-label" style={{ marginBottom: 10 }}>How to improve</div>
+          <div className="card" style={{ borderColor: "var(--primary)", transform: "rotate(0.2deg)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <div className="section-label" style={{ marginBottom: 0 }}>How to improve</div>
+              <svg width="30" height="8" viewBox="0 0 30 8" fill="none">
+                <path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+              </svg>
+            </div>
             {data.insights.map((ins, i) => <div key={i} style={i === data.insights.length - 1 ? { borderBottom: "none" } : {}}><InsightRow type={ins.type as "tip" | "warning"} text={ins.text} /></div>)}
           </div>
         )}
