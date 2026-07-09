@@ -1,13 +1,11 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useBrands, useCreateBrand, useDeleteBrand } from "@/lib/hooks";
 import { AppHeader, PageHeader } from "@/components/AppHeader";
-
-const PAGE_SIZE = 10;
 
 const BRAND_CARD_COLORS = [
   { bg: "#FFF9DB", acc: "var(--primary)", rot: "-0.8deg" },
@@ -23,7 +21,7 @@ function BrandsPageInner() {
   const search = searchParams.get("search") ?? "";
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
 
-  const { data: brands = [], isLoading, error: loadError, refetch } = useBrands();
+  const { data: brands = [], isLoading, error: loadError, refetch } = useBrands(page, search);
   const createBrand = useCreateBrand();
   const deleteBrand = useDeleteBrand();
 
@@ -48,15 +46,7 @@ function BrandsPageInner() {
     router.replace(`/brands${sp.toString() ? `?${sp.toString()}` : ""}`);
   }, [searchParams, router]);
 
-  const filtered = useMemo(() => {
-    if (!search) return brands;
-    const q = search.toLowerCase();
-    return brands.filter((b: any) => b.name.toLowerCase().includes(q) || b.domain.toLowerCase().includes(q));
-  }, [brands, search]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const handleSearch = () => navigate({ search: searchInput.trim(), page: "1" });
 
   const validate = useCallback(() => {
     let valid = true;
@@ -129,16 +119,12 @@ function BrandsPageInner() {
               className="input"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  navigate({ search: searchInput.trim(), page: "1" });
-                }
-              }}
+              onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
               placeholder="Search brands..."
               style={{ flex: 1, minWidth: 0 }}
             />
             <button
-              onClick={() => navigate({ search: searchInput.trim(), page: "1" })}
+              onClick={handleSearch}
               className="btn btn-primary btn-sm"
               style={{ flexShrink: 0 }}
             >
@@ -165,7 +151,7 @@ function BrandsPageInner() {
           <div className="card" style={{ background: "#DCFCE7", borderColor: "var(--green)", padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#166534", fontWeight: 600 }}>{success}</div>
         )}
 
-        {loading ? (
+        {isLoading ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {[1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 56 }} />)}
           </div>
@@ -174,12 +160,12 @@ function BrandsPageInner() {
             <div style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 14, fontWeight: 600 }}>Sign in to manage your brands.</div>
             <button onClick={() => openAuthModal("login")} className="btn btn-primary">Sign in</button>
           </div>
-        ) : filtered.length === 0 && !search ? (
+        ) : brands.length === 0 && !search ? (
           <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
             <div style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 14, fontWeight: 600 }}>You haven&apos;t added any brands yet.</div>
             <button onClick={() => setShowModal(true)} className="btn btn-primary">Add your first brand</button>
           </div>
-        ) : filtered.length === 0 && search ? (
+        ) : brands.length === 0 && search ? (
           <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
             <div style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 14, fontWeight: 600 }}>No brands match &quot;{search}&quot;</div>
             <button onClick={() => { setSearchInput(""); navigate({ search: "" }); }} className="btn btn-ghost">Clear search</button>
@@ -187,11 +173,11 @@ function BrandsPageInner() {
         ) : (
           <>
             <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600, marginBottom: 10 }}>
-              {filtered.length} brand{filtered.length !== 1 ? "s" : ""}{search && <> matching &quot;{search}&quot;</>}
+              {search ? `Results for "${search}"` : "Your brands"}
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {paginated.map((b, i) => {
+              {brands.map((b, i) => {
                 const c = BRAND_CARD_COLORS[i % BRAND_CARD_COLORS.length];
                 return (
                 <Link key={b.id} href={`/brands/${b.id}`} style={{ textDecoration: "none", color: "inherit" }}>
@@ -258,28 +244,18 @@ function BrandsPageInner() {
               );})}
             </div>
 
-            {totalPages > 1 && (
+            {brands.length >= 50 && (
               <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6, marginTop: 16, flexWrap: "wrap" }}>
                 <button
-                  onClick={() => navigate({ page: String(currentPage - 1) })}
-                  disabled={currentPage <= 1}
+                  onClick={() => navigate({ page: String(page - 1) })}
+                  disabled={page <= 1}
                   className="btn btn-sm btn-ghost"
                 >
                   Prev
                 </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => navigate({ page: String(p) })}
-                    className={`btn btn-sm ${p === currentPage ? "btn-primary" : "btn-ghost"}`}
-                    style={{ minWidth: 32 }}
-                  >
-                    {p}
-                  </button>
-                ))}
                 <button
-                  onClick={() => navigate({ page: String(currentPage + 1) })}
-                  disabled={currentPage >= totalPages}
+                  onClick={() => navigate({ page: String(page + 1) })}
+                  disabled={brands.length < 50}
                   className="btn btn-sm btn-ghost"
                 >
                   Next

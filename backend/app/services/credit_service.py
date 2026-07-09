@@ -125,12 +125,13 @@ async def grant_credits(db: AsyncSession, amount: int, description: str, tx_type
     return wallet
 
 
-async def get_credit_history(db: AsyncSession, user_id: uuid.UUID, limit: int = 50) -> list[CreditTransaction]:
+async def get_credit_history(db: AsyncSession, user_id: uuid.UUID, limit: int = 50, offset: int = 0) -> list[CreditTransaction]:
     """Get recent credit transactions."""
     result = await db.execute(
         select(CreditTransaction)
         .where(CreditTransaction.user_id == user_id)
         .order_by(CreditTransaction.created_at.desc())
+        .offset(offset)
         .limit(limit)
     )
     return result.scalars().all()

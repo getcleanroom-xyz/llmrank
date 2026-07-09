@@ -38,7 +38,8 @@ async function apiFetch<T>(path: string, init?: RequestInit, timeoutMs = DEFAULT
 
 // ─── Brands ────────────────────────────────────────────────────────────────────
 
-export const getBrands = () => apiFetch<Brand[]>("/brands");
+export const getBrands = (page: number = 1, perPage: number = 50, search: string = "") =>
+  apiFetch<Brand[]>(`/brands?page=${page}&per_page=${perPage}&search=${encodeURIComponent(search)}`);
 
 export const getBrand = (id: string) => apiFetch<Brand>(`/brands/${id}`);
 
@@ -99,8 +100,8 @@ export const triggerScan = (brandId: string, llms: string[]) =>
     body: JSON.stringify({ llms }),
   });
 
-export const getScans = (brandId: string) =>
-  apiFetch<Scan[]>(`/brands/${brandId}/scans`);
+export const getScans = (brandId: string, page: number = 1, perPage: number = 20) =>
+  apiFetch<Scan[]>(`/brands/${brandId}/scans?page=${page}&per_page=${perPage}`);
 
 export const getScan = (brandId: string, scanId: string) =>
   apiFetch<Scan>(`/brands/${brandId}/scans/${scanId}`);

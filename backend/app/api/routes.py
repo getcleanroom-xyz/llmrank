@@ -52,10 +52,20 @@ async def create_brand(request: Request, body: BrandCreate, db: AsyncSession = D
 
 
 @router.get("/brands", response_model=list[BrandOut], tags=["Brands"])
-async def list_brands(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    result = await db.execute(
-        select(Brand).where(Brand.owner_id == user.id).order_by(desc(Brand.created_at))
-    )
+async def list_brands(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+    page: int = 1,
+    per_page: int = 50,
+    search: str = "",
+):
+    stmt = select(Brand).where(Brand.owner_id == user.id)
+    if search:
+        stmt = stmt.where(
+            (Brand.name.ilike(f"%{search}%")) | (Brand.domain.ilike(f"%{search}%"))
+        )
+    stmt = stmt.order_by(desc(Brand.created_at)).offset((page - 1) * per_page).limit(per_page)
+    result = await db.execute(stmt)
     return result.scalars().all()
 
 
@@ -307,12 +317,18 @@ async def _run_scan_background(brand_id: uuid.UUID, scan_id: uuid.UUID, llm_name
 
 
 @router.get("/brands/{brand_id}/scans", response_model=list[ScanOut], tags=["Scans"])
-async def list_scans(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+async def list_scans(
+    brand_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    page: int = 1,
+    per_page: int = 20,
+):
     result = await db.execute(
         select(Scan)
         .where(Scan.brand_id == brand_id)
         .order_by(desc(Scan.started_at))
-        .limit(20)
+        .offset((page - 1) * per_page)
+        .limit(per_page)
     )
     return result.scalars().all()
 
@@ -841,6 +857,10 @@ async def admin_grant_credits(body: CreditGrantRequest, db: AsyncSession = Depen
 
 
 @router.get("/credits/history", response_model=list[CreditTransactionOut], tags=["Credits"])
-async def credit_history(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    transactions = await get_credit_history(db, user.id)
-    return transactions
+async def credit_history(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+    page: int = 1,
+    per_page: int = 50,
+):
+    return await get_credit_history(db, user.id, limit=per_page, offset=(page - 1) * per_page)

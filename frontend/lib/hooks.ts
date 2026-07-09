@@ -4,10 +4,10 @@ import * as api from "./api";
 
 // ─── Brands ──────────────────────────────────────────────────────────────────
 
-export function useBrands() {
+export function useBrands(page: number = 1, search: string = "") {
   return useQuery({
-    queryKey: queryKeys.brands,
-    queryFn: api.getBrands,
+    queryKey: queryKeys.brands(page, search),
+    queryFn: () => api.getBrands(page, 50, search),
   });
 }
 
@@ -16,7 +16,7 @@ export function useCreateBrand() {
   return useMutation({
     mutationFn: ({ name, domain }: { name: string; domain: string }) =>
       api.createBrand(name, domain),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.brands }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["brands"] }),
   });
 }
 
@@ -24,7 +24,7 @@ export function useDeleteBrand() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.deleteBrand(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.brands }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["brands"] }),
   });
 }
 
@@ -95,10 +95,10 @@ export function useSuggestQueries() {
 
 // ─── Scans ───────────────────────────────────────────────────────────────────
 
-export function useScans(brandId: string) {
+export function useScans(brandId: string, page: number = 1, perPage: number = 20) {
   return useQuery({
-    queryKey: queryKeys.scans(brandId),
-    queryFn: () => api.getScans(brandId),
+    queryKey: queryKeys.scans(brandId, page, perPage),
+    queryFn: () => api.getScans(brandId, page, perPage),
   });
 }
 
