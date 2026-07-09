@@ -119,18 +119,17 @@ function BrandDashboardPageInner() {
         {error && data && <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "8px 12px", marginBottom: 12, fontSize: 13, color: "#991B1B", fontWeight: 600 }}>{error}</div>}
 
         {/* Tab bar with handwriting accent */}
-        <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", marginBottom: 20 }}>
-          <div style={{ display: "flex", alignItems: "flex-end", gap: 4, minWidth: "max-content", position: "relative" }}>
-            <div style={{ fontSize: "clamp(22px, 3vw, 28px)", fontFamily: "var(--font-hand), Caveat, cursive", fontWeight: 700, color: "var(--text)", marginRight: 12, transform: "rotate(-0.5deg)", flexShrink: 0, lineHeight: 1 }}>
-              {brand.name}
-            </div>
-            <div role="tablist" style={{ display: "flex", gap: 4 }}>
-              {(["overview", "queries", "scans"] as Tab[]).map((t) => (
-                <button key={t} role="tab" aria-selected={t === tab} onClick={() => setTab(t)} className={`tab ${t === tab ? "tab-active" : ""}`}>{t}</button>
-              ))}
-            </div>
-            {/* Floating doodle near tabs */}
-            <DoodleCircle color="#3B82F6" style={{ position: "absolute", top: -10, right: -20 }} />
+        <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", gap: 6, flexWrap: "wrap" }}>
+          <div style={{ fontSize: "clamp(22px, 3vw, 28px)", fontFamily: "var(--font-hand), Caveat, cursive", fontWeight: 700, color: "var(--text)", transform: "rotate(-0.5deg)", lineHeight: 1 }}>
+            {brand.name}
+          </div>
+          <svg width="30" height="8" viewBox="0 0 30 8" fill="none" style={{ marginBottom: 4 }}>
+            <path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+          </svg>
+          <div role="tablist" style={{ display: "flex", gap: 4, marginLeft: "auto" }}>
+            {(["overview", "queries", "scans"] as Tab[]).map((t) => (
+              <button key={t} role="tab" aria-selected={t === tab} onClick={() => setTab(t)} className={`tab ${t === tab ? "tab-active" : ""}`}>{t}</button>
+            ))}
           </div>
         </div>
 
@@ -184,77 +183,40 @@ function BrandDashboardPageInner() {
               </div>
             )}
 
-            {/* Stat pills row */}
+            {/* Stat pills row — colored like sticky notes */}
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: "var(--gap)" }}>
-              <div
-                style={{
-                  background: "var(--surface)",
-                  border: "2px solid var(--border)",
-                  borderRadius: "var(--radius)",
-                  boxShadow: "3px 3px 0 #1A1A1A",
-                  padding: "10px 16px",
-                  transform: "rotate(-0.3deg)",
-                  display: "flex",
-                  alignItems: "baseline",
-                  gap: 6,
-                }}
-              >
-                <span style={{ fontSize: 22, fontWeight: 800 }}>{mention_rate}%</span>
-                <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>mention rate</span>
-              </div>
-              <div
-                style={{
-                  background: "var(--surface)",
-                  border: "2px solid var(--border)",
-                  borderRadius: "var(--radius)",
-                  boxShadow: "3px 3px 0 #1A1A1A",
-                  padding: "10px 16px",
-                  transform: "rotate(0.3deg)",
-                  display: "flex",
-                  alignItems: "baseline",
-                  gap: 6,
-                }}
-              >
-                <span style={{ fontSize: 22, fontWeight: 800 }}>{data.queries_monitored}</span>
-                <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>queries</span>
-              </div>
-              <div
-                style={{
-                  background: "var(--surface)",
-                  border: "2px solid var(--border)",
-                  borderRadius: "var(--radius)",
-                  boxShadow: "3px 3px 0 #1A1A1A",
-                  padding: "10px 16px",
-                  transform: "rotate(-0.2deg)",
-                  display: "flex",
-                  alignItems: "baseline",
-                  gap: 6,
-                }}
-              >
-                <span style={{ fontSize: 22, fontWeight: 800, color: top_competitor ? "#991B1B" : "var(--text)" }}>{top_competitor ?? "none"}</span>
-                <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>top competitor</span>
-              </div>
-              <div
-                style={{
-                  background: "var(--surface)",
-                  border: "2px solid var(--border)",
-                  borderRadius: "var(--radius)",
-                  boxShadow: "3px 3px 0 #1A1A1A",
-                  padding: "10px 16px",
-                  transform: "rotate(0.4deg)",
-                  display: "flex",
-                  alignItems: "baseline",
-                  gap: 6,
-                }}
-              >
-                <span style={{ fontSize: 22, fontWeight: 800 }}>{llm_breakdown.length || "-"}</span>
-                <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>LLMs tracked</span>
-              </div>
+              {[
+                { val: `${mention_rate}%`, label: "mention rate", bg: "#FFF9DB", acc: "var(--primary)", rot: "-0.3deg" },
+                { val: data.queries_monitored, label: "queries", bg: "#DBEAFF", acc: "#3B82F6", rot: "0.4deg" },
+                { val: top_competitor ?? "none", label: "top competitor", bg: top_competitor ? "#FEE2E2" : "#E6F9ED", acc: top_competitor ? "#991B1B" : "#22C55E", rot: "-0.4deg" },
+                { val: llm_breakdown.length || "-", label: "LLMs tracked", bg: "#F3E8FF", acc: "#A855F7", rot: "0.3deg" },
+              ].map((s, i) => (
+                <div
+                  key={s.label}
+                  style={{
+                    background: s.bg,
+                    border: "2px solid var(--border)",
+                    borderRadius: "var(--radius)",
+                    boxShadow: "3px 3px 0 #1A1A1A",
+                    padding: "10px 16px",
+                    transform: `rotate(${s.rot})`,
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: 6,
+                    flex: "1 1 auto",
+                    minWidth: 120,
+                    maxWidth: 200,
+                  }}
+                >
+                  <span style={{ fontSize: 22, fontWeight: 800, color: s.acc }}>{s.val}</span>
+                  <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>{s.label}</span>
+                </div>
+              ))}
             </div>
 
             {/* Analysis grid */}
             <div className="grid-2" style={{ marginBottom: "var(--gap)" }}>
-              <div className="card" style={{ position: "relative", transform: "rotate(-0.15deg)" }}>
+              <div className="card" style={{ position: "relative", transform: "rotate(-0.15deg)", borderTop: "4px solid var(--primary)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                   <div className="section-label" style={{ marginBottom: 0 }}>LLM breakdown</div>
                   <Scribble color="var(--primary)" />
@@ -262,7 +224,7 @@ function BrandDashboardPageInner() {
                 <LLMBreakdownTable data={llm_breakdown} />
                 <DoodleCircle color="var(--primary)" style={{ position: "absolute", top: -12, right: -8 }} />
               </div>
-              <div className="card" style={{ position: "relative", transform: "rotate(0.15deg)" }}>
+              <div className="card" style={{ position: "relative", transform: "rotate(0.15deg)", borderTop: "4px solid #3B82F6" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                   <div className="section-label" style={{ marginBottom: 0 }}>Competitor share</div>
                   <Scribble color="#3B82F6" />
@@ -271,16 +233,28 @@ function BrandDashboardPageInner() {
               </div>
             </div>
 
+            {/* Doodle animal divider */}
+            <div style={{ textAlign: "center", margin: "10px 0 8px", opacity: 0.3 }}>
+              <svg width="180" height="28" viewBox="0 0 180 28" fill="none">
+                <path d="M10 14 Q20 8 35 14 Q50 20 65 14 Q80 8 95 14 Q110 20 125 14 Q140 8 155 14 Q165 18 175 14" stroke="var(--primary)" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+                {/* tiny bird */}
+                <path d="M42 6 Q46 2 50 6 Q54 2 58 6" stroke="#3B82F6" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+                <path d="M85 8 L88 4 M85 8 L82 6" stroke="#22C55E" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+                <circle cx="128" cy="8" r="3" stroke="#A855F7" strokeWidth="1.5" fill="none" />
+                <path d="M165 4 Q168 8 170 4" stroke="#F97316" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+              </svg>
+            </div>
+
             {/* Bottom row: queries + chart + insights */}
             <div className="dashboard-bottom-grid" style={{ marginBottom: "var(--gap)" }}>
-              <div className="card dashboard-bottom-queries" style={{ position: "relative", transform: "rotate(-0.15deg)" }}>
+              <div className="card dashboard-bottom-queries" style={{ position: "relative", transform: "rotate(-0.15deg)", borderTop: "4px solid #22C55E" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                   <div className="section-label" style={{ marginBottom: 0 }}>Queries</div>
                   <Scribble color="#22C55E" />
                 </div>
                 <QueryChipsPanel queries={displayQueries} brandId={brandId} onManageQueries={() => setTab("queries")} />
               </div>
-              <div className="card" style={{ transform: "rotate(0.15deg)" }}>
+              <div className="card" style={{ transform: "rotate(0.15deg)", borderTop: "4px solid #A855F7" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                   <div className="section-label" style={{ marginBottom: 0 }}>Score history</div>
                   <Scribble color="#A855F7" />
@@ -290,7 +264,7 @@ function BrandDashboardPageInner() {
                 </Suspense>
               </div>
               {insights.length > 0 && (
-                <div className="card" style={{ borderColor: "var(--primary)", position: "relative", transform: "rotate(0.2deg)" }}>
+                <div className="card" style={{ borderColor: "var(--primary)", position: "relative", transform: "rotate(0.2deg)", borderTop: "4px solid var(--primary)" }}>
                   <svg width="22" height="26" viewBox="0 0 22 26" fill="none" style={{ position: "absolute", top: -12, right: 24, zIndex: 2 }}>
                     <ellipse cx="11" cy="5" rx="5.5" ry="5.5" fill="#EF4444" stroke="#1A1A1A" strokeWidth="1.5" />
                     <rect x="9" y="10" width="4" height="10" rx="1" fill="#DC2626" stroke="#1A1A1A" strokeWidth="1.5" />
