@@ -33,7 +33,7 @@ _token_cache: dict = {"access_token": None, "expires_at": 0}
 def _base_url() -> str:
     if settings.FLW_SANDBOX:
         return "https://developersandbox-api.flutterwave.com"
-    return settings.FLW_BASE_URL
+    return "https://f4bexperience.flutterwave.com"
 
 
 async def _get_access_token() -> str:

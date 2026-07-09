@@ -13,7 +13,6 @@ class Settings(BaseSettings):
     FLW_CLIENT_ID: str = ""  # Flutterwave v4 client ID
     FLW_CLIENT_SECRET: str = ""  # Flutterwave v4 client secret
     FLW_SECRET_HASH: str = ""  # Flutterwave webhook secret hash
-    FLW_BASE_URL: str = "https://api.flutterwave.com"  # v4 production URL
     FLW_SANDBOX: bool = False  # Set true for sandbox mode
     RESEND_API_KEY: str = ""
     ADMIN_EMAILS: str = ""
