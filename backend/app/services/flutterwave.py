@@ -150,16 +150,18 @@ async def create_flutterwave_charge(
 
 async def _get_or_create_customer(user: User, headers: dict, base: str) -> str:
     """Create a Flutterwave v4 customer."""
+    display = (user.display_name or "User").strip()
+    parts = display.split(" ", 1)
+    first_name = parts[0] if parts[0] else "User"
+    last_name = parts[1] if len(parts) > 1 else "Customer"
+
     async with httpx.AsyncClient(timeout=15) as client:
         response = await client.post(
             f"{base}/customers",
             headers=headers,
             json={
                 "email": user.email,
-                "name": {
-                    "first": user.display_name or "User",
-                    "last": "",
-                },
+                "name": {"first": first_name, "last": last_name},
                 "phone": {"country_code": "1", "number": "0000000000"},
             },
         )
