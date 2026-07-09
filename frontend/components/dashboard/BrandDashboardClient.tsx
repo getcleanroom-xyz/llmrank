@@ -19,16 +19,18 @@ const ScanHistory = lazy(() => import("@/components/dashboard/ScanHistory").then
 
 type Tab = "overview" | "queries" | "scans";
 
-function ScribbleUnderline({ color = "var(--primary)", width = "100%", style }: { color?: string; width?: string; style?: React.CSSProperties }) {
+function Scribble({ color = "var(--primary)", style }: { color?: string; style?: React.CSSProperties }) {
   return (
-    <svg width={width} height="6" viewBox="0 0 120 6" preserveAspectRatio="none" style={{ display: "block", ...style }}>
-      <path
-        d="M0 3 Q8 0 16 4 Q24 6 32 2 Q40 0 48 5 Q56 6 64 2 Q72 0 80 4 Q88 6 96 2 Q104 0 112 4 Q120 5 120 3"
-        fill="none"
-        stroke={color}
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
+    <svg width="60" height="10" viewBox="0 0 60 10" fill="none" style={{ display: "block", opacity: 0.5, ...style }}>
+      <path d="M0 5 Q8 1 16 6 Q24 9 32 3 Q40 1 48 6 Q56 9 60 4" stroke={color} strokeWidth="1.5" strokeLinecap="round" fill="none" />
+    </svg>
+  );
+}
+
+function DoodleCircle({ color = "var(--primary)", style }: { color?: string; style?: React.CSSProperties }) {
+  return (
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style={{ display: "block", opacity: 0.25, pointerEvents: "none", ...style }}>
+      <ellipse cx="16" cy="16" rx="14" ry="14" stroke={color} strokeWidth="1.5" strokeDasharray="2 3" fill="none" />
     </svg>
   );
 }
@@ -40,13 +42,11 @@ function BrandDashboardPageInner() {
   const tab = (searchParams.get("tab") as Tab) ?? "overview";
   const { user, loading: authLoading } = useAuth();
 
-  const { data: dashResult, isLoading, error: loadError, refetch } = useDashboard(brandId);
+  const { data: dashResult, isLoading, error: loadError } = useDashboard(brandId);
   const { data: credits } = useCredits();
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace("/brands");
-    }
+    if (!authLoading && !user) router.replace("/brands");
   }, [user, authLoading, router]);
 
   if (authLoading) return <div className="page" style={{ display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "var(--text-muted)", minHeight: "100vh" }}>Loading...</div>;
@@ -70,6 +70,7 @@ function BrandDashboardPageInner() {
   const { brand, latest_scan, active_scan, visibility_score, mention_rate, llm_breakdown, competitor_share, query_summaries, score_history, top_competitor } = data;
   const isScanRunning = active_scan?.status === "pending" || active_scan?.status === "running";
   const prev = score_history.length >= 2 ? score_history[score_history.length - 2] : null;
+  const hasScan = latest_scan && latest_scan.status === "completed";
 
   const displayQueries = query_summaries.length > 0
     ? query_summaries
@@ -98,9 +99,7 @@ function BrandDashboardPageInner() {
       />
       <PageHeader>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
-          {isScanRunning && (
-            <span className="pill pill-gold" style={{ fontSize: 10, flexShrink: 0 }}>Scanning</span>
-          )}
+          {isScanRunning && <span className="pill pill-gold" style={{ fontSize: 10, flexShrink: 0 }}>Scanning</span>}
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto" }}>
             {(active_scan ?? latest_scan)?.completed_at && (
               <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>
@@ -112,24 +111,17 @@ function BrandDashboardPageInner() {
         </div>
       </PageHeader>
       {isScanRunning && <div className="scan-progress" style={{ maxWidth: 1200, margin: "0 auto" }}><div className="scan-progress-fill" /></div>}
-      {scanError && <div style={{ maxWidth: 1200, margin: "0 auto", padding: "4px var(--page-px) 0" }}><div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "5px 10px", fontSize: 11, color: "#991B1B", fontWeight: 600 }}>{scanError}</div></div>}
+      {scanError && <div style={{ maxWidth: 1200, margin: "0 auto", padding: "4px var(--page-px) 0" }}>
+        <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "5px 10px", fontSize: 11, color: "#991B1B", fontWeight: 600 }}>{scanError}</div>
+      </div>}
+
       <div style={{ flex: 1, padding: "var(--gap) var(--page-px)", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
         {error && data && <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "8px 12px", marginBottom: 12, fontSize: 13, color: "#991B1B", fontWeight: 600 }}>{error}</div>}
 
-        {/* Tab bar */}
-        <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", marginBottom: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: "max-content" }}>
-            <div
-              style={{
-                fontFamily: "var(--font-hand), Caveat, cursive",
-                fontSize: 20,
-                fontWeight: 700,
-                color: "var(--text-muted)",
-                marginRight: 8,
-                transform: "rotate(-0.5deg)",
-                flexShrink: 0,
-              }}
-            >
+        {/* Tab bar with handwriting accent */}
+        <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 4, minWidth: "max-content", position: "relative" }}>
+            <div style={{ fontSize: "clamp(22px, 3vw, 28px)", fontFamily: "var(--font-hand), Caveat, cursive", fontWeight: 700, color: "var(--text)", marginRight: 12, transform: "rotate(-0.5deg)", flexShrink: 0, lineHeight: 1 }}>
               {brand.name}
             </div>
             <div role="tablist" style={{ display: "flex", gap: 4 }}>
@@ -137,71 +129,175 @@ function BrandDashboardPageInner() {
                 <button key={t} role="tab" aria-selected={t === tab} onClick={() => setTab(t)} className={`tab ${t === tab ? "tab-active" : ""}`}>{t}</button>
               ))}
             </div>
+            {/* Floating doodle near tabs */}
+            <DoodleCircle color="#3B82F6" style={{ position: "absolute", top: -10, right: -20 }} />
           </div>
         </div>
 
         {tab === "overview" && (
           <>
-            <div className="grid-4" style={{ marginBottom: "var(--gap)" }}>
-              <div className="card" style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", transform: "rotate(-0.3deg)" }}>
-                <ScoreRing score={visibility_score} size={48} stroke={4} />
-                <div>
-                  <div className="section-label" style={{ marginBottom: 2 }}>Visibility</div>
-                  <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
-                    {visibility_score >= 70 ? "Strong" : visibility_score >= 45 ? "Moderate" : "Low"}
-                    {prev && <span style={{ marginLeft: 4, color: visibility_score > prev.visibility_score ? "#166534" : "#991B1B" }}>{visibility_score > prev.visibility_score ? "+" : ""}{Math.round((visibility_score - prev.visibility_score) * 10) / 10}</span>}
+            {/* Hero score card */}
+            {hasScan && (
+              <div
+                style={{
+                  position: "relative",
+                  background: "#FFF9DB",
+                  border: "2px solid var(--border)",
+                  borderRadius: "var(--radius)",
+                  boxShadow: "5px 5px 0 #1A1A1A",
+                  padding: "28px 32px",
+                  marginBottom: "var(--gap)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "clamp(20px, 4vw, 40px)",
+                  flexWrap: "wrap",
+                  transform: "rotate(-0.2deg)",
+                }}
+              >
+                {/* Pushpin */}
+                <svg width="22" height="26" viewBox="0 0 22 26" fill="none" style={{ position: "absolute", top: -12, left: 24, zIndex: 2 }}>
+                  <ellipse cx="11" cy="5" rx="5.5" ry="5.5" fill="#EF4444" stroke="#1A1A1A" strokeWidth="1.5" />
+                  <rect x="9" y="10" width="4" height="10" rx="1" fill="#DC2626" stroke="#1A1A1A" strokeWidth="1.5" />
+                </svg>
+
+                {/* Doodle circle behind score */}
+                <DoodleCircle color="var(--primary)" style={{ position: "absolute", right: 30, bottom: 20 }} />
+
+                <div style={{ flexShrink: 0 }}>
+                  <ScoreRing score={visibility_score} size={100} stroke={5} />
+                </div>
+                <div style={{ flex: 1, minWidth: 180 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>
+                    Visibility Score
+                  </div>
+                  <div style={{ fontSize: "clamp(28px, 5vw, 40px)", fontWeight: 800, lineHeight: 1, marginBottom: 4 }}>
+                    {visibility_score}
+                    <span style={{ fontSize: 14, color: "var(--text-muted)", fontWeight: 600, marginLeft: 6 }}>
+                      / 100
+                    </span>
+                  </div>
+                  <div style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 18, color: visibility_score >= 70 ? "#166534" : visibility_score >= 45 ? "#F59E0B" : "#991B1B", fontWeight: 700 }}>
+                    {visibility_score >= 70 ? "Strong" : visibility_score >= 45 ? "Moderate" : "Needs work"}
+                    {prev && <span style={{ marginLeft: 6, fontSize: 14 }}>{visibility_score > prev.visibility_score ? "+" : ""}{Math.round((visibility_score - prev.visibility_score) * 10) / 10} pts</span>}
                   </div>
                 </div>
               </div>
-              <KpiCard label="Queries" value={data.queries_monitored} sub={`${llm_breakdown.length || "-"} LLMs`} />
-              <KpiCard label="Mention rate" value={`${mention_rate}%`} sub={<> {mention_rate >= 60 ? "Good" : "Low"}{prev && <span style={{ marginLeft: 4, color: mention_rate > prev.mention_rate ? "#166534" : "#991B1B" }}>{mention_rate > prev.mention_rate ? "+" : ""}{Math.round((mention_rate - prev.mention_rate) * 10) / 10}</span>}</>} subColor={mention_rate >= 60 ? "#166534" : "#991B1B"} />
-              <KpiCard label="Top competitor" value={top_competitor ?? "-"} sub={top_competitor ? "Outranks you" : "None"} subColor={top_competitor ? "#991B1B" : "var(--text-muted)"} />
+            )}
+
+            {/* Stat pills row */}
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: "var(--gap)" }}>
+              <div
+                style={{
+                  background: "var(--surface)",
+                  border: "2px solid var(--border)",
+                  borderRadius: "var(--radius)",
+                  boxShadow: "3px 3px 0 #1A1A1A",
+                  padding: "10px 16px",
+                  transform: "rotate(-0.3deg)",
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: 6,
+                }}
+              >
+                <span style={{ fontSize: 22, fontWeight: 800 }}>{mention_rate}%</span>
+                <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>mention rate</span>
+              </div>
+              <div
+                style={{
+                  background: "var(--surface)",
+                  border: "2px solid var(--border)",
+                  borderRadius: "var(--radius)",
+                  boxShadow: "3px 3px 0 #1A1A1A",
+                  padding: "10px 16px",
+                  transform: "rotate(0.3deg)",
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: 6,
+                }}
+              >
+                <span style={{ fontSize: 22, fontWeight: 800 }}>{data.queries_monitored}</span>
+                <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>queries</span>
+              </div>
+              <div
+                style={{
+                  background: "var(--surface)",
+                  border: "2px solid var(--border)",
+                  borderRadius: "var(--radius)",
+                  boxShadow: "3px 3px 0 #1A1A1A",
+                  padding: "10px 16px",
+                  transform: "rotate(-0.2deg)",
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: 6,
+                }}
+              >
+                <span style={{ fontSize: 22, fontWeight: 800, color: top_competitor ? "#991B1B" : "var(--text)" }}>{top_competitor ?? "none"}</span>
+                <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>top competitor</span>
+              </div>
+              <div
+                style={{
+                  background: "var(--surface)",
+                  border: "2px solid var(--border)",
+                  borderRadius: "var(--radius)",
+                  boxShadow: "3px 3px 0 #1A1A1A",
+                  padding: "10px 16px",
+                  transform: "rotate(0.4deg)",
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: 6,
+                }}
+              >
+                <span style={{ fontSize: 22, fontWeight: 800 }}>{llm_breakdown.length || "-"}</span>
+                <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>LLMs tracked</span>
+              </div>
             </div>
 
+            {/* Analysis grid */}
             <div className="grid-2" style={{ marginBottom: "var(--gap)" }}>
-              <div className="card" style={{ transform: "rotate(-0.2deg)" }}>
+              <div className="card" style={{ position: "relative", transform: "rotate(-0.15deg)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                   <div className="section-label" style={{ marginBottom: 0 }}>LLM breakdown</div>
-                  <svg width="30" height="8" viewBox="0 0 30 8" fill="none">
-                    <path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-                  </svg>
+                  <Scribble color="var(--primary)" />
                 </div>
                 <LLMBreakdownTable data={llm_breakdown} />
+                <DoodleCircle color="var(--primary)" style={{ position: "absolute", top: -12, right: -8 }} />
               </div>
-              <div className="card" style={{ transform: "rotate(0.2deg)" }}>
+              <div className="card" style={{ position: "relative", transform: "rotate(0.15deg)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                   <div className="section-label" style={{ marginBottom: 0 }}>Competitor share</div>
-                  <svg width="30" height="8" viewBox="0 0 30 8" fill="none">
-                    <path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-                  </svg>
+                  <Scribble color="#3B82F6" />
                 </div>
                 <CompetitorShare items={competitor_share} brandName={brand.name} brandScore={mention_rate} />
               </div>
             </div>
 
+            {/* Bottom row: queries + chart + insights */}
             <div className="dashboard-bottom-grid" style={{ marginBottom: "var(--gap)" }}>
-              <div className="card dashboard-bottom-queries" style={{ transform: "rotate(-0.2deg)" }}>
+              <div className="card dashboard-bottom-queries" style={{ position: "relative", transform: "rotate(-0.15deg)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                   <div className="section-label" style={{ marginBottom: 0 }}>Queries</div>
-                  <svg width="30" height="8" viewBox="0 0 30 8" fill="none">
-                    <path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5" stroke="#22C55E" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-                  </svg>
+                  <Scribble color="#22C55E" />
                 </div>
                 <QueryChipsPanel queries={displayQueries} brandId={brandId} onManageQueries={() => setTab("queries")} />
               </div>
-              <div className="card" style={{ transform: "rotate(0.2deg)" }}>
-                <div className="section-label" style={{ marginBottom: 10 }}>Score history</div>
+              <div className="card" style={{ transform: "rotate(0.15deg)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <div className="section-label" style={{ marginBottom: 0 }}>Score history</div>
+                  <Scribble color="#A855F7" />
+                </div>
                 <Suspense fallback={<div className="skeleton" style={{ height: 150 }} />}>
                   <ScoreHistoryChart data={score_history} />
                 </Suspense>
               </div>
               {insights.length > 0 && (
-                <div className="card" style={{ borderColor: "var(--primary)", transform: "rotate(0.3deg)" }}>
+                <div className="card" style={{ borderColor: "var(--primary)", position: "relative", transform: "rotate(0.2deg)" }}>
+                  <svg width="22" height="26" viewBox="0 0 22 26" fill="none" style={{ position: "absolute", top: -12, right: 24, zIndex: 2 }}>
+                    <ellipse cx="11" cy="5" rx="5.5" ry="5.5" fill="#EF4444" stroke="#1A1A1A" strokeWidth="1.5" />
+                    <rect x="9" y="10" width="4" height="10" rx="1" fill="#DC2626" stroke="#1A1A1A" strokeWidth="1.5" />
+                  </svg>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                     <div className="section-label" style={{ marginBottom: 0 }}>Insights</div>
-                    <svg width="30" height="8" viewBox="0 0 30 8" fill="none">
-                      <path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-                    </svg>
+                    <Scribble color="var(--primary)" />
                   </div>
                   {insights.map((ins, i) => <div key={i} style={i === insights.length - 1 ? { borderBottom: "none" } : {}}><InsightRow type={ins.type} text={ins.text} /></div>)}
                 </div>
@@ -218,20 +314,11 @@ function BrandDashboardPageInner() {
 
         {tab === "scans" && (
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-              <h2
-                style={{
-                  fontFamily: "var(--font-hand), Caveat, cursive",
-                  fontSize: "clamp(22px, 3vw, 28px)",
-                  fontWeight: 700,
-                  margin: 0,
-                  lineHeight: 1,
-                  transform: "rotate(-0.3deg)",
-                }}
-              >
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 12, marginBottom: 16 }}>
+              <h2 style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: "clamp(24px, 3.5vw, 32px)", fontWeight: 700, margin: 0, lineHeight: 1, transform: "rotate(-0.3deg)" }}>
                 Scan history
               </h2>
-              <ScribbleUnderline color="var(--primary)" width="100px" />
+              <Scribble color="var(--primary)" style={{ marginBottom: 4 }} />
             </div>
             <Suspense fallback={<div className="skeleton" style={{ height: 200 }} />}>
               <ScanHistory brandId={brandId} />
