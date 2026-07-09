@@ -4,7 +4,7 @@ import hashlib
 import hmac
 import base64
 import time
-import random
+import secrets
 import logging
 from datetime import datetime, timezone
 
@@ -80,111 +80,86 @@ def verify_flutterwave_signature(payload: bytes, signature: str, secret_hash: st
 async def create_flutterwave_charge(
     user: User,
     package_key: str,
+    encrypted_card: dict,
     currency: str = "USD",
 ) -> dict:
-    """Create a Flutterwave v4 charge and return redirect URL."""
+    """Create a Flutterwave v4 charge via orchestrator with encrypted card data."""
     package = CREDIT_PACKAGES.get(package_key)
     if not package:
         raise ValueError(f"Invalid package: {package_key}")
 
     token = await _get_access_token()
-    reference = f"llmrank_{user.id}_{uuid.uuid4().hex[:12]}"
-    trace_id = str(uuid.uuid4())
     base = _base_url()
+
+    # v4 requires alphanumeric reference, 6-42 chars
+    ref = secrets.token_hex(10)  # 20-char alphanumeric hex
+
+    display = (user.display_name or "User").strip()
+    parts = display.split(" ", 1)
+    first_name = parts[0] if parts[0] else "User"
+    last_name = parts[1] if len(parts) > 1 and len(parts[1]) >= 2 else "Customer"
 
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
-        "X-Trace-Id": trace_id,
+        "X-Trace-Id": str(uuid.uuid4()),
+        "X-Idempotency-Key": ref,
     }
 
-    # Step 1: Get or create customer
-    customer_id = await _get_or_create_customer(user, headers, base)
+    body = {
+        "amount": package["amount_usd"],
+        "currency": currency,
+        "reference": ref,
+        "redirect_url": f"{settings.RP_ORIGIN}/credits/success",
+        "customer": {
+            "email": user.email,
+            "name": {"first": first_name, "last": last_name},
+            "phone": {"country_code": "1", "number": "0000000000"},
+        },
+        "payment_method": {
+            "type": "card",
+            "card": encrypted_card,
+        },
+        "meta": {
+            "user_id": str(user.id),
+            "package_key": package_key,
+            "credits": package["credits"],
+        },
+    }
 
-    # Step 2: Create charge
     async with httpx.AsyncClient(timeout=30) as client:
         response = await client.post(
-            f"{base}/charges",
+            f"{base}/orchestration/direct-charges",
             headers=headers,
-            json={
-                "reference": reference,
-                "amount": package["amount_usd"],
-                "currency": currency,
-                "customer_id": customer_id,
-                "redirect_url": f"{settings.RP_ORIGIN}/credits/success",
-                "meta": {
-                    "user_id": str(user.id),
-                    "package_key": package_key,
-                    "credits": package["credits"],
-                },
-            },
+            json=body,
         )
 
         data = response.json()
         if data.get("status") not in ("success", "pending"):
-            logger.error("Flutterwave charge failed: %s", data)
+            logger.error("Flutterwave orchestrator charge failed: %s", data)
             raise ValueError(data.get("message", "Payment initialization failed"))
 
         charge_data = data.get("data", {})
         charge_id = charge_data.get("id")
 
-        # Get redirect URL from next_action
         redirect_url = None
         next_action = charge_data.get("next_action", {})
         if next_action.get("type") == "redirect_url":
             redirect_url = next_action.get("redirect_url", {}).get("url")
 
         if not charge_id:
-            logger.error("Flutterwave response missing charge id: %s", data)
+            logger.error("Flutterwave orchestrator response missing charge id: %s", data)
             raise ValueError("Payment provider returned unexpected response format")
 
-        logger.info("Flutterwave v4 charge created: ref=%s, id=%s, url=%s", reference, charge_id, redirect_url)
+        logger.info("Flutterwave v4 orchestrator charge created: ref=%s, id=%s, url=%s", ref, charge_id, redirect_url)
 
         return {
             "charge_id": charge_id,
-            "reference": reference,
+            "reference": ref,
             "checkout_url": redirect_url,
             "amount": package["amount_usd"],
             "currency": currency,
         }
-
-
-async def _get_or_create_customer(user: User, headers: dict, base: str) -> str:
-    """Create a Flutterwave v4 customer with a random plausible name."""
-    first = _random_name(4, 7)
-    last = _random_name(5, 9)
-
-    async with httpx.AsyncClient(timeout=15) as client:
-        response = await client.post(
-            f"{base}/customers",
-            headers=headers,
-            json={
-                "email": user.email,
-                "name": {"first": first, "last": last},
-                "phone": {"country_code": "1", "number": "0000000000"},
-            },
-        )
-        data = response.json()
-        if data.get("status") != "success":
-            logger.error("Flutterwave customer creation failed: %s", data)
-            raise ValueError(data.get("message", "Failed to create customer"))
-
-        return data["data"]["id"]
-
-
-_CONSONANTS = "bcdfghjklmnpqrstvwxyz"
-_VOWELS = "aeiou"
-
-
-def _random_name(min_len: int, max_len: int) -> str:
-    length = random.randint(min_len, max_len)
-    name = ""
-    for i in range(length):
-        if i % 2 == 0:
-            name += random.choice(_CONSONANTS)
-        else:
-            name += random.choice(_VOWELS)
-    return name.capitalize()
 
 
 async def verify_flutterwave_charge(transaction_id: str) -> dict:

@@ -29,6 +29,7 @@ router = APIRouter(prefix="/payments", tags=["Payments"])
 class CreateCheckoutRequest(BaseModel):
     package_key: str  # "starter", "popular", "pro", "enterprise"
     currency: str = "USD"
+    encrypted_card: dict  # { encrypted_card_number, encrypted_expiry_month, encrypted_expiry_year, encrypted_cvv, nonce }
 
 class CreateCheckoutResponse(BaseModel):
     charge_id: str
@@ -60,6 +61,14 @@ async def list_packages():
     ]
 
 
+@router.get("/encryption-key")
+async def get_encryption_key():
+    """Return the Flutterwave v4 encryption key for client-side card encryption."""
+    if not settings.FLW_ENCRYPTION_KEY:
+        raise HTTPException(500, "Encryption key not configured")
+    return {"key": settings.FLW_ENCRYPTION_KEY}
+
+
 @router.post("/checkout", response_model=CreateCheckoutResponse)
 async def create_checkout(
     body: CreateCheckoutRequest,
@@ -71,6 +80,7 @@ async def create_checkout(
         result = await create_flutterwave_charge(
             user=user,
             package_key=body.package_key,
+            encrypted_card=body.encrypted_card,
             currency=body.currency,
         )
         return CreateCheckoutResponse(**result)

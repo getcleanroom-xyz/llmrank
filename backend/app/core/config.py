@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     SESSION_EXPIRE_HOURS: int = 720  # 30 days
     FLW_CLIENT_ID: str = ""  # Flutterwave v4 client ID
     FLW_CLIENT_SECRET: str = ""  # Flutterwave v4 client secret
+    FLW_ENCRYPTION_KEY: str = ""  # Flutterwave v4 encryption key (base64 encoded, for client-side card encryption)
     FLW_SECRET_HASH: str = ""  # Flutterwave webhook secret hash
     FLW_SANDBOX: bool = False  # Set true for sandbox mode
     RESEND_API_KEY: str = ""

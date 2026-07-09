@@ -157,8 +157,8 @@ export function useCreditPackages() {
 
 export function useCreateCheckout() {
   return useMutation({
-    mutationFn: ({ packageKey, currency }: { packageKey: string; currency?: string }) =>
-      api.createCheckout(packageKey, currency),
+    mutationFn: ({ packageKey, currency, encryptedCard }: { packageKey: string; currency?: string; encryptedCard: Record<string, string> }) =>
+      api.createCheckout(packageKey, currency, encryptedCard),
   });
 }
 

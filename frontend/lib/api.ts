@@ -281,10 +281,12 @@ export interface CheckoutSession {
 
 export const getCreditPackages = () => apiFetch<CreditPackage[]>("/payments/packages");
 
-export const createCheckout = (packageKey: string, currency: string = "USD") =>
+export const getEncryptionKey = () => apiFetch<{ key: string }>("/payments/encryption-key");
+
+export const createCheckout = (packageKey: string, currency: string = "USD", encryptedCard: Record<string, string>) =>
   apiFetch<CheckoutSession>("/payments/checkout", {
     method: "POST",
-    body: JSON.stringify({ package_key: packageKey, currency }),
+    body: JSON.stringify({ package_key: packageKey, currency, encrypted_card: encryptedCard }),
   });
 
 export const verifyPayment = (transactionId: string) =>
