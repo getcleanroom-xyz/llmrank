@@ -287,7 +287,7 @@ async def generate_query_suggestions(brand_name: str, domain: str, keywords: lis
 
     web_context = ""
     if not has_useful_content:
-        search_results = await _web_search_context(f"{brand_name} {domain}")
+        search_results = await _web_search_context(f"what is {brand_name} {domain} products features")
         if search_results:
             web_context = "Web search context:\n" + "\n".join(f"- {s}" for s in search_results)
             logger.info("Got %d web search snippets for %s", len(search_results), domain)
@@ -304,18 +304,22 @@ async def generate_query_suggestions(brand_name: str, domain: str, keywords: lis
     content_signal = combined if has_useful_content else f"Brand name: {brand_name} | Domain: {domain}\n\n{web_context}".strip()
     content_label = "crawled website content" if has_useful_content else ("brand signals + web search results" if web_context else "brand signals (name, domain)")
 
-    prompt = f"""You are an SEO expert. Based on the following {content_label}, generate 12 realistic search queries that potential customers would ask an AI assistant when looking for the products, services, or tools this company offers.
+    prompt = f"""You are an SEO expert. Based EXCLUSIVELY on the following information about {brand_name} ({domain}), generate 12 realistic search queries that potential customers would ask an AI assistant.
 
 {content_signal}{keyword_block}
 
-Requirements:
-- Queries must be directly relevant to what this company actually does/sells
+CRITICAL RULES:
+- Only generate queries about what {brand_name} actually offers — do NOT invent features or products not mentioned in the context
+- If the context says this is a social network, DON'T generate e-commerce or project management queries
 - Natural, conversational questions a real user would ask
-- Mix of: "best X for Y", "X vs Y", "how to do Z", "tool for Z", "alternatives to X"
-- Do NOT include the brand name
+- Do NOT include the brand name in the query
 - Return ONLY a JSON array of strings, no explanation
 
-Example: ["best project management tool for startups", "how to organize team tasks efficiently", ...]"""
+Example: ["best professional networking platform", "how to find jobs through networking", ...]"""
+
+    # Fallback if context is too thin — just use brand name + domain directly without web noise
+    if not has_useful_content and not web_context:
+        prompt = f"""Generate 10 search queries that someone might ask ChatGPT when looking for a service like {brand_name} ({domain}). Consider what this company is known for. Return ONLY a JSON array of strings, no explanation. Do NOT include the brand name."""
 
     for model_key in ["llama", "chatgpt", "gemini"]:
         try:
