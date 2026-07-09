@@ -65,7 +65,7 @@ export default function CompetitorDrilldownPage() {
         </span>
       </PageHeader>
 
-      <div style={{ maxWidth: 800, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
         {/* Hero card */}
         <div style={{ position: "relative", background: threatBg, border: "2px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "4px 4px 0 #1A1A1A", padding: "24px 28px", marginBottom: "var(--gap)", transform: "rotate(-0.2deg)" }}>
           <svg width="22" height="26" viewBox="0 0 22 26" fill="none" style={{ position: "absolute", top: -12, left: 24, zIndex: 2 }}>

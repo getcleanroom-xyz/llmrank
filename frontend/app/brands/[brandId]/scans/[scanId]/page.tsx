@@ -147,7 +147,7 @@ export default function ScanDetailPage() {
         </Link>
       </PageHeader>
 
-      <div style={{ maxWidth: 800, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
         {/* Scan heading */}
         <div style={{ marginBottom: 18 }}>
           <h1

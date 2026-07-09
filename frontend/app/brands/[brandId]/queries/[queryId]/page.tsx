@@ -67,7 +67,7 @@ function QueryDrilldownInner() {
         </div>
       </PageHeader>
 
-      <div style={{ flex: 1, maxWidth: 1100, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
+      <div style={{ flex: 1, maxWidth: 1200, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
         {/* Query title */}
         <div style={{ marginBottom: 14 }}>
           <h1
