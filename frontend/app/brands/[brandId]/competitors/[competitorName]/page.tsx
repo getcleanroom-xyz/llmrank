@@ -100,7 +100,7 @@ export default function CompetitorDrilldownPage() {
           <div style={{ marginBottom: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 12, fontWeight: 700 }}>
               <span style={{ color: "#166534" }}>You win</span>
-              <span>{youWin.length} query{youWin.length !== 1 ? "ies" : ""}</span>
+              <span>{youWin.length} quer{youWin.length !== 1 ? "ies" : "y"}</span>
             </div>
             <div className="bar-track" style={{ height: 10 }}>
               <div className="bar-fill" style={{ width: `${(youWin.length / data.total_appearances) * 100}%`, background: "#22C55E", borderRadius: 0 }} />
@@ -110,7 +110,7 @@ export default function CompetitorDrilldownPage() {
           <div style={{ marginBottom: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 12, fontWeight: 700 }}>
               <span style={{ color: "#991B1B" }}>{decodedName} wins</span>
-              <span>{theyWin.length} query{theyWin.length !== 1 ? "ies" : ""}</span>
+              <span>{theyWin.length} quer{theyWin.length !== 1 ? "ies" : "y"}</span>
             </div>
             <div className="bar-track" style={{ height: 10 }}>
               <div className="bar-fill" style={{ width: `${(theyWin.length / data.total_appearances) * 100}%`, background: "#EF4444", borderRadius: 0 }} />
@@ -121,7 +121,7 @@ export default function CompetitorDrilldownPage() {
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 12, fontWeight: 700 }}>
                 <span style={{ color: "var(--text-muted)" }}>You absent</span>
-                <span>{youAbsent.length} query{youAbsent.length !== 1 ? "ies" : ""}</span>
+                <span>{youAbsent.length} quer{youAbsent.length !== 1 ? "ies" : "y"}</span>
               </div>
               <div className="bar-track" style={{ height: 10 }}>
                 <div className="bar-fill" style={{ width: `${(youAbsent.length / data.total_appearances) * 100}%`, background: "var(--text-muted)", borderRadius: 0 }} />
