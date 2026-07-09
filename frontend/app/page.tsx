@@ -64,6 +64,12 @@ const STEPS = [
   },
 ];
 
+const STEP_COLORS = [
+  { bg: "#FFF9DB", accent: "var(--primary)" },
+  { bg: "#DBEAFF", accent: "#3B82F6" },
+  { bg: "#E6F9ED", accent: "#22C55E" },
+];
+
 const FEATURES = [
   {
     title: "Visibility Score",
@@ -146,6 +152,29 @@ const faqStructuredData = {
   })),
 };
 
+function ScribbleUnderline({ color = "var(--primary)", width = "100%", style }: { color?: string; width?: string; style?: React.CSSProperties }) {
+  return (
+    <svg width={width} height="8" viewBox="0 0 120 8" preserveAspectRatio="none" style={{ display: "block", ...style }}>
+      <path
+        d="M0 4 Q10 0 20 5 Q30 8 40 3 Q50 0 60 6 Q70 8 80 2 Q90 0 100 5 Q110 8 120 3"
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function PushPin() {
+  return (
+    <svg width="18" height="22" viewBox="0 0 18 22" fill="none" style={{ position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)", zIndex: 2 }}>
+      <ellipse cx="9" cy="4.5" rx="4.5" ry="4.5" fill="#EF4444" stroke="#1A1A1A" strokeWidth="1.5" />
+      <rect x="7" y="9" width="4" height="7" rx="1" fill="#DC2626" stroke="#1A1A1A" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
 export default function HomePage() {
   return (
     <main className="page" style={{ display: "flex", flexDirection: "column" }}>
@@ -161,36 +190,53 @@ export default function HomePage() {
       <LandingHeader />
 
       <div style={{ flex: 1, maxWidth: 720, margin: "0 auto", padding: "0 var(--page-px)", width: "100%" }}>
-        {/* Hero */}
-        <header style={{ paddingTop: "clamp(40px, 10vh, 80px)", paddingBottom: 32 }}>
+
+        {/* ── Hero ── */}
+        <header style={{ paddingTop: "clamp(40px, 10vh, 80px)", paddingBottom: 36 }}>
+          <div
+            style={{
+              fontFamily: "var(--font-hand), Caveat, cursive",
+              fontSize: "clamp(18px, 3vw, 24px)",
+              fontWeight: 600,
+              color: "var(--text-muted)",
+              marginBottom: 4,
+              transform: "rotate(-0.5deg)",
+            }}
+          >
+            AI visibility tracking, finally simple
+          </div>
+
           <h1
             style={{
-              fontSize: "clamp(28px, 6vw, 48px)",
+              fontSize: "clamp(30px, 6vw, 50px)",
               fontWeight: 800,
               color: "var(--text)",
-              margin: "0 0 12px",
+              margin: "0 0 8px",
               lineHeight: 1.1,
               letterSpacing: "-0.03em",
             }}
           >
-            Know what<br />
+            Know what{" "}
             <span style={{ background: "var(--primary)", padding: "0 4px", border: "2px solid var(--border)", display: "inline-block" }}>
               AI tells people
-            </span>
-            <br />
+            </span>{" "}
             about your brand
           </h1>
+
+          <ScribbleUnderline color="var(--primary)" width="85%" style={{ marginBottom: 14 }} />
+
           <p
             style={{
               fontSize: 15,
               color: "var(--text-secondary)",
-              margin: "0 0 20px",
+              margin: "0 0 22px",
               lineHeight: 1.6,
               maxWidth: 540,
+              fontFamily: "var(--font-serif), Georgia, serif",
             }}
           >
-            Every day, people ask ChatGPT and other AI models about products like yours.
-            Do you know what the AI is telling them? LLMRank shows you exactly how AI models rank your brand, and how to rank better.
+            Every day, people ask ChatGPT and other AI models about products like yours. Do you know what the AI is telling them?
+            LLMRank shows you exactly how AI models rank your brand &mdash; and how to rank better.
           </p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <LandingCTA variant="primary" />
@@ -198,9 +244,14 @@ export default function HomePage() {
           </div>
         </header>
 
-        {/* Supported LLMs */}
-        <section style={{ paddingBottom: 24, borderBottom: "2px solid var(--border)", marginBottom: 24 }}>
-          <div className="section-label" style={{ marginBottom: 12 }}>AI Models We Monitor</div>
+        {/* ── Supported LLMs ── */}
+        <section style={{ paddingBottom: 24, borderBottom: "2px solid var(--border)", marginBottom: 28 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+            <div className="section-label" style={{ marginBottom: 0 }}>AI Models We Monitor</div>
+            <svg width="40" height="10" viewBox="0 0 40 10" fill="none">
+              <path d="M0 5 Q6 2 12 6 Q18 9 24 4 Q30 1 40 7" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" fill="none" />
+            </svg>
+          </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {SUPPORTED_LLMS.map((llm) => (
               <span key={llm} className="pill pill-neu">
@@ -210,14 +261,30 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* How it works */}
-        <section id="how-it-works" style={{ paddingBottom: 32 }}>
-          <h2 className="section-label" style={{ marginBottom: 12 }}>How It Works</h2>
+        {/* ── How it works ── */}
+        <section id="how-it-works" style={{ paddingBottom: 36 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+            <h2 className="section-label" style={{ marginBottom: 0 }}>How It Works</h2>
+            <svg width="40" height="10" viewBox="0 0 40 10" fill="none">
+              <path d="M0 5 Q6 2 12 6 Q18 9 24 4 Q30 1 40 7" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" fill="none" />
+            </svg>
+          </div>
+
           <div className="grid-3">
-            {STEPS.map((item) => (
-              <div key={item.step} className="card">
-                <div style={{ fontSize: 24, fontWeight: 800, color: "var(--primary)", marginBottom: 8 }}>
-                  {item.step}
+            {STEPS.map((item, i) => (
+              <div
+                key={item.step}
+                className="card"
+                style={{
+                  background: STEP_COLORS[i].bg,
+                  position: "relative",
+                  transform: `rotate(${i === 0 ? "-0.5deg" : i === 1 ? "0.3deg" : "-0.3deg"})`,
+                  padding: "18px 16px",
+                }}
+              >
+                <PushPin />
+                <div style={{ fontSize: "clamp(32px, 5vw, 40px)", fontFamily: "var(--font-hand), Caveat, cursive", fontWeight: 700, color: STEP_COLORS[i].accent, marginBottom: 4, marginTop: 4, lineHeight: 1 }}>
+                  {item.step}.
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{item.title}</div>
                 <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>
@@ -228,12 +295,25 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Features */}
-        <section style={{ paddingBottom: 32 }}>
-          <h2 className="section-label" style={{ marginBottom: 12 }}>What You Get</h2>
+        {/* ── Features ── */}
+        <section style={{ paddingBottom: 36 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+            <h2 className="section-label" style={{ marginBottom: 0 }}>What You Get</h2>
+            <svg width="40" height="10" viewBox="0 0 40 10" fill="none">
+              <path d="M0 5 Q6 2 12 6 Q18 9 24 4 Q30 1 40 7" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" fill="none" />
+            </svg>
+          </div>
+
           <div className="grid-2">
-            {FEATURES.map((feature) => (
-              <div key={feature.title} className="card" style={{ padding: 14 }}>
+            {FEATURES.map((feature, i) => (
+              <div
+                key={feature.title}
+                className="card"
+                style={{
+                  padding: 14,
+                  transform: `rotate(${i % 2 === 0 ? "-0.3deg" : "0.3deg"})`,
+                }}
+              >
                 <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{feature.title}</div>
                 <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>
                   {feature.desc}
@@ -241,14 +321,25 @@ export default function HomePage() {
               </div>
             ))}
           </div>
+
+          {/* Scribble doodle between sections */}
+          <div style={{ textAlign: "center", margin: "28px 0 8px", fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 18, color: "var(--text-muted)", opacity: 0.4 }}>
+            ~ ~ ~
+          </div>
         </section>
 
-        {/* FAQ - AEO optimized */}
-        <section style={{ paddingBottom: 32 }}>
-          <h2 className="section-label" style={{ marginBottom: 12 }}>Common Questions</h2>
+        {/* ── FAQ ── */}
+        <section style={{ paddingBottom: 36 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+            <h2 className="section-label" style={{ marginBottom: 0 }}>Common Questions</h2>
+            <svg width="40" height="10" viewBox="0 0 40 10" fill="none">
+              <path d="M0 5 Q6 2 12 6 Q18 9 24 4 Q30 1 40 7" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" fill="none" />
+            </svg>
+          </div>
+
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {FAQS.map((faq, i) => (
-              <details key={i} className="card" style={{ padding: "12px 16px", cursor: "pointer" }}>
+              <details key={i} className="card" style={{ padding: "12px 16px", cursor: "pointer", transform: `rotate(${i % 2 === 0 ? "-0.2deg" : "0.2deg"})` }}>
                 <summary style={{ fontSize: 14, fontWeight: 700, marginBottom: 0 }}>
                   {faq.q}
                 </summary>
@@ -260,22 +351,44 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Bottom CTA */}
-        <section style={{ paddingBottom: 40 }}>
-          <div className="card" style={{ padding: "32px 24px", textAlign: "center" }}>
-            <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>
+        {/* ── Bottom CTA ── */}
+        <section style={{ paddingBottom: 48 }}>
+          <div
+            style={{
+              position: "relative",
+              background: "#FFF9DB",
+              border: "2px solid var(--border)",
+              borderRadius: "var(--radius)",
+              boxShadow: "4px 4px 0 #1A1A1A",
+              padding: "28px 24px",
+              textAlign: "center",
+              transform: "rotate(0.3deg)",
+            }}
+          >
+            <PushPin />
+            <h2
+              style={{
+                fontFamily: "var(--font-hand), Caveat, cursive",
+                fontSize: "clamp(28px, 4.5vw, 38px)",
+                fontWeight: 700,
+                margin: "0 0 4px",
+                lineHeight: 1.1,
+              }}
+            >
               Start tracking your AI visibility
             </h2>
+            <ScribbleUnderline color="var(--primary)" width="180px" style={{ margin: "6px auto 12px" }} />
             <p
               style={{
                 fontSize: 14,
                 color: "var(--text-secondary)",
                 marginBottom: 16,
                 maxWidth: 400,
-                margin: "0 auto 16px",
+                margin: "0 auto 18px",
+                fontFamily: "var(--font-serif), Georgia, serif",
               }}
             >
-              Free to start. No credit card. Takes under a minute to set up. Stop guessing what AI says about your brand and start knowing.
+              Free to start. No credit card. Takes under a minute. Stop guessing what AI says about your brand and start knowing.
             </p>
             <LandingCTA variant="primary" />
           </div>
