@@ -233,15 +233,12 @@ function BrandDashboardPageInner() {
                     padding: "10px 16px",
                     transform: `rotate(${s.rot})`,
                     display: "flex",
-                    alignItems: "baseline",
-                    gap: 6,
-                    flex: "1 1 auto",
-                    minWidth: 120,
-                    maxWidth: 200,
+                    flexDirection: "column",
+                    gap: 2,
                   }}
                 >
-                  <span style={{ fontSize: 22, fontWeight: 800, color: s.acc }}>{s.val}</span>
-                  <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>{s.label}</span>
+                  <span style={{ fontSize: 22, fontWeight: 800, color: s.acc, lineHeight: 1, overflow: "hidden", textOverflow: "ellipsis" }}>{s.val}</span>
+                  <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.03em" }}>{s.label}</span>
                 </div>
               ))}
             </div>
