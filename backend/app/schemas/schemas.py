@@ -249,6 +249,7 @@ class CompetitorQueryResult(BaseModel):
 
 class CompetitorDrilldownOut(BaseModel):
     competitor_name: str
+    domain: str = ""
     scanned_at: datetime
     mention_pct: float
     total_appearances: int

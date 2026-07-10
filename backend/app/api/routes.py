@@ -957,8 +957,19 @@ async def get_competitor_drilldown(
 
     queries_out.sort(key=lambda x: x.competitor_position)
 
+    # Look up domain from brand's competitors list
+    comp_domain = ""
+    brand_result = await db.execute(select(Brand.competitors).where(Brand.id == brand_id))
+    competitors_data = brand_result.scalar_one_or_none()
+    if competitors_data:
+        for c in competitors_data:
+            if c.get("name", "").lower() == competitor_name.lower() and c.get("domain"):
+                comp_domain = c["domain"]
+                break
+
     return CompetitorDrilldownOut(
         competitor_name=competitor_name,
+        domain=comp_domain,
         scanned_at=latest_scan.completed_at or latest_scan.started_at,
         mention_pct=round(len(comp_results) / len(all_results) * 100, 1) if all_results else 0,
         total_appearances=len(comp_results),
