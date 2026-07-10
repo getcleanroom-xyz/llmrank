@@ -44,6 +44,13 @@ function BrandDashboardPageInner() {
 
   const { data: dashResult, isLoading, error: loadError } = useDashboard(brandId);
   const { data: credits } = useCredits();
+  const [scanError, setScanError] = useState<string | null>(null);
+
+  const setTab = useCallback((t: Tab) => {
+    const p = new URLSearchParams(searchParams.toString());
+    p.set("tab", t);
+    router.replace(`/brands/${brandId}?${p.toString()}`);
+  }, [brandId, searchParams, router]);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/brands");
@@ -54,15 +61,7 @@ function BrandDashboardPageInner() {
 
   const data: DashboardData | null = dashResult?.dashboard ?? null;
   const queries = dashResult?.queries ?? [];
-
-  const setTab = useCallback((t: Tab) => {
-    const p = new URLSearchParams(searchParams.toString());
-    p.set("tab", t);
-    router.replace(`/brands/${brandId}?${p.toString()}`);
-  }, [brandId, searchParams, router]);
-
   const error = loadError ? (loadError instanceof Error ? loadError.message : "Failed to load") : null;
-  const [scanError, setScanError] = useState<string | null>(null);
 
   if (isLoading) return <div className="page" style={{ display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "var(--text-muted)" }}>Loading...</div>;
   if (!data) return <div className="page" style={{ padding: "var(--page-px)" }}><div style={{ color: "var(--red)", fontWeight: 700, marginBottom: 8 }}>{error ?? "Brand not found."}</div></div>;
