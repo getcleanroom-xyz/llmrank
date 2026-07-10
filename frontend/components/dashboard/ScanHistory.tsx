@@ -97,7 +97,7 @@ function ExpandedScan({ scanId, brandId }: { scanId: string; brandId: string }) 
                     <div key={r.llm_name} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, padding: "2px 0" }}>
                       <span style={{ textTransform: "capitalize", fontWeight: 600, minWidth: 60, color: "var(--text-secondary)" }}>{r.llm_name}</span>
                       <PositionBadge mentioned={r.mentioned} position={r.position} />
-                      <span style={{ color: r.sentiment === "positive" ? "#166534" : r.sentiment === "negative" ? "#991B1B" : "var(--text-muted)", fontSize: 10 }}>{r.sentiment}</span>
+                      <span style={{ color: r.sentiment === "positive" ? "#166534" : r.sentiment === "negative" ? "#991B1B" : "var(--text-muted)", fontSize: 10 }}>{SENTIMENT_LABELS[r.sentiment] ?? "Unmentioned"}</span>
                       {r.score != null && r.score > 0 && (
                         <span style={{ fontWeight: 700, color: r.score >= 70 ? "#166534" : r.score >= 40 ? "var(--text)" : "#991B1B" }}>{r.score}</span>
                       )}
@@ -117,6 +117,8 @@ function ExpandedScan({ scanId, brandId }: { scanId: string; brandId: string }) 
     </div>
   );
 }
+
+const SENTIMENT_LABELS: Record<string, string> = { positive: "Positive", neutral: "Neutral", negative: "Negative", not_mentioned: "Unmentioned" };
 
 export function ScanHistory({ brandId }: { brandId: string }) {
   const { data: scans = [], isLoading } = useScans(brandId);

@@ -8,6 +8,8 @@ import type { QueryDrilldown } from "@/types";
 import { AppHeader, PageHeader } from "@/components/AppHeader";
 import { InsightRow, ScoreRing, getLLMColor } from "@/components/ui";
 
+const SENTIMENT_LABELS: Record<string, string> = { positive: "Positive", neutral: "Neutral", negative: "Negative", not_mentioned: "Unmentioned" };
+
 const LLM_NAMES: Record<string, string> = {
   chatgpt: "ChatGPT", gemini: "Gemini", claude: "Claude", llama: "Llama",
   deepseek: "DeepSeek", mistral: "Mistral", qwen: "Qwen",
@@ -127,7 +129,7 @@ function QueryDrilldownInner() {
                       ) : (
                         <span className="pill pill-neg" style={{ fontSize: 10 }}>--</span>
                       )}
-                      <span className="pill" style={{ fontSize: 10, fontWeight: 700, background: r.sentiment === "positive" ? "#DCFCE7" : r.sentiment === "negative" ? "#FEE2E2" : "var(--bg-dark)", color: r.sentiment === "positive" ? "#166534" : r.sentiment === "negative" ? "#991B1B" : "var(--text)", border: "1.5px solid var(--border)", textTransform: "capitalize" }}>{r.sentiment}</span>
+                      <span className="pill" style={{ fontSize: 10, fontWeight: 700, background: r.sentiment === "positive" ? "#DCFCE7" : r.sentiment === "negative" ? "#FEE2E2" : "var(--bg-dark)", color: r.sentiment === "positive" ? "#166534" : r.sentiment === "negative" ? "#991B1B" : "var(--text)", border: "1.5px solid var(--border)" }}>{SENTIMENT_LABELS[r.sentiment] ?? "Unmentioned"}</span>
                     </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
