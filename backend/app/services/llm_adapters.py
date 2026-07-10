@@ -336,20 +336,34 @@ async def generate_scored_queries(brand_name: str, domain: str, classification: 
     """Agent loop: generate queries, score, dedup, regenerate weak ones."""
     comp_str = ", ".join(c.get("name", "") for c in competitors[:8])
     user_msg = (
-        f"Generate 30 queries for {brand_name} ({domain}) targeting these types: brand_category, workflow, competitor, adjacent.\n\n"
-        f"Classification: {json.dumps(classification)}\n"
-        f"Known competitors: {comp_str}\n\n"
-        f"RULES:\n"
-        f"- Do NOT include the brand name ({brand_name}) in any query\n"
-        f"- Competitor names ARE allowed in competitor-type queries\n"
-        f"- Generate at least 25 queries across all 4 types\n\n"
-        f'Return ONLY a valid JSON array: [{{"query_text":"...","query_type":"brand_category|workflow|competitor|adjacent","score":1-5}}]\n'
+        f"A person who doesn't know about {brand_name} is looking for solutions in the {classification.get('sub_category', classification.get('industry', ''))} space.\n"
+        f"They haven't discovered any brand yet. They're exploring their options.\n"
+        f"What questions would they ask an AI assistant like ChatGPT?\n\n"
+        f"Company context: {brand_name} ({domain})\n"
+        f"Industry: {classification.get('industry', '')}\n"
+        f"Known alternatives: {comp_str}\n\n"
+        f"Generate 30 natural, conversational questions. These are real questions people type into ChatGPT.\n"
+        f"Examples of good queries:\n"
+        f'- "I run a small team and need better collaboration tools"\n'
+        f'- "What should I use to manage my projects more efficiently"\n'
+        f'- "How do other people handle team communication"\n'
+        f"- \"Is there a better way to track tasks than spreadsheets\"\n\n"
+        f"Avoid: generic questions like 'best X tool' or 'X alternatives'. Be specific and scenario-based.\n"
+        f"Every query must NOT contain the brand name {brand_name}.\n"
+        f"Competitor names ARE allowed.\n\n"
+        f'Return ONLY a valid JSON array: [{{"query_text":"...","query_type":"workflow","score":1-5}}]\n'
         f"Score each 1-5 based on how natural and specific the query is.\n"
         f"No text, no markdown, no explanation."
     )
 
     messages = [
-        {"role": "developer", "content": "Return ONLY a valid JSON array of scored queries. No text, no markdown, no explanation."},
+        {"role": "developer", "content": (
+            "You are a UX researcher simulating real users. Generate conversational questions "
+            "people would type into ChatGPT when researching products in a specific industry. "
+            "These are people who don't know any brand names yet — they're solving problems.\n"
+            "Use scenario-based, specific questions. Never use 'best X' or 'X alternatives' patterns.\n"
+            "Return ONLY a valid JSON array. No text, no markdown."
+        )},
         {"role": "user", "content": user_msg},
     ]
 
@@ -386,11 +400,16 @@ async def generate_scored_queries(brand_name: str, domain: str, classification: 
     if weak and len(queries) < 25:
         try:
             resp = await _call_openrouter([
-                {"role": "developer", "content": "Return ONLY a valid JSON array of replacement queries. No text, no markdown. Do NOT include the brand name in queries."},
+                {"role": "developer", "content": (
+                    "Generate natural, scenario-based questions people ask AI when researching products. "
+                    "Avoid 'best X' patterns. Be specific and conversational. Do NOT include the brand name.\n"
+                    "Return ONLY a valid JSON array."
+                )},
                 {"role": "user", "content": (
-                    f"These queries for {brand_name} ({domain}) scored poorly:\n{json.dumps(weak)}\n\n"
-                    f"Generate {len(weak)} better, more specific, natural replacements.\n"
-                    f"Return: [{{\"query_text\":\"...\",\"query_type\":\"...\",\"score\":1-5}}]"
+                    f"These queries scored poorly for {brand_name} ({domain}):\n{json.dumps(weak)}\n\n"
+                    f"Generate {len(weak)} better, scenario-based, natural replacements.\n"
+                    f"Example of good query: 'I run a small team and need better collaboration tools'\n"
+                    f"Return: [{{\"query_text\":\"...\",\"query_type\":\"workflow\",\"score\":1-5}}]"
                 )},
             ], "chatgpt", client, temperature=0.7, max_tokens=1024)
             result = _parse_json(resp)
@@ -403,11 +422,16 @@ async def generate_scored_queries(brand_name: str, domain: str, classification: 
     if len(queries) < 20:
         try:
             resp = await _call_openrouter([
-                {"role": "developer", "content": "Return ONLY a valid JSON array. No text, no markdown. Do NOT include the brand name in queries."},
+                {"role": "developer", "content": (
+                    "Generate natural, scenario-based questions people ask AI when researching {brand_name} ({domain}). "
+                    "Avoid 'best X' patterns. Be specific and conversational.\n"
+                    "Return ONLY a valid JSON array."
+                )},
                 {"role": "user", "content": (
-                    f"Generate {20 - len(queries)} additional queries for {brand_name} ({domain}). "
-                    f"Do NOT include the brand name ({brand_name}) in the queries.\n"
-                    f"Return: [{{\"query_text\":\"...\",\"query_type\":\"workflow|adjacent\",\"score\":4-5}}]"
+                    f"Generate {20 - len(queries)} more scenario-based questions for {brand_name} ({domain}). "
+                    f"People don't know any brands yet. They're asking about their problems.\n"
+                    f"Do NOT include the brand name.\n"
+                    f'Return: [{{"query_text":"...","query_type":"workflow","score":4-5}}]'
                 )},
             ], "chatgpt", client, temperature=0.6, max_tokens=1024)
             result = _parse_json(resp)
