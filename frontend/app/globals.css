@@ -17,13 +17,13 @@
   --purple:         #A855F7;
 
   --text:           #1A1A1A;
-  --text-secondary: #555555;
-  --text-muted:     #999999;
+  --text-secondary: #333333;
+  --text-muted:     #666666;
 
-  --radius:         4px;
-  --shadow:         3px 3px 0px #1A1A1A;
-  --shadow-sm:      2px 2px 0px #1A1A1A;
-  --shadow-hover:   4px 4px 0px #1A1A1A;
+  --radius:         10px;
+  --shadow:         4px 4px 0px #1A1A1A;
+  --shadow-sm:      3px 3px 0px #1A1A1A;
+  --shadow-hover:   5px 5px 0px #1A1A1A;
 
   --page-px:        16px;
   --gap:            12px;
@@ -71,15 +71,16 @@ body {
   padding: 16px;
   box-shadow: var(--shadow);
 }
+.card:hover { box-shadow: var(--shadow-hover); transform: translate(-1px, -1px); }
 @media (min-width: 768px) { .card { padding: 20px; } }
 
 /* ─── Section label ─── */
 .section-label {
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-secondary);
+  color: var(--text);
 }
 
 /* ─── Buttons ─── */
@@ -89,8 +90,8 @@ body {
   justify-content: center;
   gap: 6px;
   font-size: 13px;
-  font-weight: 600;
-  padding: 8px 16px;
+  font-weight: 700;
+  padding: 10px 18px;
   border-radius: var(--radius);
   border: 2px solid var(--border);
   cursor: pointer;
@@ -102,13 +103,13 @@ body {
   text-decoration: none;
 }
 .btn:hover { transform: translate(-1px, -1px); box-shadow: var(--shadow-hover); }
-.btn:active { transform: translate(1px, 1px); box-shadow: none; }
+.btn:active { transform: translate(2px, 2px); box-shadow: none; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: var(--shadow-sm); }
 .btn-primary { background: var(--primary); color: var(--black); border-color: var(--black); }
 .btn-danger { background: var(--red); color: white; border-color: var(--black); }
-.btn-ghost { background: transparent; box-shadow: none; border: 2px solid transparent; }
-.btn-ghost:hover { border-color: var(--border); box-shadow: var(--shadow-sm); background: var(--bg-dark); }
-.btn-sm { font-size: 12px; padding: 5px 10px; }
+.btn-ghost { background: var(--bg-dark); box-shadow: var(--shadow-sm); border: 2px solid var(--border); }
+.btn-ghost:hover { background: var(--bg); border-color: var(--border); box-shadow: var(--shadow-hover); }
+.btn-sm { font-size: 12px; padding: 7px 14px; }
 
 /* ─── Input ─── */
 .input {
@@ -116,14 +117,14 @@ body {
   background: var(--surface);
   border: 2px solid var(--border);
   border-radius: var(--radius);
-  padding: 8px 12px;
+  padding: 10px 14px;
   font-size: 14px;
   color: var(--text);
   outline: none;
   box-shadow: var(--shadow-sm);
   font-family: var(--font-sans);
 }
-.input:focus { box-shadow: var(--shadow); }
+.input:focus { box-shadow: var(--shadow); border-color: var(--blue); }
 .input::placeholder { color: var(--text-muted); }
 
 /* ─── Pills ─── */
@@ -131,10 +132,10 @@ body {
   display: inline-flex;
   align-items: center;
   font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
+  font-weight: 700;
+  padding: 3px 10px;
   border-radius: var(--radius);
-  border: 1.5px solid var(--border);
+  border: 2px solid var(--border);
   white-space: nowrap;
 }
 .pill-pos { background: #DCFCE7; color: #166534; border-color: #166534; }
@@ -165,7 +166,7 @@ body {
 .span-qualifier { background: #FEF3C7; color: #92400E; border: 1px solid #92400E; border-radius: 2px; padding: 0 3px; font-style: italic; }
 
 /* ─── Progress bar ─── */
-.bar-track { height: 8px; background: var(--bg-dark); border: 1.5px solid var(--border); border-radius: 2px; overflow: hidden; }
+.bar-track { height: 8px; background: var(--bg-dark); border: 2px solid var(--border); border-radius: 2px; overflow: hidden; }
 .bar-fill { height: 100%; background: var(--primary); border-radius: 1px; transition: width 0.6s ease; }
 
 /* ─── Score ring ─── */
@@ -224,7 +225,7 @@ body {
 
 /* ─── Scan progress ─── */
 @keyframes progress-slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
-.scan-progress { height: 4px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 2px; overflow: hidden; }
+.scan-progress { height: 6px; background: var(--bg-dark); border: 2px solid var(--border); border-radius: 2px; overflow: hidden; }
 .scan-progress-fill { height: 100%; background: var(--primary); width: 40%; animation: progress-slide 1.2s ease-in-out infinite; }
 
 /* ─── App Header ─── */
