@@ -69,7 +69,7 @@ function BrandDashboardPageInner() {
     wasRunningRef.current = true;
     const interval = setInterval(() => {
       refetch();
-    }, 3000);
+    }, 5000);
     return () => clearInterval(interval);
   }, [isScanRunning, brandId, refetch, qc]);
 

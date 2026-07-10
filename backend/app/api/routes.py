@@ -29,6 +29,7 @@ from app.services.scan_orchestrator import run_scan
 from app.services.llm_adapters import scan_all_llms, scan_query, OpenRouterAdapter, _call_openrouter, _parse_json, SCAN_DEVELOPER
 from app.services.insight_engine import generate_insights_for_query, generate_dashboard_insights
 from app.services.credit_service import get_or_create_wallet, check_credits, deduct_credits, grant_credits, get_credit_history, calculate_scan_cost, CREDIT_COSTS, CREDITS_PER_DOLLAR
+from app.services.cache import dashboard_cache
 from app.api.auth import get_current_user, get_optional_user
 
 router = APIRouter()
@@ -696,11 +697,22 @@ async def get_dashboard(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db))
         for s in reversed(history_scans)
     ]
 
-    # Compute dashboard insights
-    raw_dash_insights = await generate_dashboard_insights(brand.name, all_results, brand.domain)
-    dash_insights = [DrilldownInsight(type=i["type"], text=i["text"]) for i in raw_dash_insights]
+    # Cache key for dashboard
+    import json as _json
+    cache_key = f"dash:{brand_id}"
+    cached = dashboard_cache.get(cache_key)
+    if cached:
+        return cached
 
-    return DashboardOut(
+    # Compute dashboard insights (non-blocking: fire-and-forget, cached separately)
+    insights_cache_key = f"dash_insights:{brand_id}"
+    dash_insights = dashboard_cache.get(insights_cache_key)
+    if dash_insights is None:
+        dash_insights = []
+        import asyncio as _asyncio
+        _asyncio.ensure_future(_compute_and_cache_insights(brand.name, all_results, brand.domain, insights_cache_key))
+
+    result = DashboardOut(
         brand=BrandOut.model_validate(brand),
         latest_scan=ScanOut.model_validate(latest_scan),
         active_scan=ScanOut.model_validate(active_scan) if active_scan else None,
@@ -714,6 +726,19 @@ async def get_dashboard(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db))
         score_history=score_history,
         insights=dash_insights,
     )
+    dashboard_cache.set(cache_key, result, ttl=10)
+    return result
+
+
+async def _compute_and_cache_insights(brand_name: str, all_results: list, domain: str, cache_key: str) -> None:
+    """Background task: generate insights and cache them."""
+    try:
+        raw = await generate_dashboard_insights(brand_name, all_results, domain)
+        insights = [DrilldownInsight(type=i["type"], text=i["text"]) for i in raw]
+        dashboard_cache.set(cache_key, insights, ttl=300)
+        logger.info("Dashboard insights cached for %s", brand_name)
+    except Exception as e:
+        logger.warning("Failed to generate dashboard insights: %s", e)
 
 
 # ─── Query drilldown ────────────────────────────────────────────────────────────

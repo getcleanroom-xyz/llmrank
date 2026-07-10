@@ -26,7 +26,7 @@ function QueryDrilldownInner() {
         setRescanning(false);
         if (pollRef.current) clearInterval(pollRef.current);
       }
-    }, 2000);
+    }, 3000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [rescanId, refetch]);
 
