@@ -1,5 +1,6 @@
 import asyncio
 import uuid
+import json
 import logging
 from datetime import datetime, timezone
 
@@ -7,14 +8,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text
 
 from app.models.models import Brand, MonitoredQuery, Scan, QueryResult, ScanStatus
-from app.services.llm_adapters import query_llm, OpenRouterAdapter, MODEL_REGISTRY
-from app.services.ranking_engine import rank_response
+from app.services.llm_adapters import scan_query, scan_all_llms
 
 logger = logging.getLogger(__name__)
 
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _compute_score(mentioned: bool, position: int | None, sentiment: str) -> float:
+    """Compute visibility score 0-100 from structured LLM output."""
+    if not mentioned:
+        return 5.0
+    base = 40.0
+    position_bonus = {1: 35, 2: 25, 3: 15, 4: 8}.get(position or 99, 3)
+    sentiment_bonus = {"positive": 20, "neutral": 10, "negative": 0}.get(sentiment, 0)
+    return round(min(100.0, base + position_bonus + sentiment_bonus), 1)
 
 
 async def _keepalive_ping(db: AsyncSession, scan_id: uuid.UUID, stop_event: asyncio.Event):
@@ -30,39 +40,6 @@ async def _keepalive_ping(db: AsyncSession, scan_id: uuid.UUID, stop_event: asyn
         except Exception:
             logger.warning("Keepalive ping failed for scan %s", scan_id)
             break
-
-
-def _make_prompt(query_text: str) -> str:
-    return f"""You are a helpful assistant. A user is asking for recommendations.
-
-User question: {query_text}
-
-Please list the best options with your reasoning."""
-
-
-async def _fire_all_llms(
-    queries: list[MonitoredQuery],
-    llm_names: list[str],
-    client,
-) -> list[tuple[str, str, str, str | None]]:
-    """Fire every (query, llm) pair concurrently. Returns [(query_id, llm_name, response, error), ...]."""
-
-    async def _call(q_id: str, q_text: str, llm: str):
-        prompt = _make_prompt(q_text)
-        adapter = OpenRouterAdapter(llm, client=client)
-        try:
-            response = await adapter.query(prompt)
-            return (q_id, llm, response, None)
-        except Exception as e:
-            return (q_id, llm, "", str(e))
-
-    tasks = [
-        _call(str(q.id), q.query_text, llm)
-        for q in queries
-        for llm in llm_names
-    ]
-    results = await asyncio.gather(*tasks, return_exceptions=False)
-    return results
 
 
 async def run_scan(
@@ -110,7 +87,11 @@ async def run_scan(
     # Fire ALL LLMs for ALL queries concurrently using a shared httpx client
     import httpx as _httpx
     async with _httpx.AsyncClient(timeout=45) as client:
-        raw_results = await _fire_all_llms(queries, llm_names, client)
+        raw_results = await scan_all_llms(
+            [(str(q.id), q.query_text) for q in queries],
+            llm_names,
+            client,
+        )
 
     # Stop keepalive
     stop_event.set()
@@ -126,8 +107,8 @@ async def run_scan(
     total_mentioned = 0
     total_successful = 0
 
-    for q_id, llm_name, response_text, error in raw_results:
-        if error or not response_text:
+    for q_id, llm_name, result_data, error in raw_results:
+        if error or not result_data:
             result = QueryResult(
                 id=uuid.uuid4(), scan_id=scan.id,
                 query_id=uuid.UUID(q_id), llm_name=llm_name,
@@ -136,16 +117,25 @@ async def run_scan(
                 competitors_mentioned=[], annotated_response=None, score=None,
             )
         else:
-            ranking = rank_response(brand.name, brand.domain, response_text)
+            mentioned = result_data.get("brand_mentioned", False)
+            position = result_data.get("brand_position")
+            sentiment = result_data.get("brand_sentiment", "not_mentioned")
+            if sentiment not in ("positive", "neutral", "negative", "not_mentioned"):
+                sentiment = "not_mentioned"
+            # Build competitors list from the LLM's structured output
+            competitors = [{"name": c, "position": 0} for c in result_data.get("competitors", [])]
+            # Compute score from LLM's structured data
+            score = _compute_score(mentioned, position, sentiment)
+
             result = QueryResult(
                 id=uuid.uuid4(), scan_id=scan.id,
                 query_id=uuid.UUID(q_id), llm_name=llm_name,
-                raw_response=response_text,
-                mentioned=ranking.mentioned, position=ranking.position,
-                sentiment=ranking.sentiment,
-                competitors_mentioned=ranking.competitors,
-                annotated_response=ranking.annotated_spans,
-                score=ranking.score,
+                raw_response=result_data.get("summary", json.dumps(result_data)),
+                mentioned=mentioned, position=position,
+                sentiment=sentiment,
+                competitors_mentioned=competitors,
+                annotated_response=None,
+                score=score,
             )
 
         all_results.append(result)

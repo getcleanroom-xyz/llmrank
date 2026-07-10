@@ -36,9 +36,15 @@ ALL_LLM_KEYS = list(MODEL_REGISTRY.keys())
 # ─── Prompts ───────────────────────────────────────────────────────────────────
 
 SCAN_DEVELOPER = (
-    "You rank products and services in response to user queries. "
-    "Return a NUMBERED list starting from 1 with the BEST option first. "
-    "Format: N. [Name] - [one-sentence reason]. Only name products you genuinely know."
+    "You are a product recommendation engine. A user has asked a question. "
+    "Return ONLY a valid JSON object with this exact schema:\n"
+    '{"items":[{"name":"Product Name","position":1,"description":"one sentence why"}],'
+    '"brand_mentioned":true_or_false,'
+    '"brand_position":1_or_null,'
+    '"brand_sentiment":"positive"|"neutral"|"negative"|"not_mentioned",'
+    '"competitors":["Brand1","Brand2"],'
+    '"summary":"natural language summary of the recommendation"}\n'
+    "No text, no markdown, no explanation. Only the JSON object."
 )
 
 CLASSIFY_DEVELOPER = (
@@ -167,7 +173,8 @@ def _parse_json(text: str) -> any:
 
 # ─── Scan ──────────────────────────────────────────────────────────────────────
 
-async def scan_query(query_text: str, llm_name: str, client) -> tuple[str, Optional[str]]:
+async def scan_query(query_text: str, llm_name: str, client) -> tuple[Optional[dict], Optional[str]]:
+    """Query an LLM for a scan. Returns (parsed_json, error_message)."""
     messages = [
         {"role": "developer", "content": SCAN_DEVELOPER},
         {"role": "user", "content": f"<query>{query_text}</query>"},
@@ -175,28 +182,40 @@ async def scan_query(query_text: str, llm_name: str, client) -> tuple[str, Optio
     for attempt in range(3):
         try:
             resp = await _call_openrouter(messages, llm_name, client)
-            return resp, None
+            try:
+                return _parse_json(resp), None
+            except ValueError:
+                # Fallback: treat as raw text and build a minimal JSON
+                return {
+                    "items": [{"name": line.strip(), "position": i + 1, "description": ""}
+                               for i, line in enumerate(resp.strip().split("\n")) if line.strip()],
+                    "brand_mentioned": None, "brand_position": None,
+                    "brand_sentiment": "not_mentioned", "competitors": [],
+                    "summary": resp[:500],
+                }, None
         except httpx.HTTPStatusError as e:
             status = e.response.status_code
             if status == 429:
-                return "", f"{llm_name} rate limited"
+                return None, f"{llm_name} rate limited"
             if status == 503 and attempt < 2:
                 await asyncio.sleep(2 * (2 ** attempt))
                 continue
-            return "", str(e)
+            return None, str(e)
         except Exception as e:
-            return "", str(e)
-    return "", f"{llm_name} unavailable after retries"
+            return None, str(e)
+    return None, f"{llm_name} unavailable after retries"
 
 
-async def scan_all_llms(queries: list[tuple[str, str]], llm_names: list[str], client) -> list[tuple[str, str, str, Optional[str]]]:
+async def scan_all_llms(queries: list[tuple[str, str]], llm_names: list[str], client) -> list[tuple[str, str, dict | None, Optional[str]]]:
+    """Returns [(query_id, llm_name, result_dict_or_None, error_or_None)]."""
     tasks = [scan_query(q_text, llm, client) for q_id, q_text in queries for llm in llm_names]
     results = await asyncio.gather(*tasks, return_exceptions=False)
     out = []
     idx = 0
     for q_id, _ in queries:
         for llm in llm_names:
-            out.append((q_id, llm, results[idx][0], results[idx][1]))
+            result, error = results[idx]
+            out.append((q_id, llm, result, error))
             idx += 1
     return out
 
@@ -397,8 +416,13 @@ async def run_probe_scan(brand_name: str, domain: str, queries: list[dict], clie
     )
 
     results_text = []
-    for q_id, llm_name, response, error in raw:
-        status = error if error else (response[:300] if response else "empty")
+    for q_id, llm_name, result_data, error in raw:
+        if error:
+            status = error
+        elif isinstance(result_data, dict):
+            status = result_data.get("summary", json.dumps(result_data)[:300])
+        else:
+            status = "empty"
         results_text.append(f"Query: {q_id}\nLLM: {llm_name}\nResponse: {status}\n")
 
     messages = [
