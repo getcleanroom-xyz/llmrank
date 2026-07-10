@@ -259,7 +259,7 @@ async def discover_competitors_from_crawl(content: str, client) -> list[dict]:
             resp = await _call_openrouter(messages, model, client, temperature=0.2, max_tokens=1024)
             result = _parse_json(resp)
             if isinstance(result, list):
-                return result[:10]
+                return [c for c in result if isinstance(c, dict) and _is_valid_competitor(c.get("name", ""))][:10]
         except Exception:
             continue
     return []
@@ -282,7 +282,7 @@ async def discover_competitors_by_category(classification: dict, client) -> list
             resp = await _call_openrouter(messages, model, client, temperature=0.3, max_tokens=1024)
             result = _parse_json(resp)
             if isinstance(result, list):
-                return result[:10]
+                return [c for c in result if isinstance(c, dict) and _is_valid_competitor(c.get("name", ""))][:10]
         except Exception:
             continue
     return []
@@ -491,6 +491,21 @@ async def run_probe_scan(brand_name: str, domain: str, queries: list[dict], clie
 
 # ─── Full Orchestrator ─────────────────────────────────────────────────────────
 
+_PLACEHOLDER_NAMES = {"branda", "brandb", "brandc", "brand1", "brand2", "competitor1", "competitor2", "competitora", "competitorb", "company1", "company2", "companyx", "companyy", "clienta", "clientb"}
+
+
+def _is_valid_competitor(name: str) -> bool:
+    """Reject obviously fake placeholder competitor names."""
+    lower = name.lower().strip()
+    if lower in _PLACEHOLDER_NAMES:
+        return False
+    if re.match(r"^(brand|competitor|company|client|product|vendor|provider)[a-z0-9]*$", lower):
+        return False
+    if len(lower) <= 1:
+        return False
+    return True
+
+
 async def orchestrate_query_generation(brand_name, domain, crawl_content, user_competitors, client) -> dict:
     classification = await classify_brand(crawl_content, brand_name, domain, client)
     logger.info("Classification for %s: %s", domain, classification.get("industry"))
@@ -503,10 +518,10 @@ async def orchestrate_query_generation(brand_name, domain, crawl_content, user_c
     seen = {}
     for c in from_crawl + from_category:
         name_lower = c.get("name", "").lower()
-        if name_lower and name_lower not in seen and name_lower != brand_name.lower():
+        if name_lower and name_lower not in seen and name_lower != brand_name.lower() and _is_valid_competitor(name_lower):
             seen[name_lower] = c
     for name in user_competitors:
-        if name.lower() not in seen:
+        if name.lower() not in seen and _is_valid_competitor(name.lower()):
             seen[name.lower()] = {"name": name, "domain": "", "relevance_score": 5}
     competitors = sorted(seen.values(), key=lambda c: c.get("relevance_score", 0), reverse=True)[:10]
     logger.info("Discovered %d competitors for %s", len(competitors), domain)
