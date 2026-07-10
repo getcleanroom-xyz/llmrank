@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { useDashboard, useCredits } from "@/lib/hooks";
+import { queryKeys } from "@/lib/query-keys";
 import type { DashboardData } from "@/types";
 import { KpiCard, ScoreRing, InsightRow } from "@/components/ui";
 import { AppHeader, PageHeader } from "@/components/AppHeader";
@@ -42,9 +44,34 @@ function BrandDashboardPageInner() {
   const tab = (searchParams.get("tab") as Tab) ?? "overview";
   const { user, loading: authLoading } = useAuth();
 
-  const { data: dashResult, isLoading, error: loadError } = useDashboard(brandId);
+  const { data: dashResult, isLoading, error: loadError, refetch } = useDashboard(brandId);
   const { data: credits } = useCredits();
+  const qc = useQueryClient();
   const [scanError, setScanError] = useState<string | null>(null);
+  const [scanComplete, setScanComplete] = useState(false);
+  const wasRunningRef = useRef(false);
+
+  // Poll for scan completion
+  const data: DashboardData | null = dashResult?.dashboard ?? null;
+  const isScanRunning = data && (data.active_scan?.status === "pending" || data.active_scan?.status === "running");
+
+  useEffect(() => {
+    if (!isScanRunning) {
+      if (wasRunningRef.current) {
+        // Scan just finished
+        setScanComplete(true);
+        qc.invalidateQueries({ queryKey: queryKeys.dashboard(brandId) });
+        setTimeout(() => setScanComplete(false), 5000);
+        wasRunningRef.current = false;
+      }
+      return;
+    }
+    wasRunningRef.current = true;
+    const interval = setInterval(() => {
+      refetch();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [isScanRunning, brandId, refetch, qc]);
 
   const setTab = useCallback((t: Tab) => {
     const p = new URLSearchParams(searchParams.toString());
@@ -59,7 +86,6 @@ function BrandDashboardPageInner() {
   if (authLoading) return <div className="page" style={{ display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "var(--text-muted)", minHeight: "100vh" }}>Loading...</div>;
   if (!user) return null;
 
-  const data: DashboardData | null = dashResult?.dashboard ?? null;
   const queries = dashResult?.queries ?? [];
   const error = loadError ? (loadError instanceof Error ? loadError.message : "Failed to load") : null;
 
@@ -67,7 +93,6 @@ function BrandDashboardPageInner() {
   if (!data) return <div className="page" style={{ padding: "var(--page-px)" }}><div style={{ color: "var(--red)", fontWeight: 700, marginBottom: 8 }}>{error ?? "Brand not found."}</div></div>;
 
   const { brand, latest_scan, active_scan, visibility_score, mention_rate, llm_breakdown, competitor_share, query_summaries, score_history, top_competitor } = data;
-  const isScanRunning = active_scan?.status === "pending" || active_scan?.status === "running";
   const prev = score_history.length >= 2 ? score_history[score_history.length - 2] : null;
   const hasScan = latest_scan && latest_scan.status === "completed";
 
@@ -110,6 +135,13 @@ function BrandDashboardPageInner() {
         </div>
       </PageHeader>
       {isScanRunning && <div className="scan-progress" style={{ maxWidth: 1200, margin: "0 auto" }}><div className="scan-progress-fill" /></div>}
+      {scanComplete && (
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "4px var(--page-px) 0" }}>
+          <div style={{ background: "#DCFCE7", border: "2px solid #22C55E", borderRadius: "var(--radius)", padding: "8px 14px", fontSize: 12, color: "#166534", fontWeight: 700, display: "flex", alignItems: "center", gap: 8, boxShadow: "2px 2px 0 #1A1A1A" }}>
+            <span style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 18 }}>Done!</span> Scan complete. Your results have been updated.
+          </div>
+        </div>
+      )}
       {scanError && <div style={{ maxWidth: 1200, margin: "0 auto", padding: "4px var(--page-px) 0" }}>
         <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "5px 10px", fontSize: 11, color: "#991B1B", fontWeight: 600 }}>{scanError}</div>
       </div>}

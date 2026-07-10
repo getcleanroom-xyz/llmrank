@@ -137,9 +137,10 @@ export function ScanHistory({ brandId }: { brandId: string }) {
                 style={{
                   padding: 0,
                   borderColor: isExpanded ? "var(--primary)" : undefined,
-                  transition: "border-color 0.1s, transform 0.15s",
+                  transition: "border-color 0.1s, transform 0.15s, box-shadow 0.15s",
                   transform: `rotate(${scans.indexOf(scan) % 2 === 0 ? "-0.15deg" : "0.15deg"})`,
                   borderLeft: `4px solid ${scan.status === "completed" ? "var(--primary)" : scan.status === "running" ? "var(--primary)" : scan.status === "failed" ? "#EF4444" : "var(--bg-dark)"}`,
+                  boxShadow: isExpanded ? "var(--shadow)" : "2px 2px 0 #1A1A1A, 3px 3px 0 #1A1A1A",
                 }}
             >
               <div
