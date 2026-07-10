@@ -144,6 +144,27 @@ async def _call_openrouter(messages: list[dict], model_key: str, client, tempera
     return content
 
 
+def _parse_json(text: str) -> any:
+    """Safely extract JSON from LLM response. Tries direct parse, then regex fallback."""
+    try:
+        return json.loads(text)
+    except (json.JSONDecodeError, TypeError):
+        pass
+    match = re.search(r"```json\s*(.*?)\s*```", text, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(1))
+        except (json.JSONDecodeError, TypeError):
+            pass
+    match = re.search(r"(\[.*\]|\{.*\})", text, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(1))
+        except (json.JSONDecodeError, TypeError):
+            pass
+    raise ValueError("No valid JSON found in LLM response")
+
+
 # ─── Scan ──────────────────────────────────────────────────────────────────────
 
 async def scan_query(query_text: str, llm_name: str, client) -> tuple[str, Optional[str]]:
@@ -183,17 +204,19 @@ async def scan_all_llms(queries: list[tuple[str, str]], llm_names: list[str], cl
 # ─── Brand Classification ─────────────────────────────────────────────────────
 
 async def classify_brand(content: str, brand_name: str, domain: str, client) -> dict:
-    import json as _json
+    """Classify brand using structured JSON output."""
     messages = [
-        {"role": "developer", "content": CLASSIFY_DEVELOPER},
-        {"role": "user", "content": f"<company><name>{brand_name}</name><domain>{domain}</domain></company><content>{content[:3000]}</content>"},
+        {"role": "developer", "content": "Return ONLY a valid JSON object. No text, no markdown, no explanation."},
+        {"role": "user", "content": (
+            f"Classify {brand_name} ({domain}) based on this content:\n\n"
+            f"<content>{content[:3000]}</content>\n\n"
+            f'Return exactly: {{"industry":"...","sub_category":"...","price_tier":"...","target_audience":"...","key_features":["..."]}}'
+        )},
     ]
     for model in ["chatgpt"]:
         try:
-            resp = await _call_openrouter(messages, model, client, temperature=0.3, max_tokens=512)
-            match = re.search(r"\{.*\}", resp, re.DOTALL)
-            if match:
-                return _json.loads(match.group())
+            resp = await _call_openrouter(messages, model, client, temperature=0.2, max_tokens=512)
+            return _parse_json(resp)
         except Exception:
             continue
     return {"industry": "unknown", "sub_category": "", "price_tier": "", "target_audience": "", "key_features": []}
@@ -202,36 +225,45 @@ async def classify_brand(content: str, brand_name: str, domain: str, client) -> 
 # ─── Competitor Discovery ─────────────────────────────────────────────────────
 
 async def discover_competitors_from_crawl(content: str, client) -> list[dict]:
-    """Extract competitors mentioned on the brand's own website."""
-    import json as _json
+    """Extract competitors from the brand's website content using structured JSON."""
     messages = [
-        {"role": "developer", "content": DISCOVER_FROM_CRAWL_DEVELOPER},
-        {"role": "user", "content": f"<content>{content[:3000]}</content>"},
+        {"role": "developer", "content": "Return ONLY a valid JSON array. No text, no markdown, no explanation."},
+        {"role": "user", "content": (
+            f"From this company's website content, identify competing brands mentioned, compared to, or referenced.\n\n"
+            f"<content>{content[:3000]}</content>\n\n"
+            f'Return: [{{"name":"BrandName","domain":"domain.com","relevance_score":1-5}}]\n'
+            f'Maximum 10 entries. Only include real brand names, not generic terms like "competitors" or "alternatives".'
+        )},
     ]
     for model in ["chatgpt"]:
         try:
-            resp = await _call_openrouter(messages, model, client, temperature=0.3, max_tokens=1024)
-            match = re.search(r"\[.*\]", resp, re.DOTALL)
-            if match:
-                return _json.loads(match.group())[:10]
+            resp = await _call_openrouter(messages, model, client, temperature=0.2, max_tokens=1024)
+            result = _parse_json(resp)
+            if isinstance(result, list):
+                return result[:10]
         except Exception:
             continue
     return []
 
 
 async def discover_competitors_by_category(classification: dict, client) -> list[dict]:
-    """Get category-typical competitors from LLM knowledge."""
-    import json as _json
+    """Get category-typical competitors using structured JSON."""
     messages = [
-        {"role": "developer", "content": CATEGORY_COMPETITORS_DEVELOPER},
-        {"role": "user", "content": f"<industry>{classification.get('industry','')}</industry><sub_category>{classification.get('sub_category','')}</sub_category><audience>{classification.get('target_audience','')}</audience>"},
+        {"role": "developer", "content": "Return ONLY a valid JSON array. No text, no markdown, no explanation."},
+        {"role": "user", "content": (
+            f"List the top 10 known competitors in the {classification.get('industry','')} industry, "
+            f"sub-category: {classification.get('sub_category','')}, "
+            f"target audience: {classification.get('target_audience','')}.\n\n"
+            f'Return: [{{"name":"BrandName","domain":"domain.com","relevance_score":1-5}}]\n'
+            f'Include real brand names only. No generic category terms.'
+        )},
     ]
     for model in ["chatgpt"]:
         try:
-            resp = await _call_openrouter(messages, model, client, temperature=0.4, max_tokens=1024)
-            match = re.search(r"\[.*\]", resp, re.DOTALL)
-            if match:
-                return _json.loads(match.group())[:10]
+            resp = await _call_openrouter(messages, model, client, temperature=0.3, max_tokens=1024)
+            result = _parse_json(resp)
+            if isinstance(result, list):
+                return result[:10]
         except Exception:
             continue
     return []
@@ -285,40 +317,43 @@ async def generate_scored_queries(brand_name: str, domain: str, classification: 
     """Agent loop: generate queries, score, dedup, regenerate weak ones."""
     comp_str = ", ".join(c.get("name", "") for c in competitors[:8])
     user_msg = (
-        f"<company><name>{brand_name}</name><domain>{domain}</domain></company>"
-        f"<classification>{json.dumps(classification)}</classification>"
-        f"<competitors>{comp_str}</competitors>"
+        f"Generate 25+ queries for {brand_name} ({domain}) targeting these types: brand_category, workflow, competitor, adjacent.\n\n"
+        f"Classification: {json.dumps(classification)}\n"
+        f"Known competitors: {comp_str}\n\n"
+        f"Return ONLY a valid JSON array: [{{\"query_text\":\"...\",\"query_type\":\"brand_category|workflow|competitor|adjacent\",\"score\":1-5}}]\n"
+        f"Score each 1-5 based on how natural and specific the query is.\n"
+        f"No text, no markdown, no explanation."
     )
+
     messages = [
-        {"role": "developer", "content": SCORED_QUERY_DEVELOPER},
+        {"role": "developer", "content": "Return ONLY a valid JSON array of scored queries. No text, no markdown, no explanation."},
         {"role": "user", "content": user_msg},
     ]
+
     queries = []
     for model in ["chatgpt", "llama"]:
         try:
             resp = await _call_openrouter(messages, model, client, temperature=0.6, max_tokens=2048)
-            match = re.search(r"\[.*\]", resp, re.DOTALL)
-            if match:
-                queries = _json.loads(match.group())
-                if isinstance(queries, list) and len(queries) >= 15:
-                    break
+            result = _parse_json(resp)
+            if isinstance(result, list) and len(result) >= 15:
+                queries = result
+                break
         except Exception:
             continue
 
     if not queries:
         return []
 
-    # Dedup via LLM
+    # Dedup via LLM if batch is large
     if len(queries) > 15:
-        dedup_msgs = [
-            {"role": "developer", "content": "Remove semantically duplicate queries. Keep only the best-scored one from each group. Return deduped JSON array. No preamble."},
-            {"role": "user", "content": json.dumps(queries)},
-        ]
         try:
-            resp = await _call_openrouter(dedup_msgs, "chatgpt", client, temperature=0.2, max_tokens=1536)
-            match = re.search(r"\[.*\]", resp, re.DOTALL)
-            if match:
-                queries = _json.loads(match.group())
+            resp = await _call_openrouter([
+                {"role": "developer", "content": "Remove semantically duplicate queries. Keep only the best-scored one from each group. Return deduped JSON array."},
+                {"role": "user", "content": json.dumps(queries)},
+            ], "chatgpt", client, temperature=0.2, max_tokens=1536)
+            result = _parse_json(resp)
+            if isinstance(result, list):
+                queries = result
         except Exception:
             pass
 
@@ -326,15 +361,18 @@ async def generate_scored_queries(brand_name: str, domain: str, classification: 
     weak = [q for q in queries if q.get("score", 0) < 3]
     strong = [q for q in queries if q.get("score", 0) >= 3]
     if weak and len(queries) < 25:
-        regen_msgs = [
-            {"role": "developer", "content": "Generate better replacements for these weak queries. Be more specific and natural. Return JSON array. No preamble."},
-            {"role": "user", "content": f"Brand: {brand_name} ({domain})\nWeak queries: {json.dumps(weak)}\nGenerate {len(weak)} better ones."},
-        ]
         try:
-            resp = await _call_openrouter(regen_msgs, "chatgpt", client, temperature=0.7, max_tokens=1024)
-            match = re.search(r"\[.*\]", resp, re.DOTALL)
-            if match:
-                queries = strong + _json.loads(match.group())
+            resp = await _call_openrouter([
+                {"role": "developer", "content": "Return ONLY a valid JSON array of replacement queries. No text, no markdown."},
+                {"role": "user", "content": (
+                    f"These queries for {brand_name} ({domain}) scored poorly:\n{json.dumps(weak)}\n\n"
+                    f"Generate {len(weak)} better, more specific, natural replacements.\n"
+                    f"Return: [{{\"query_text\":\"...\",\"query_type\":\"...\",\"score\":1-5}}]"
+                )},
+            ], "chatgpt", client, temperature=0.7, max_tokens=1024)
+            result = _parse_json(resp)
+            if isinstance(result, list):
+                queries = strong + result
         except Exception:
             pass
 
@@ -348,7 +386,7 @@ async def generate_scored_queries(brand_name: str, domain: str, classification: 
 # ─── Probe Scan ────────────────────────────────────────────────────────────────
 
 async def run_probe_scan(brand_name: str, domain: str, queries: list[dict], client) -> dict:
-    """Run a small probe scan (3 queries x 3 LLMs) and return analysis."""
+    """Run a small probe scan (3 queries x 3 LLMs) and return structured analysis."""
     probe_queries = sorted(queries, key=lambda q: q.get("score", 0), reverse=True)[:3]
     llm_names = ["chatgpt", "gemini", "llama"]
 
@@ -360,20 +398,22 @@ async def run_probe_scan(brand_name: str, domain: str, queries: list[dict], clie
 
     results_text = []
     for q_id, llm_name, response, error in raw:
-        status = error if error else (response[:200] if response else "empty")
+        status = error if error else (response[:300] if response else "empty")
         results_text.append(f"Query: {q_id}\nLLM: {llm_name}\nResponse: {status}\n")
 
-    probe_msgs = [
-        {"role": "developer", "content": PROBE_DEVELOPER},
-        {"role": "user", "content": f"<brand>{brand_name} ({domain})</brand><results>{''.join(results_text)}</results>"},
+    messages = [
+        {"role": "developer", "content": "Return ONLY a valid JSON object with keys 'insights' (array) and 'summary' (string). No text, no markdown."},
+        {"role": "user", "content": (
+            f"Analyze probe scan for {brand_name} ({domain}):\n\n{''.join(results_text)}\n\n"
+            f'For each query, return:\n{{"query_text":"...","brand_overmentioned":bool,"competitors_found":["..."],"recommendation":"keep"|"drop"|"refine"}}\n'
+            f'Overall summary explaining findings.'
+        )},
     ]
 
     for model in ["chatgpt"]:
         try:
-            resp = await _call_openrouter(probe_msgs, model, client, temperature=0.3, max_tokens=1024)
-            match = re.search(r"\{.*\}", resp, re.DOTALL)
-            if match:
-                return json.loads(match.group())
+            resp = await _call_openrouter(messages, model, client, temperature=0.3, max_tokens=1024)
+            return _parse_json(resp)
         except Exception:
             continue
 
