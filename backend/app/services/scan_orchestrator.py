@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text
 
 from app.models.models import Brand, MonitoredQuery, Scan, QueryResult, ScanStatus
-from app.services.llm_adapters import scan_query, scan_all_llms
+from app.services.llm_adapters import scan_query, scan_all_llms, OpenRouterAdapter
 
 logger = logging.getLogger(__name__)
 
