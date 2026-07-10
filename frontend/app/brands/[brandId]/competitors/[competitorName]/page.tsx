@@ -159,7 +159,7 @@ export default function CompetitorDrilldownPage() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {theyWin.map((q, i) => (
-                <div key={`${q.query_id}-${q.llm_name}`} className="card" style={{ padding: "10px 14px", transform: `rotate(${i % 2 === 0 ? "-0.15deg" : "0.15deg"})`, borderLeft: "4px solid #EF4444" }}>
+                <div key={`${q.query_id}-${q.llm_name}`} className="card" style={{ padding: "10px 14px", transform: `rotate(${i % 2 === 0 ? "-0.15deg" : "0.15deg"})`, borderLeft: "4px solid #EF4444", boxShadow: "2px 2px 0 #1A1A1A, 3px 3px 0 #1A1A1A", background: "#FFF9DB" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
                     <Link href={`/brands/${brandId}/queries/${q.query_id}`} style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", textDecoration: "none", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{q.query_text}</Link>
                     <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, textTransform: "capitalize", flexShrink: 0 }}>{q.llm_name}</span>
@@ -183,7 +183,7 @@ export default function CompetitorDrilldownPage() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {youWin.map((q, i) => (
-                <div key={`${q.query_id}-${q.llm_name}`} className="card" style={{ padding: "10px 14px", transform: `rotate(${i % 2 === 0 ? "-0.15deg" : "0.15deg"})`, borderLeft: "4px solid #22C55E" }}>
+                <div key={`${q.query_id}-${q.llm_name}`} className="card" style={{ padding: "10px 14px", transform: `rotate(${i % 2 === 0 ? "-0.15deg" : "0.15deg"})`, borderLeft: "4px solid #22C55E", boxShadow: "2px 2px 0 #1A1A1A, 3px 3px 0 #1A1A1A", background: "#E6F9ED" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
                     <Link href={`/brands/${brandId}/queries/${q.query_id}`} style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", textDecoration: "none", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{q.query_text}</Link>
                     <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, textTransform: "capitalize", flexShrink: 0 }}>{q.llm_name}</span>
@@ -207,7 +207,7 @@ export default function CompetitorDrilldownPage() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {youAbsent.map((q, i) => (
-                <div key={`${q.query_id}-${q.llm_name}`} className="card" style={{ padding: "10px 14px", transform: `rotate(${i % 2 === 0 ? "-0.15deg" : "0.15deg"})`, borderLeft: "4px solid var(--bg-dark)", opacity: 0.7 }}>
+                <div key={`${q.query_id}-${q.llm_name}`} className="card" style={{ padding: "10px 14px", transform: `rotate(${i % 2 === 0 ? "-0.15deg" : "0.15deg"})`, borderLeft: "4px solid var(--bg-dark)", boxShadow: "1px 1px 0 #1A1A1A, 2px 2px 0 #1A1A1A", background: "var(--surface)", opacity: 0.7 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
                     <Link href={`/brands/${brandId}/queries/${q.query_id}`} style={{ fontSize: 13, fontWeight: 600, color: "var(--text-muted)", textDecoration: "none", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{q.query_text}</Link>
                     <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, textTransform: "capitalize", flexShrink: 0 }}>{q.llm_name}</span>
