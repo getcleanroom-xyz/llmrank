@@ -235,7 +235,7 @@ function BrandsPageInner() {
                       </>
                     ) : (
                       <>
-                        <button onClick={() => setDeleteConfirm(b.id)} className="btn btn-sm btn-ghost" style={{ color: "var(--red)" }}>Del</button>
+                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteConfirm(b.id); }} className="btn btn-sm btn-ghost" style={{ color: "var(--red)" }}>Del</button>
                       </>
                     )}
                   </div>
