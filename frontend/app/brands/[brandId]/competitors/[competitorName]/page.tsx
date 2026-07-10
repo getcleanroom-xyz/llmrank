@@ -96,16 +96,14 @@ export default function CompetitorDrilldownPage() {
         </div>
 
         {/* Actionable recommendation */}
-        {data.mention_pct >= 25 && (
+        {data.insight && (
           <div style={{ position: "relative", background: "#FFF9DB", border: "2px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "3px 3px 0 #1A1A1A", padding: "14px 18px", marginBottom: "var(--gap)", transform: "rotate(0.2deg)" }}>
             <svg width="16" height="20" viewBox="0 0 16 20" fill="none" style={{ position: "absolute", top: -9, left: 12, zIndex: 2 }}>
               <ellipse cx="8" cy="4" rx="4" ry="4" fill="#EF4444" stroke="#1A1A1A" strokeWidth="1.2" />
               <rect x="6.5" y="8" width="3" height="6" rx="0.5" fill="#DC2626" stroke="#1A1A1A" strokeWidth="1.2" />
             </svg>
             <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5, fontFamily: "var(--font-serif), Georgia, serif", marginTop: 4 }}>
-              A <strong>&quot;{decodedName} vs your brand&quot; comparison page</strong> is your highest-impact content move right now.
-              {theyWin.length > 0 && <> They&apos;re winning in <strong>{theyWin.length}</strong> quer{theyWin.length !== 1 ? "ies" : "y"}.</>}
-              {youWin.length > 0 && <> You&apos;re ahead in <strong>{youWin.length}</strong> quer{youWin.length !== 1 ? "ies" : "y"} — double down on what&apos;s working there.</>}
+              {data.insight}
             </div>
           </div>
         )}

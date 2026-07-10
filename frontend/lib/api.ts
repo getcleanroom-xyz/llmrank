@@ -235,6 +235,7 @@ export interface CompetitorQueryResultItem {
 export interface CompetitorDrilldownData {
   competitor_name: string;
   domain: string;
+  insight: string;
   scanned_at: string;
   mention_pct: number;
   total_appearances: number;

@@ -134,3 +134,31 @@ async def generate_dashboard_insights(
         logger.warning("Dashboard insight generation failed: %s", e)
 
     return []
+
+
+async def generate_competitor_insight(
+    brand_name: str,
+    competitor_name: str,
+    mention_pct: float,
+    you_win_count: int,
+    they_win_count: int,
+    you_absent_count: int,
+) -> str:
+    """Generate a specific, actionable competitive insight using LLM."""
+    user_msg = (
+        f"Brand: {brand_name} | Competitor: {competitor_name}\n"
+        f"Mention rate: {mention_pct}% | Brand wins: {you_win_count} | Competitor wins: {they_win_count} | Brand absent: {you_absent_count}\n\n"
+        f"Generate ONE specific, actionable sentence about how {brand_name} can compete better. Reference the data. Return ONLY the sentence."
+    )
+    messages = [
+        {"role": "developer", "content": "You are a competitive strategist. Output a single short sentence. No JSON, no lists, no preamble."},
+        {"role": "user", "content": user_msg},
+    ]
+    try:
+        from app.services.llm_adapters import _call_openrouter
+        import httpx
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await _call_openrouter(messages, "chatgpt", client, temperature=0.3, max_tokens=256)
+            return resp.strip().strip('"').strip("'")
+    except Exception:
+        return ""

@@ -27,7 +27,7 @@ from app.schemas.schemas import (
 )
 from app.services.scan_orchestrator import run_scan, generate_query_suggestions
 from app.services.llm_adapters import scan_all_llms, scan_query, OpenRouterAdapter, _call_openrouter, _parse_json, SCAN_DEVELOPER
-from app.services.insight_engine import generate_insights_for_query, generate_dashboard_insights
+from app.services.insight_engine import generate_insights_for_query, generate_dashboard_insights, generate_competitor_insight
 from app.services.credit_service import get_or_create_wallet, check_credits, deduct_credits, grant_credits, get_credit_history, calculate_scan_cost, CREDIT_COSTS, CREDITS_PER_DOLLAR
 from app.services.cache import dashboard_cache
 from app.api.auth import get_current_user, get_optional_user
@@ -938,12 +938,15 @@ async def get_competitor_drilldown(
     query_map = {q.id: q for q in queries_query.scalars().all()}
 
     beats_count = 0
+    brand_wins = 0
     queries_out = []
     for r, comp_pos in comp_results:
         q = query_map.get(r.query_id)
         brand_pos = r.position if r.mentioned else None
         if r.mentioned and brand_pos is not None and comp_pos < brand_pos:
             beats_count += 1
+        elif r.mentioned and brand_pos is not None and comp_pos > brand_pos:
+            brand_wins += 1
 
         queries_out.append(CompetitorQueryResult(
             query_id=r.query_id,
@@ -963,13 +966,37 @@ async def get_competitor_drilldown(
     competitors_data = brand_result.scalar_one_or_none()
     if competitors_data:
         for c in competitors_data:
-            if c.get("name", "").lower() == competitor_name.lower() and c.get("domain"):
-                comp_domain = c["domain"]
+            if c.get("name", "").lower() == competitor_name.lower():
+                comp_domain = c.get("domain", "") or ""
                 break
+    # Fallback: construct domain from competitor name
+    if not comp_domain:
+        comp_domain = f"{competitor_name.lower().replace(' ', '').replace('-', '')}.com"
+
+    # Generate competitive insight
+    brand_result2 = await db.execute(select(Brand).where(Brand.id == brand_id))
+    brand_name = brand_result2.scalar_one_or_none().name if brand_result2.scalar_one_or_none() else ""
+
+    comp_insight = ""
+    try:
+        comp_insight = await generate_competitor_insight(
+            brand_name, competitor_name,
+            round(len(comp_results) / len(all_results) * 100, 1) if all_results else 0,
+            brand_wins, beats_count,
+            len({r.query_id for r, _ in comp_results}) - beats_count - brand_wins,
+        )
+    except Exception as e:
+        logger.warning("Competitor insight failed: %s", e)
+
+    comp_insight = comp_insight or (
+        f"{competitor_name} beats you in {beats_count} out of {total_queries} queries. "
+        f"A comparison page targeting their weaknesses is your highest-impact move."
+    )
 
     return CompetitorDrilldownOut(
         competitor_name=competitor_name,
         domain=comp_domain,
+        insight=comp_insight,
         scanned_at=latest_scan.completed_at or latest_scan.started_at,
         mention_pct=round(len(comp_results) / len(all_results) * 100, 1) if all_results else 0,
         total_appearances=len(comp_results),
