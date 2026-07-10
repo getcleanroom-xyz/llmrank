@@ -35,6 +35,22 @@ KNOWN_COMPETITORS = [
 ]
 
 
+def strip_markdown(text: str) -> str:
+    """Strip common markdown formatting from LLM responses before parsing."""
+    # Bold/italic: **text**, *text*, __text__, _text_
+    text = re.sub(r"\*{1,2}([^*]+)\*{1,2}", r"\1", text)
+    text = re.sub(r"_{1,2}([^_]+)_{1,2}", r"\1", text)
+    # Inline code: `text`
+    text = re.sub(r"`([^`]+)`", r"\1", text)
+    # Links: [text](url)
+    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+    # Headers: ### text
+    text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
+    # Horizontal rules
+    text = re.sub(r"^[-*_]{3,}\s*$", "", text, flags=re.MULTILINE)
+    return text.strip()
+
+
 @dataclass
 class RankingResult:
     mentioned: bool
@@ -151,45 +167,78 @@ def analyze_sentiment(text: str, brand_variants: list[str]) -> tuple[str, float]
         return "neutral", 0.5
 
 
+# Words that are category descriptions, not competitor names
+GENERIC_TERMS = {
+    "networking", "professional", "social", "platform", "tool", "app", "software",
+    "service", "product", "solution", "website", "page", "site", "blog", "review",
+    "comparison", "alternative", "alternative to", "personal", "business", "enterprise",
+    "open source", "free", "premium", "freemium", "saas", "platform as a service",
+}
+
+
 def extract_competitors(text: str, brand_variants: list[str]) -> list[dict]:
-    """Extract competitors from numbered lists and natural text.
-    Fully dynamic: detects any competitor, not just known ones."""
-    text_lower = text.lower()
+    """Extract competitors from numbered lists. Fully dynamic detection."""
     found = []
     seen = set()
 
-    # Strategy 1: Parse numbered lists — most reliable
+    # Parse numbered lists — most reliable
     numbered_pattern = re.compile(r"(\d+)[.)]\s+([^\n.]+)", re.MULTILINE)
     matches = numbered_pattern.findall(text)
 
     for num_str, item_text in matches:
-        is_brand = any(v in text_lower[0:text_lower.find(item_text.lower())] + item_text.lower() for v in brand_variants)
+        clean = item_text.strip()
+        is_brand = any(v in clean.lower() for v in brand_variants)
         if is_brand:
             continue
-        # Extract the leading proper noun or first meaningful phrase
-        clean = item_text.strip()
-        lead_match = re.match(r"^[:\s]*([A-Z][a-zA-Z0-9]+(?:\s+[A-Z][a-zA-Z0-9]+){0,3})", clean)
+
+        # Extract: look for a multi-word proper noun, or a short capitalized phrase
+        # that's NOT a generic category word
+        lead_match = re.match(
+            r"^[:\s]*([A-Z][a-zA-Z0-9]+(?:[\s+\-/]+[A-Z0-9][a-zA-Z0-9]*){0,3})",
+            clean,
+        )
         if lead_match:
             candidate = lead_match.group(1).strip()
         else:
-            # Fallback: take the first few words
-            words = clean.split()[:3]
-            candidate = " ".join(words)
-        if candidate and candidate.lower() not in seen and not any(v in candidate.lower() for v in brand_variants):
-            seen.add(candidate.lower())
-            found.append({"name": candidate, "position": int(num_str)})
+            # Try lowercase brand-style names (e.g., "notion", "clickup")
+            lower_match = re.match(r"^[:\s]*([a-z][a-zA-Z0-9]+(?:[\s+\-/]+[a-zA-Z0-9]+){0,2})", clean)
+            if lower_match:
+                candidate = lower_match.group(1).strip()
+            else:
+                words = clean.split()[:3]
+                candidate = " ".join(words)
+
+        # Filter: must be at least 2 chars, not a generic term, not the brand
+        candidate_lower = candidate.lower().strip("*")
+        if (
+            len(candidate) >= 2
+            and candidate_lower not in seen
+            and not any(v in candidate_lower for v in brand_variants)
+            and candidate_lower not in GENERIC_TERMS
+            and not any(t in candidate_lower for t in GENERIC_TERMS)
+        ):
+            # Clean remaining markdown
+            clean_name = re.sub(r"[*_`]", "", candidate).strip()
+            if clean_name:
+                seen.add(candidate_lower)
+                found.append({"name": clean_name, "position": int(num_str)})
 
     if found:
         return sorted(found, key=lambda x: x["position"])
 
-    # Strategy 2: Sentence order fallback
+    # Fallback: sentence order — only multi-word capitalized phrases
     sentences = extract_sentences(text)
     for i, sentence in enumerate(sentences):
-        # Look for any capitalized multi-word phrase that isn't the brand
-        lead_match = re.findall(r"([A-Z][a-zA-Z0-9]+(?:\s+[A-Z][a-zA-Z0-9]+){1,3})", sentence)
-        for candidate in lead_match:
-            if candidate.lower() not in seen and not any(v in candidate.lower() for v in brand_variants):
-                seen.add(candidate.lower())
+        lead_matches = re.findall(r"([A-Z][a-zA-Z0-9]+(?:\s+[A-Z][a-zA-Z0-9]+){1,3})", sentence)
+        for candidate in lead_matches:
+            cl = candidate.lower()
+            if (
+                cl not in seen
+                and not any(v in cl for v in brand_variants)
+                and cl not in GENERIC_TERMS
+                and not any(t in cl for t in GENERIC_TERMS)
+            ):
+                seen.add(cl)
                 found.append({"name": candidate, "position": i + 1})
 
     return found[:10]
@@ -260,13 +309,14 @@ def rank_response(
     llm_response: str,
 ) -> RankingResult:
     """Full pipeline: run all ranking analysis on a single LLM response."""
+    clean = strip_markdown(llm_response)
     brand_variants = normalize_brand(brand_name, domain)
-    sentences = extract_sentences(llm_response)
+    sentences = extract_sentences(clean)
 
     mentioned, position = find_brand_position(sentences, brand_variants)
-    sentiment, sentiment_score = analyze_sentiment(llm_response, brand_variants)
-    competitors = extract_competitors(llm_response, brand_variants)
-    annotated = annotate_response(llm_response, brand_variants, competitors)
+    sentiment, sentiment_score = analyze_sentiment(clean, brand_variants)
+    competitors = extract_competitors(clean, brand_variants)
+    annotated = annotate_response(clean, brand_variants, competitors)
     score = compute_score(mentioned, position, sentiment)
 
     return RankingResult(
