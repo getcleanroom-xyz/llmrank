@@ -132,7 +132,7 @@ class ScanOut(BaseModel):
 # Result schemas
 class CompetitorMention(BaseModel):
     name: str
-    position: int
+    position: Optional[int] = None
 
 
 class AnnotationSpan(BaseModel):
@@ -239,7 +239,7 @@ class CompetitorQueryResult(BaseModel):
     query_id: UUID
     query_text: str
     llm_name: str
-    competitor_position: int
+    competitor_position: Optional[int]
     brand_mentioned: bool
     brand_position: Optional[int]
     score: Optional[float]

@@ -37,7 +37,7 @@ export interface AnnotationSpan {
 
 export interface CompetitorMention {
   name: string;
-  position: number;
+  position: number | null;
 }
 
 export interface QueryResult {

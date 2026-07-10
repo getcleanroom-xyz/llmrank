@@ -137,7 +137,7 @@ export default function LLMDrilldownPage() {
                     <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
                       {q.competitors_mentioned.map((c) => (
                         <Link key={c.name} href={`/brands/${brandId}/competitors/${encodeURIComponent(c.name)}`} style={{ textDecoration: "none" }}>
-                          <span className="pill pill-neu" style={{ fontSize: 10, cursor: "pointer" }}>#{c.position} {c.name}</span>
+                          <span className="pill pill-neu" style={{ fontSize: 10, cursor: "pointer" }}>{c.position != null ? `#${c.position} ` : ""}{c.name}</span>
                         </Link>
                       ))}
                     </div>

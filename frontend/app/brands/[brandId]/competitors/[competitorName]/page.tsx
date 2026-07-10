@@ -31,8 +31,8 @@ export default function CompetitorDrilldownPage() {
     </div>
   );
 
-  const theyWin = data.queries.filter((q) => q.brand_mentioned && q.competitor_position < (q.brand_position ?? 999));
-  const youWin = data.queries.filter((q) => q.brand_mentioned && (q.brand_position ?? 999) < q.competitor_position);
+  const theyWin = data.queries.filter((q) => q.brand_mentioned && q.competitor_position != null && q.competitor_position < (q.brand_position ?? 999));
+  const youWin = data.queries.filter((q) => q.brand_mentioned && q.competitor_position != null && (q.brand_position ?? 999) < q.competitor_position);
   const youAbsent = data.queries.filter((q) => !q.brand_mentioned);
 
   const threatLabel = data.mention_pct >= 50 ? "High threat" : data.mention_pct >= 25 ? "Medium threat" : "Low threat";
@@ -139,7 +139,7 @@ export default function CompetitorDrilldownPage() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {Object.entries(llmGroups).map(([llm, queries]) => {
-                const wins = queries.filter((q) => q.brand_mentioned && q.competitor_position < (q.brand_position ?? 999)).length;
+                const wins = queries.filter((q) => q.brand_mentioned && q.competitor_position != null && q.competitor_position < (q.brand_position ?? 999)).length;
                 const pct = Math.round((wins / queries.length) * 100);
                 return (
                   <div key={llm} style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -179,7 +179,7 @@ export default function CompetitorDrilldownPage() {
                     <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, textTransform: "capitalize", flexShrink: 0 }}>{q.llm_name}</span>
                   </div>
                   <div style={{ display: "flex", gap: 10, fontSize: 11, alignItems: "center", marginTop: 2 }}>
-                    <span style={{ color: "#991B1B", fontWeight: 700 }}>{decodedName} #{q.competitor_position}</span>
+                    <span style={{ color: "#991B1B", fontWeight: 700 }}>{decodedName}{q.competitor_position != null ? ` #${q.competitor_position}` : ""}</span>
                     <span style={{ color: "var(--text-muted)" }}>You #{q.brand_position}</span>
                   </div>
                 </div>
@@ -204,7 +204,7 @@ export default function CompetitorDrilldownPage() {
                   </div>
                   <div style={{ display: "flex", gap: 10, fontSize: 11, alignItems: "center", marginTop: 2 }}>
                     <span style={{ color: "#166534", fontWeight: 700 }}>You #{q.brand_position}</span>
-                    <span style={{ color: "var(--text-muted)" }}>{decodedName} #{q.competitor_position}</span>
+                    <span style={{ color: "var(--text-muted)" }}>{decodedName}{q.competitor_position != null ? ` #${q.competitor_position}` : ""}</span>
                   </div>
                 </div>
               ))}
@@ -227,7 +227,7 @@ export default function CompetitorDrilldownPage() {
                     <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, textTransform: "capitalize", flexShrink: 0 }}>{q.llm_name}</span>
                   </div>
                   <div style={{ display: "flex", gap: 10, fontSize: 11, alignItems: "center", marginTop: 2 }}>
-                    <span style={{ color: "#991B1B", fontWeight: 700 }}>{decodedName} #{q.competitor_position}</span>
+                    <span style={{ color: "#991B1B", fontWeight: 700 }}>{decodedName}{q.competitor_position != null ? ` #${q.competitor_position}` : ""}</span>
                     <span style={{ color: "var(--text-muted)" }}>Not mentioned</span>
                   </div>
                 </div>

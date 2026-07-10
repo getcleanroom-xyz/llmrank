@@ -125,7 +125,7 @@ async def run_scan(
             # Build competitors list from the LLM's structured output
             comps_raw = result_data.get("competitors", [])
             brand_lower = brand.name.lower()
-            competitors = [{"name": c, "position": 0} for c in comps_raw
+            competitors = [{"name": c} for c in comps_raw
                           if isinstance(c, str) and c.lower() != brand_lower and
                           c.lower() != brand.domain.split(".")[0]]
             # Compute score from LLM's structured data

@@ -174,7 +174,7 @@ export function LLMResponseCard({ result }: { result: QueryResult }) {
           <div style={{ padding: "8px 14px", borderTop: "1.5px solid var(--border)" }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", marginBottom: 4, textTransform: "uppercase" }}>Also ranked</div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {result.competitors_mentioned.slice(0, 5).map((c) => <span key={c.name} className="pill pill-neu" style={{ fontSize: 10 }}>#{c.position} {c.name}</span>)}
+              {result.competitors_mentioned.slice(0, 5).map((c) => <span key={c.name} className="pill pill-neu" style={{ fontSize: 10 }}>{c.position != null ? `#${c.position} ` : ""}{c.name}</span>)}
             </div>
           </div>
         )}

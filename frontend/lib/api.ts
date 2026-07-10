@@ -226,7 +226,7 @@ export interface CompetitorQueryResultItem {
   query_id: string;
   query_text: string;
   llm_name: string;
-  competitor_position: number;
+  competitor_position: number | null;
   brand_mentioned: boolean;
   brand_position: number | null;
   score: number | null;

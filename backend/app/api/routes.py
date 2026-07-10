@@ -884,7 +884,7 @@ async def get_llm_drilldown(
             position=r.position,
             sentiment=r.sentiment.value if hasattr(r.sentiment, "value") else r.sentiment,
             score=r.score,
-            competitors_mentioned=[CompetitorMention(name=c.get("name", ""), position=c.get("position", 0)) for c in (r.competitors_mentioned or [])],
+            competitors_mentioned=[CompetitorMention(name=c.get("name", ""), position=c.get("position")) for c in (r.competitors_mentioned or [])],
         ))
 
     queries_out.sort(key=lambda x: (x.position or 999))
@@ -935,7 +935,7 @@ async def get_competitor_drilldown(
         comps = r.competitors_mentioned or []
         for c in comps:
             if _normalize_competitor(c.get("name", "")) == normalized_target:
-                comp_results.append((r, c.get("position", 0)))
+                comp_results.append((r, c.get("position")))
                 break
 
     if not comp_results:
@@ -954,10 +954,11 @@ async def get_competitor_drilldown(
     for r, comp_pos in comp_results:
         q = query_map.get(r.query_id)
         brand_pos = r.position if r.mentioned else None
-        if r.mentioned and brand_pos is not None and comp_pos < brand_pos:
-            beats_count += 1
-        elif r.mentioned and brand_pos is not None and comp_pos > brand_pos:
-            brand_wins += 1
+        if r.mentioned and brand_pos is not None and comp_pos is not None:
+            if comp_pos < brand_pos:
+                beats_count += 1
+            elif comp_pos > brand_pos:
+                brand_wins += 1
 
         queries_out.append(CompetitorQueryResult(
             query_id=r.query_id,
@@ -969,7 +970,7 @@ async def get_competitor_drilldown(
             score=r.score,
         ))
 
-    queries_out.sort(key=lambda x: x.competitor_position)
+    queries_out.sort(key=lambda x: (x.competitor_position or 999))
 
     # Look up domain from brand's competitors list
     comp_domain = ""
