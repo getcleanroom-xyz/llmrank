@@ -1,7 +1,7 @@
 import uuid
 import logging
 from datetime import datetime, timezone
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 import asyncio
 import json
 
@@ -25,8 +25,8 @@ from app.schemas.schemas import (
     CompetitorDrilldownOut, CompetitorQueryResult, CompetitorMention,
     CreditBalanceOut, CreditGrantRequest, CreditTransactionOut,
 )
-from app.services.scan_orchestrator import run_scan, generate_query_suggestions
-from app.services.llm_adapters import orchestrate_query_generation
+from app.services.scan_orchestrator import run_scan
+from app.services.llm_adapters import scan_all_llms, scan_query, OpenRouterAdapter, _call_openrouter, _parse_json, SCAN_DEVELOPER
 from app.services.insight_engine import generate_insights_for_query, generate_dashboard_insights
 from app.services.credit_service import get_or_create_wallet, check_credits, deduct_credits, grant_credits, get_credit_history, calculate_scan_cost, CREDIT_COSTS, CREDITS_PER_DOLLAR
 from app.api.auth import get_current_user, get_optional_user
@@ -244,6 +244,73 @@ async def probe_queries(request: Request, brand_id: uuid.UUID, db: AsyncSession 
         queries = await generate_scored_queries(brand.name, brand.domain, classification, competitors, client)
         probe = await run_probe_scan(brand.name, brand.domain, queries, client)
     return {"queries": queries, "probe_result": probe}
+
+
+@router.post("/brands/{brand_id}/queries/{query_id}/rescan", tags=["Queries"])
+@limiter.limit("10/minute")
+async def rescan_single_query(
+    request: Request,
+    brand_id: uuid.UUID,
+    query_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Rescan a single query across standard LLMs and persist results."""
+    query_result = await db.execute(
+        select(MonitoredQuery).where(MonitoredQuery.id == query_id, MonitoredQuery.brand_id == brand_id)
+    )
+    query = query_result.scalar_one_or_none()
+    if not query:
+        raise HTTPException(404, "Query not found")
+
+    llm_names = ["chatgpt", "gemini", "llama"]
+
+    # Create a scan record
+    scan = Scan(id=uuid.uuid4(), brand_id=brand_id, status=ScanStatus.running, started_at=_utcnow())
+    db.add(scan)
+    await db.commit()
+
+    import httpx as _httpx
+    async with _httpx.AsyncClient(timeout=45) as client:
+        raw_results = await scan_all_llms([(str(query.id), query.query_text)], llm_names, client)
+
+    results: list[QueryResult] = []
+    for q_id, llm_name, result_data, error in raw_results:
+        if error or not result_data:
+            r = QueryResult(id=uuid.uuid4(), scan_id=scan.id, query_id=query.id, llm_name=llm_name,
+                raw_response=f"[Error: {error}]" if error else "[Empty response]",
+                mentioned=False, position=None, sentiment="not_mentioned",
+                competitors_mentioned=[], annotated_response=None, score=None)
+        else:
+            r = QueryResult(id=uuid.uuid4(), scan_id=scan.id, query_id=query.id, llm_name=llm_name,
+                raw_response=result_data.get("summary", str(result_data)),
+                mentioned=result_data.get("brand_mentioned", False),
+                position=result_data.get("brand_position"),
+                sentiment=result_data.get("brand_sentiment", "not_mentioned"),
+                competitors_mentioned=[{"name": c, "position": 0} for c in result_data.get("competitors", [])],
+                annotated_response=None,
+                score=_compute_scan_score(
+                    result_data.get("brand_mentioned", False),
+                    result_data.get("brand_position"),
+                    result_data.get("brand_sentiment", "not_mentioned"),
+                ))
+        results.append(r)
+
+    db.add_all(results)
+    scan.status = ScanStatus.completed
+    scan.completed_at = _utcnow()
+    await db.commit()
+
+    return {"scan_id": str(scan.id)}
+
+
+def _compute_scan_score(mentioned: bool, position: Optional[int], sentiment: str) -> float:
+    """Replicate the score logic from scan_orchestrator."""
+    if not mentioned:
+        return 5.0
+    base = 40.0
+    pos_bonus = {1: 35, 2: 25, 3: 15, 4: 8}.get(position or 99, 3)
+    sent_bonus = {"positive": 20, "neutral": 10, "negative": 0}.get(sentiment, 0)
+    return round(min(100.0, base + pos_bonus + sent_bonus), 1)
 
 
 # ─── Scans ─────────────────────────────────────────────────────────────────────

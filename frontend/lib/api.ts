@@ -152,6 +152,9 @@ export const triggerScan = (brandId: string, llms: string[]) =>
     body: JSON.stringify({ llms }),
   });
 
+export const rescanQuery = (brandId: string, queryId: string) =>
+  apiFetch<{ scan_id: string }>(`/brands/${brandId}/queries/${queryId}/rescan`, { method: "POST" });
+
 export const getScans = (brandId: string, page: number = 1, perPage: number = 20) =>
   apiFetch<Scan[]>(`/brands/${brandId}/scans?page=${page}&per_page=${perPage}`);
 
