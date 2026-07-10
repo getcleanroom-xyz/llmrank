@@ -169,12 +169,12 @@ function BrandDashboardPageInner() {
             {/* Hero score card */}
             {hasScan && (
               <div
+                className="card sketchy-accent"
                 style={{
                   position: "relative",
                   background: "#FFF9DB",
                   border: "2px solid var(--border)",
                   borderRadius: "var(--radius)",
-                  boxShadow: "5px 5px 0 #1A1A1A",
                   padding: "28px 32px",
                   marginBottom: "var(--gap)",
                   display: "flex",
@@ -224,6 +224,7 @@ function BrandDashboardPageInner() {
               ].map((s, i) => (
                 <div
                   key={s.label}
+                  className="card sketchy"
                   style={{
                     background: s.bg,
                     border: "2px solid var(--border)",

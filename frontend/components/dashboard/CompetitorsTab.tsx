@@ -69,7 +69,7 @@ export function CompetitorsTab({ brandId }: { brandId: string }) {
           return (
             <div
               key={c.name}
-              className="card"
+              className="card sketchy"
               onClick={() => router.push(`/brands/${bid}/competitors/${encodeURIComponent(c.name)}`)}
               style={{
                 padding: "14px 16px",

@@ -61,7 +61,7 @@ export default function CompetitorDrilldownPage() {
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
 
         {/* Hero card */}
-        <div style={{ position: "relative", background: threatBg, border: "2px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "5px 5px 0 #1A1A1A, -1px 2px 0 #1A1A1A", padding: "28px 32px", marginBottom: "var(--gap)", transform: "rotate(-0.2deg)" }}>
+        <div className="card sketchy-accent" style={{ position: "relative", background: threatBg, border: "2px solid var(--border)", borderRadius: "var(--radius)", padding: "28px 32px", marginBottom: "var(--gap)", transform: "rotate(-0.2deg)" }}>
           <svg width="22" height="26" viewBox="0 0 22 26" fill="none" style={{ position: "absolute", top: -12, left: 24, zIndex: 2 }}>
             <ellipse cx="11" cy="5" rx="5.5" ry="5.5" fill="#EF4444" stroke="#1A1A1A" strokeWidth="1.5" />
             <rect x="9" y="10" width="4" height="10" rx="1" fill="#DC2626" stroke="#1A1A1A" strokeWidth="1.5" />

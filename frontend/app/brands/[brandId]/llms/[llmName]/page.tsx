@@ -64,7 +64,7 @@ export default function LLMDrilldownPage() {
 
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
         {/* Hero card */}
-        <div style={{ position: "relative", background: "#FFF9DB", border: "2px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "4px 4px 0 #1A1A1A", padding: "24px 28px", marginBottom: "var(--gap)", display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap", transform: "rotate(-0.2deg)" }}>
+        <div className="card sketchy" style={{ position: "relative", background: "#FFF9DB", border: "2px solid var(--border)", borderRadius: "var(--radius)", padding: "24px 28px", marginBottom: "var(--gap)", display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap", transform: "rotate(-0.2deg)" }}>
           <svg width="22" height="26" viewBox="0 0 22 26" fill="none" style={{ position: "absolute", top: -12, left: 24, zIndex: 2 }}>
             <ellipse cx="11" cy="5" rx="5.5" ry="5.5" fill="#EF4444" stroke="#1A1A1A" strokeWidth="1.5" />
             <rect x="9" y="10" width="4" height="10" rx="1" fill="#DC2626" stroke="#1A1A1A" strokeWidth="1.5" />

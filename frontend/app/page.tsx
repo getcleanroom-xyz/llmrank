@@ -284,7 +284,7 @@ export default function HomePage() {
             {STEPS.map((item, i) => (
               <div
                 key={item.step}
-                className="card"
+                className="card sketchy"
                 style={{
                   background: STEP_COLORS[i].bg,
                   position: "relative",
@@ -339,7 +339,7 @@ export default function HomePage() {
             {FEATURES.map((feature, i) => (
               <div
                 key={feature.title}
-                className="card"
+                className="card sketchy"
                 style={{
                   padding: 14,
                   transform: `rotate(${i % 2 === 0 ? "-0.3deg" : "0.3deg"})`,
