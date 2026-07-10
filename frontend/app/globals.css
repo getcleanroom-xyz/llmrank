@@ -20,7 +20,7 @@
   --text-secondary: #333333;
   --text-muted:     #666666;
 
-  --radius:         10px;
+  --radius:         0px;
   --shadow:         4px 4px 0px #1A1A1A;
   --shadow-sm:      3px 3px 0px #1A1A1A;
   --shadow-hover:   5px 5px 0px #1A1A1A;
