@@ -1,66 +1,47 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { getQueryDrilldown, rescanQuery, getQueryDrilldown as fetchDrilldown } from "@/lib/api";
-import type { QueryDrilldown } from "@/types";
+import { rescanQuery } from "@/lib/api";
+import { useQueryDrilldown } from "@/lib/hooks";
 import { AppHeader, PageHeader } from "@/components/AppHeader";
 import { InsightRow, getLLMColor } from "@/components/ui";
 import { SENTIMENT_LABELS, LLM_NAMES } from "@/lib/utils";
 
 function QueryDrilldownInner() {
   const { brandId, queryId } = useParams<{ brandId: string; queryId: string }>();
-  const [data, setData] = useState<QueryDrilldown | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isFetching, error: loadError, refetch } = useQueryDrilldown(brandId, queryId);
   const [rescanning, setRescanning] = useState(false);
   const [rescanId, setRescanId] = useState<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const loadData = useCallback(() => {
-    abortRef.current?.abort();
-    const c = new AbortController();
-    abortRef.current = c;
-    setLoading(true);
-    setError(null);
-    fetchDrilldown(brandId, queryId)
-      .then((d) => { if (!c.signal.aborted) setData(d); })
-      .catch((e) => { if (!c.signal.aborted) setError(e instanceof Error ? e.message : "Failed to load"); })
-      .finally(() => { if (!c.signal.aborted) setLoading(false); });
-  }, [brandId, queryId]);
-
-  useEffect(() => { loadData(); }, [loadData]);
-
-  // Poll for scan completion
+  // Poll for re-scan completion
   useEffect(() => {
     if (!rescanId) return;
     pollRef.current = setInterval(async () => {
-      try {
-        const d = await fetchDrilldown(brandId, queryId);
-        setData(d);
+      const result = await refetch();
+      if (result.isSuccess) {
         setRescanId(null);
         setRescanning(false);
-        clearInterval(pollRef.current!);
-      } catch { /* still running */ }
+        if (pollRef.current) clearInterval(pollRef.current);
+      }
     }, 2000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [rescanId, brandId, queryId]);
+  }, [rescanId, refetch]);
 
   const handleRescan = async () => {
     setRescanning(true);
     try {
       const { scan_id } = await rescanQuery(brandId, queryId);
       setRescanId(scan_id);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Re-scan failed");
+    } catch {
       setRescanning(false);
     }
   };
 
-  if (loading && !data) return <div className="page" style={{ display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "var(--text-muted)" }}>Loading...</div>;
-  if (!data) return <div className="page" style={{ padding: "var(--page-px)" }}><div style={{ color: "var(--red)", fontWeight: 700, marginBottom: 8 }}>{error ?? "No data yet."}</div><Link href={`/brands/${brandId}`} style={{ color: "var(--text)", fontWeight: 700, fontSize: 13 }}>Back</Link></div>;
+  if (isFetching && !data) return <div className="page" style={{ display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "var(--text-muted)" }}>Loading...</div>;
+  if (!data) return <div className="page" style={{ padding: "var(--page-px)" }}><div style={{ color: "var(--red)", fontWeight: 700, marginBottom: 8 }}>{loadError instanceof Error ? loadError.message : "No data yet."}</div><Link href={`/brands/${brandId}`} style={{ color: "var(--text)", fontWeight: 700, fontSize: 13 }}>Back</Link></div>;
 
   const mentioned = data.results.filter((r) => r.mentioned);
   const notMentioned = data.results.filter((r) => !r.mentioned);

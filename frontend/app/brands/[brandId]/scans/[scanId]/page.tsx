@@ -1,10 +1,10 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { getScanResults } from "@/lib/api";
-import type { ScanDetail, ScanDetailQuerySummary, ScanDetailResult } from "@/lib/api";
+import { useScanDetail } from "@/lib/hooks";
+import type { ScanDetailResult, ScanDetailQuerySummary } from "@/lib/api";
 import { AppHeader, PageHeader } from "@/components/AppHeader";
 import { ScoreRing } from "@/components/ui";
 import { PositionBadge, SENTIMENT_LABELS } from "@/lib/utils";
@@ -80,21 +80,9 @@ export default function ScanDetailPage() {
   const params = useParams<{ brandId: string; scanId: string }>();
   const brandId = params.brandId;
   const scanId = params.scanId;
-  const [data, setData] = useState<ScanDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isLoading, error } = useScanDetail(brandId, scanId);
 
-  useEffect(() => {
-    if (!brandId || !scanId) return;
-    setLoading(true);
-    setError(null);
-    getScanResults(brandId, scanId)
-      .then(setData)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load scan"))
-      .finally(() => setLoading(false));
-  }, [brandId, scanId]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="page">
         <AppHeader breadcrumb={<Link href={`/brands/${brandId}`} style={{ fontWeight: 600, color: "var(--text-muted)", textDecoration: "none", fontSize: 13 }}>Scan</Link>} />
@@ -111,7 +99,7 @@ export default function ScanDetailPage() {
         <AppHeader breadcrumb={<Link href={`/brands/${brandId}`} style={{ fontWeight: 600, color: "var(--text-muted)", textDecoration: "none", fontSize: 13 }}>Scan</Link>} />
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 48 }}>
           <div className="card" style={{ color: "var(--red)", fontSize: 13, fontWeight: 600 }}>
-            {error || "Scan not found"}
+            {error instanceof Error ? error.message : error ?? "Scan not found"}
           </div>
         </div>
       </div>

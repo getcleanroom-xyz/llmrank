@@ -136,6 +136,14 @@ export function useQueryDrilldown(brandId: string, queryId: string) {
   });
 }
 
+export function useScanDetail(brandId: string, scanId: string) {
+  return useQuery({
+    queryKey: queryKeys.scanDetail(brandId, scanId),
+    queryFn: () => api.getScanResults(brandId, scanId),
+    enabled: !!brandId && !!scanId,
+  });
+}
+
 export function useLLMDrilldown(brandId: string, llmName: string) {
   return useQuery({
     queryKey: queryKeys.llmDrilldown(brandId, llmName),

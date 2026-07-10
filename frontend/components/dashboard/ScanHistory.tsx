@@ -1,27 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useScans } from "@/lib/hooks";
-import { getScanResults } from "@/lib/api";
-import type { ScanDetail, ScanDetailQuerySummary } from "@/lib/api";
+import { useState } from "react";
+import { useScans, useScanDetail } from "@/lib/hooks";
 import { timeAgo, SENTIMENT_LABELS, PositionBadge } from "@/lib/utils";
 
 function ExpandedScan({ scanId, brandId }: { scanId: string; brandId: string }) {
-  const [data, setData] = useState<ScanDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isLoading, error } = useScanDetail(brandId, scanId);
   const [expandedQuery, setExpandedQuery] = useState<string | null>(null);
 
-  useEffect(() => {
-    setLoading(true);
-    getScanResults(brandId, scanId)
-      .then(setData)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
-      .finally(() => setLoading(false));
-  }, [brandId, scanId]);
-
-  if (loading) return <div style={{ padding: "8px 0", fontSize: 11, color: "var(--text-muted)" }}>Loading results...</div>;
-  if (error) return <div style={{ padding: "8px 0", fontSize: 11, color: "var(--red)" }}>{error}</div>;
+  if (isLoading) return <div style={{ padding: "8px 0", fontSize: 11, color: "var(--text-muted)" }}>Loading results...</div>;
+  if (error) return <div style={{ padding: "8px 0", fontSize: 11, color: "var(--red)" }}>{error instanceof Error ? error.message : "Failed to load"}</div>;
   if (!data || data.query_summaries.length === 0) return <div style={{ padding: "8px 0", fontSize: 11, color: "var(--text-muted)" }}>No query results</div>;
 
   return (
