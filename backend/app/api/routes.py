@@ -1,5 +1,6 @@
 import uuid
 import logging
+import re
 from datetime import datetime, timezone
 from typing import AsyncGenerator, Optional
 import asyncio
@@ -39,6 +40,11 @@ logger = logging.getLogger(__name__)
 def _utcnow() -> datetime:
     """Return naive UTC datetime compatible with TIMESTAMP WITHOUT TIME ZONE columns."""
     return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _normalize_competitor(name: str) -> str:
+    """Normalize competitor name for fuzzy matching (ignore spaces, hyphens, underscores, case)."""
+    return re.sub(r'[\s\-_\.]+', '', name).lower()
 
 
 # ─── Brands ────────────────────────────────────────────────────────────────────
@@ -636,18 +642,22 @@ async def get_dashboard(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db))
         ))
 
     # Competitor share of voice — based on successful results only
-    comp_counts: dict[str, int] = {}
+    comp_counts: dict[str, dict] = {}
     total_results_count = len(successful_results)
     for r in successful_results:
         for comp in (r.competitors_mentioned or []):
-            name = comp.get("name", "")
-            if name:
-                comp_counts[name] = comp_counts.get(name, 0) + 1
+            raw_name = comp.get("name", "")
+            if not raw_name:
+                continue
+            norm = _normalize_competitor(raw_name)
+            if norm not in comp_counts:
+                comp_counts[norm] = {"name": raw_name, "count": 0}
+            comp_counts[norm]["count"] += 1
 
     competitor_share = sorted(
         [
-            CompetitorShareItem(name=name, mention_pct=round(count / total_results_count * 100, 1))
-            for name, count in comp_counts.items()
+            CompetitorShareItem(name=entry["name"], mention_pct=round(entry["count"] / total_results_count * 100, 1))
+            for entry in comp_counts.values()
         ],
         key=lambda x: x.mention_pct,
         reverse=True,
@@ -920,10 +930,11 @@ async def get_competitor_drilldown(
 
     # Filter to results where this competitor is mentioned
     comp_results = []
+    normalized_target = _normalize_competitor(competitor_name)
     for r in all_results:
         comps = r.competitors_mentioned or []
         for c in comps:
-            if c.get("name", "").lower() == competitor_name.lower():
+            if _normalize_competitor(c.get("name", "")) == normalized_target:
                 comp_results.append((r, c.get("position", 0)))
                 break
 
@@ -966,7 +977,7 @@ async def get_competitor_drilldown(
     competitors_data = brand_result.scalar_one_or_none()
     if competitors_data:
         for c in competitors_data:
-            if c.get("name", "").lower() == competitor_name.lower():
+            if _normalize_competitor(c.get("name", "")) == _normalize_competitor(competitor_name):
                 comp_domain = c.get("domain", "") or ""
                 break
     # Fallback: construct domain from competitor name
