@@ -150,21 +150,19 @@ def _b64url_decode(data: str) -> bytes:
 
 # ─── Registration ─────────────────────────────────────────────────────────────
 
+# In-memory store for pending registrations (email + display_name before passkey setup)
+# Keyed by temp_id, stored in a cookie so user doesn't exist in DB until registration finishes
+_pending_registrations: dict[str, dict] = {}
+
+
 @router.post("/register/start", response_model=RegisterStartResponse)
 async def register_start(body: RegisterStartRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
     existing = await db.execute(select(User).where(User.email == body.email))
     if existing.scalar_one_or_none():
         raise HTTPException(409, "Email already registered")
 
-    user = User(id=uuid.uuid4(), email=body.email, display_name=body.display_name)
-    db.add(user)
-    await db.flush()
-
-    wallet = CreditWallet(id=uuid.uuid4(), user_id=user.id, balance=500, total_purchased=0, total_used=0)
-    db.add(wallet)
-    db.add(CreditTransaction(id=uuid.uuid4(), user_id=user.id, amount=500, type="signup_bonus", description="Welcome — 500 free credits", balance_after=500))
-    await db.commit()
-    await db.refresh(user)
+    temp_id = str(uuid.uuid4())
+    _pending_registrations[temp_id] = {"email": body.email, "display_name": body.display_name}
 
     try:
         import webauthn
@@ -173,9 +171,9 @@ async def register_start(body: RegisterStartRequest, request: Request, response:
         options = webauthn.generate_registration_options(
             rp_id=settings.RP_ID,
             rp_name="LLMRank",
-            user_id=str(user.id).encode(),
-            user_name=user.email,
-            user_display_name=user.display_name,
+            user_id=temp_id.encode(),
+            user_name=body.email,
+            user_display_name=body.display_name,
         )
 
         challenge_b64 = bytes_to_base64url(options.challenge)
@@ -185,14 +183,24 @@ async def register_start(body: RegisterStartRequest, request: Request, response:
             httponly=True,
             secure=settings.RP_ORIGIN.startswith("https"),
             samesite="none" if settings.RP_ORIGIN.startswith("https") else "lax",
-            max_age=300,  # 5 minutes
+            max_age=300,
+        )
+        response.set_cookie(
+            key="pending_reg",
+            value=_sign_data(temp_id),
+            httponly=True,
+            secure=settings.RP_ORIGIN.startswith("https"),
+            samesite="none" if settings.RP_ORIGIN.startswith("https") else "lax",
+            max_age=300,
         )
 
-        return RegisterStartResponse(challenge=challenge_b64, rp_id=settings.RP_ID, user_id=str(user.id))
+        return RegisterStartResponse(challenge=challenge_b64, rp_id=settings.RP_ID, user_id=temp_id)
 
     except ImportError:
+        _pending_registrations.pop(temp_id, None)
         raise HTTPException(500, "WebAuthn library not installed. Run: pip install webauthn")
     except Exception as e:
+        _pending_registrations.pop(temp_id, None)
         logger.exception("Registration start failed")
         raise HTTPException(500, f"Registration failed: {str(e)}")
 
@@ -209,14 +217,16 @@ async def register_finish(body: RegisterFinishRequest, request: Request, respons
         if not challenge_b64:
             raise HTTPException(400, "Invalid challenge — restart registration")
 
-        user_id = body.credential.get("user_id")
-        if not user_id:
-            raise HTTPException(400, "Missing user_id in credential")
+        signed_temp_id = request.cookies.get("pending_reg")
+        if not signed_temp_id:
+            raise HTTPException(400, "Missing registration data — restart registration")
+        temp_id = _verify_signed_data(signed_temp_id)
+        if not temp_id:
+            raise HTTPException(400, "Invalid registration data — restart registration")
 
-        result = await db.execute(select(User).where(User.id == uuid.UUID(user_id)))
-        user = result.scalar_one_or_none()
-        if not user:
-            raise HTTPException(404, "User not found")
+        pending = _pending_registrations.pop(temp_id, None)
+        if not pending:
+            raise HTTPException(400, "Registration expired — restart registration")
 
         from webauthn.helpers import bytes_to_base64url
 
@@ -227,6 +237,11 @@ async def register_finish(body: RegisterFinishRequest, request: Request, respons
             expected_rp_id=settings.RP_ID,
         )
 
+        # Now create the user — only after passkey verification succeeds
+        user = User(id=uuid.uuid4(), email=pending["email"], display_name=pending["display_name"])
+        db.add(user)
+        await db.flush()
+
         passkey = Passkey(
             id=uuid.uuid4(),
             user_id=user.id,
@@ -236,9 +251,17 @@ async def register_finish(body: RegisterFinishRequest, request: Request, respons
             device_name=body.device_name or "Unknown device",
         )
         db.add(passkey)
+
+        wallet = CreditWallet(id=uuid.uuid4(), user_id=user.id, balance=settings.NEW_USER_CREDITS, total_purchased=0, total_used=0)
+        db.add(wallet)
+        db.add(CreditTransaction(id=uuid.uuid4(), user_id=user.id, amount=settings.NEW_USER_CREDITS,
+                                 type="signup_bonus",
+                                 description=f"Welcome — {settings.NEW_USER_CREDITS} free credits",
+                                 balance_after=settings.NEW_USER_CREDITS))
         await db.commit()
 
         response.delete_cookie("challenge")
+        response.delete_cookie("pending_reg")
         token = _create_session_token(str(user.id))
         response.set_cookie(
             key="session",
