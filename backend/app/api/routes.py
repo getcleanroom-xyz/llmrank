@@ -25,7 +25,7 @@ from app.schemas.schemas import (
     CompetitorDrilldownOut, CompetitorQueryResult, CompetitorMention,
     CreditBalanceOut, CreditGrantRequest, CreditTransactionOut,
 )
-from app.services.scan_orchestrator import run_scan
+from app.services.scan_orchestrator import run_scan, generate_query_suggestions
 from app.services.llm_adapters import scan_all_llms, scan_query, OpenRouterAdapter, _call_openrouter, _parse_json, SCAN_DEVELOPER
 from app.services.insight_engine import generate_insights_for_query, generate_dashboard_insights
 from app.services.credit_service import get_or_create_wallet, check_credits, deduct_credits, grant_credits, get_credit_history, calculate_scan_cost, CREDIT_COSTS, CREDITS_PER_DOLLAR
