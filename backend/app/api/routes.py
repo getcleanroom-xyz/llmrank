@@ -26,6 +26,7 @@ from app.schemas.schemas import (
     CreditBalanceOut, CreditGrantRequest, CreditTransactionOut,
 )
 from app.services.scan_orchestrator import run_scan, generate_query_suggestions
+from app.services.llm_adapters import orchestrate_query_generation
 from app.services.insight_engine import generate_insights_for_query, generate_dashboard_insights
 from app.services.credit_service import get_or_create_wallet, check_credits, deduct_credits, grant_credits, get_credit_history, calculate_scan_cost, CREDIT_COSTS, CREDITS_PER_DOLLAR
 from app.api.auth import get_current_user, get_optional_user
@@ -44,7 +45,8 @@ def _utcnow() -> datetime:
 @router.post("/brands", response_model=BrandOut, status_code=201, tags=["Brands"])
 @limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")
 async def create_brand(request: Request, body: BrandCreate, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    brand = Brand(id=uuid.uuid4(), name=body.name, domain=body.domain, owner_id=user.id)
+    competitors_json = [{"name": c, "domain": "", "relevance_score": 5} for c in body.competitors] if body.competitors else None
+    brand = Brand(id=uuid.uuid4(), name=body.name, domain=body.domain, owner_id=user.id, competitors=competitors_json)
     db.add(brand)
     await db.commit()
     await db.refresh(brand)
@@ -112,6 +114,8 @@ async def add_query(request: Request, brand_id: uuid.UUID, body: QueryCreate, db
         id=uuid.uuid4(),
         brand_id=brand_id,
         query_text=body.query_text,
+        query_type=body.query_type,
+        query_score=body.query_score,
     )
     db.add(query)
     await db.commit()
@@ -178,6 +182,8 @@ async def list_queries_table(
             items.append(QueryTableItem(
                 id=mq.id,
                 query_text=mq.query_text,
+                query_type=mq.query_type,
+                query_score=mq.query_score,
                 is_active=mq.is_active,
                 created_at=mq.created_at,
                 result_count=cnt,
@@ -188,6 +194,8 @@ async def list_queries_table(
             items.append(QueryTableItem(
                 id=mq.id,
                 query_text=mq.query_text,
+                query_type=mq.query_type,
+                query_score=mq.query_score,
                 is_active=mq.is_active,
                 created_at=mq.created_at,
             ))
@@ -195,16 +203,47 @@ async def list_queries_table(
     return QueryTableResponse(items=items, total=total, page=page, per_page=per_page, pages=pages)
 
 
-@router.post("/brands/{brand_id}/queries/suggest", response_model=QuerySuggestResponse, tags=["Queries"])
+@router.post("/brands/{brand_id}/queries/suggest", tags=["Queries"])
 @limiter.limit("5/minute")
 async def suggest_queries(request: Request, brand_id: uuid.UUID, body: QuerySuggestRequest, db: AsyncSession = Depends(get_db)):
-    # Verify brand exists and use its actual data
     brand_result = await db.execute(select(Brand).where(Brand.id == brand_id))
     brand = brand_result.scalar_one_or_none()
     if not brand:
         raise HTTPException(404, "Brand not found")
-    suggestions = await generate_query_suggestions(brand.name, brand.domain, body.keywords)
-    return QuerySuggestResponse(suggested_queries=suggestions)
+    user_comps = [c.get("name", "") for c in (brand.competitors or [])]
+    import httpx as _httpx
+    async with _httpx.AsyncClient(timeout=30) as client:
+        result = await orchestrate_query_generation(brand.name, brand.domain, "", user_comps, client)
+    # Persist competitors back to brand if new ones were found
+    if result.get("competitors"):
+        brand.competitors = result["competitors"]
+        await db.commit()
+    return result
+
+
+@router.post("/brands/{brand_id}/queries/probe", tags=["Queries"])
+@limiter.limit("5/minute")
+async def probe_queries(request: Request, brand_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    """Run a probe scan on generated queries and return insights."""
+    brand_result = await db.execute(select(Brand).where(Brand.id == brand_id))
+    brand = brand_result.scalar_one_or_none()
+    if not brand:
+        raise HTTPException(404, "Brand not found")
+    user_comps = [c.get("name", "") for c in (brand.competitors or [])]
+    import httpx as _httpx
+    async with _httpx.AsyncClient(timeout=60) as client:
+        from app.services.llm_adapters import classify_brand, discover_competitors_from_crawl, discover_competitors_by_category, generate_scored_queries, run_probe_scan
+        classification = await classify_brand("", brand.name, brand.domain, client)
+        from_crawl = await discover_competitors_from_crawl("", client)
+        from_category = await discover_competitors_by_category(classification, client)
+        seen = {c.get("name", "").lower(): c for c in from_crawl + from_category if c.get("name", "").lower() != brand.name.lower()}
+        for n in user_comps:
+            if n.lower() not in seen:
+                seen[n.lower()] = {"name": n, "domain": "", "relevance_score": 5}
+        competitors = sorted(seen.values(), key=lambda c: c.get("relevance_score", 0), reverse=True)[:10]
+        queries = await generate_scored_queries(brand.name, brand.domain, classification, competitors, client)
+        probe = await run_probe_scan(brand.name, brand.domain, queries, client)
+    return {"queries": queries, "probe_result": probe}
 
 
 # ─── Scans ─────────────────────────────────────────────────────────────────────

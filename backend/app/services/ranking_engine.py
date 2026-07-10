@@ -152,59 +152,45 @@ def analyze_sentiment(text: str, brand_variants: list[str]) -> tuple[str, float]
 
 
 def extract_competitors(text: str, brand_variants: list[str]) -> list[dict]:
-    """Extract competitors mentioned in the response with their positions.
-    Detects both known competitors and unknown proper nouns from numbered lists."""
+    """Extract competitors from numbered lists and natural text.
+    Fully dynamic: detects any competitor, not just known ones."""
     text_lower = text.lower()
     found = []
     seen = set()
 
+    # Strategy 1: Parse numbered lists — most reliable
     numbered_pattern = re.compile(r"(\d+)[.)]\s+([^\n.]+)", re.MULTILINE)
-    matches = numbered_pattern.findall(text_lower)
+    matches = numbered_pattern.findall(text)
 
-    if matches:
-        for num_str, item_text in matches:
-            is_brand = any(v in item_text for v in brand_variants)
-            if is_brand:
-                continue
+    for num_str, item_text in matches:
+        is_brand = any(v in text_lower[0:text_lower.find(item_text.lower())] + item_text.lower() for v in brand_variants)
+        if is_brand:
+            continue
+        # Extract the leading proper noun or first meaningful phrase
+        clean = item_text.strip()
+        lead_match = re.match(r"^[:\s]*([A-Z][a-zA-Z0-9]+(?:\s+[A-Z][a-zA-Z0-9]+){0,3})", clean)
+        if lead_match:
+            candidate = lead_match.group(1).strip()
+        else:
+            # Fallback: take the first few words
+            words = clean.split()[:3]
+            candidate = " ".join(words)
+        if candidate and candidate.lower() not in seen and not any(v in candidate.lower() for v in brand_variants):
+            seen.add(candidate.lower())
+            found.append({"name": candidate, "position": int(num_str)})
 
-            # Check known competitors first
-            matched_known = False
-            for comp in KNOWN_COMPETITORS:
-                if comp in item_text and comp not in seen:
-                    seen.add(comp)
-                    found.append({"name": comp.title(), "position": int(num_str), "known": True})
-                    matched_known = True
+    if found:
+        return sorted(found, key=lambda x: x["position"])
 
-            # If no known competitor found, extract the leading proper noun as potential competitor
-            if not matched_known:
-                # Match: "Brand Name:", "Brand Name -", or just the first capitalized words
-                lead_match = re.match(
-                    r"^[:\s]*([A-Z][a-zA-Z0-9]+(?:\s+[A-Z][a-zA-Z0-9]+){0,3})",
-                    item_text.strip(),
-                )
-                if lead_match:
-                    candidate = lead_match.group(1).strip()
-                    candidate_lower = candidate.lower()
-                    # Skip if it's the brand itself or already seen
-                    if candidate_lower not in seen and not any(v in candidate_lower for v in brand_variants):
-                        seen.add(candidate_lower)
-                        found.append({"name": candidate, "position": int(num_str), "known": False})
-
-        if found:
-            return sorted(found, key=lambda x: x["position"])
-
-    # Fallback: sentence order — check known competitors
+    # Strategy 2: Sentence order fallback
     sentences = extract_sentences(text)
-    pos = 1
-    for sentence in sentences:
-        sentence_lower = sentence.lower()
-        for comp in KNOWN_COMPETITORS:
-            if comp in sentence_lower and comp not in seen:
-                is_brand = any(v in sentence_lower for v in brand_variants)
-                if not is_brand:
-                    seen.add(comp)
-                    found.append({"name": comp.title(), "position": pos, "known": True})
-                    pos += 1
+    for i, sentence in enumerate(sentences):
+        # Look for any capitalized multi-word phrase that isn't the brand
+        lead_match = re.findall(r"([A-Z][a-zA-Z0-9]+(?:\s+[A-Z][a-zA-Z0-9]+){1,3})", sentence)
+        for candidate in lead_match:
+            if candidate.lower() not in seen and not any(v in candidate.lower() for v in brand_variants):
+                seen.add(candidate.lower())
+                found.append({"name": candidate, "position": i + 1})
 
     return found[:10]
 

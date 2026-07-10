@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useCallback, useEffect, lazy } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
@@ -13,11 +13,11 @@ import { LLMBreakdownTable } from "@/components/dashboard/LLMBreakdownTable";
 import { CompetitorShare } from "@/components/dashboard/CompetitorShare";
 import { QueryChipsPanel } from "@/components/dashboard/QueryChipsPanel";
 import { QueriesTable } from "@/components/dashboard/QueriesTable";
+import { CompetitorsTab } from "@/components/dashboard/CompetitorsTab";
+import { ScoreHistoryChart } from "@/components/dashboard/ScoreHistoryChart";
+import { ScanHistory } from "@/components/dashboard/ScanHistory";
 
-const ScoreHistoryChart = lazy(() => import("@/components/dashboard/ScoreHistoryChart").then(m => ({ default: m.ScoreHistoryChart })));
-const ScanHistory = lazy(() => import("@/components/dashboard/ScanHistory").then(m => ({ default: m.ScanHistory })));
-
-type Tab = "overview" | "queries" | "scans";
+type Tab = "overview" | "queries" | "scans" | "competitors";
 
 function Scribble({ color = "var(--primary)", style }: { color?: string; style?: React.CSSProperties }) {
   return (
@@ -126,7 +126,7 @@ function BrandDashboardPageInner() {
             <path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round" fill="none" />
           </svg>
           <div role="tablist" style={{ display: "flex", gap: 4, marginLeft: "auto" }}>
-            {(["overview", "queries", "scans"] as Tab[]).map((t) => (
+            {(["overview", "queries", "scans", "competitors"] as Tab[]).map((t) => (
               <button key={t} role="tab" aria-selected={t === tab} onClick={() => setTab(t)} className={`tab ${t === tab ? "tab-active" : ""}`}>{t}</button>
             ))}
           </div>
@@ -258,9 +258,7 @@ function BrandDashboardPageInner() {
                   <div className="section-label" style={{ marginBottom: 0 }}>Score history</div>
                   <Scribble color="#A855F7" />
                 </div>
-                <Suspense fallback={<div className="skeleton" style={{ height: 150 }} />}>
-                  <ScoreHistoryChart data={score_history} />
-                </Suspense>
+                <ScoreHistoryChart data={score_history} />
               </div>
               {insights.length > 0 && (
                 <div className="card" style={{ borderColor: "var(--primary)", position: "relative", transform: "rotate(0.2deg)", borderTop: "4px solid var(--primary)" }}>
@@ -286,16 +284,13 @@ function BrandDashboardPageInner() {
         {tab === "scans" && (
           <div>
             <div style={{ display: "flex", alignItems: "flex-end", gap: 12, marginBottom: 16 }}>
-              <h2 style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: "clamp(24px, 3.5vw, 32px)", fontWeight: 700, margin: 0, lineHeight: 1, transform: "rotate(-0.3deg)" }}>
-                Scan history
-              </h2>
-              <Scribble color="var(--primary)" style={{ marginBottom: 4 }} />
+              <h2 style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: "clamp(24px, 3.5vw, 32px)", fontWeight: 700, margin: 0, lineHeight: 1, transform: "rotate(-0.3deg)" }}>Scan history</h2>
             </div>
-            <Suspense fallback={<div className="skeleton" style={{ height: 200 }} />}>
-              <ScanHistory brandId={brandId} />
-            </Suspense>
+            <ScanHistory brandId={brandId} />
           </div>
         )}
+
+        {tab === "competitors" && <CompetitorsTab brandId={brandId} />}
       </div>
     </div>
   );

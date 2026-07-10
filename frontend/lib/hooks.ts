@@ -14,8 +14,8 @@ export function useBrands(page: number = 1, search: string = "") {
 export function useCreateBrand() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ name, domain }: { name: string; domain: string }) =>
-      api.createBrand(name, domain),
+    mutationFn: ({ name, domain, competitors }: { name: string; domain: string; competitors?: string[] }) =>
+      api.createBrand(name, domain, competitors ?? []),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["brands"] }),
   });
 }
@@ -90,6 +90,19 @@ export function useSuggestQueries() {
       domain: string;
       keywords: string[];
     }) => api.suggestQueries(brandId, brand_name, domain, keywords),
+  });
+}
+
+export function useSuggestQueriesFull() {
+  return useMutation({
+    mutationFn: ({ brandId, keywords }: { brandId: string; keywords?: string[] }) =>
+      api.suggestQueriesFull(brandId, keywords ?? []),
+  });
+}
+
+export function useProbeQueries() {
+  return useMutation({
+    mutationFn: (brandId: string) => api.probeQueries(brandId),
   });
 }
 

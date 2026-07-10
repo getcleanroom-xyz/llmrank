@@ -5,6 +5,7 @@ export interface Brand {
   id: string;
   name: string;
   domain: string;
+  competitors: { name: string; domain: string }[] | null;
   created_at: string;
 }
 
@@ -12,6 +13,8 @@ export interface MonitoredQuery {
   id: string;
   brand_id: string;
   query_text: string;
+  query_type?: string | null;
+  query_score?: number | null;
   is_active: boolean;
   created_at: string;
 }

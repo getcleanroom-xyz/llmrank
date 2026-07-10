@@ -43,10 +43,10 @@ export const getBrands = (page: number = 1, perPage: number = 50, search: string
 
 export const getBrand = (id: string) => apiFetch<Brand>(`/brands/${id}`);
 
-export const createBrand = (name: string, domain: string) =>
+export const createBrand = (name: string, domain: string, competitors: string[] = []) =>
   apiFetch<Brand>("/brands", {
     method: "POST",
-    body: JSON.stringify({ name, domain }),
+    body: JSON.stringify({ name, domain, competitors }),
   });
 
 export const deleteBrand = (id: string) =>
@@ -75,6 +75,8 @@ export const suggestQueries = (brandId: string, brand_name: string, domain: stri
 export interface QueriesTableItem {
   id: string;
   query_text: string;
+  query_type?: string | null;
+  query_score?: number | null;
   is_active: boolean;
   created_at: string;
   result_count: number;
@@ -91,6 +93,56 @@ export interface QueriesTableResponse {
 
 export const getQueriesTable = (brandId: string, page: number = 1, per_page: number = 20, q: string = "") =>
   apiFetch<QueriesTableResponse>(`/brands/${brandId}/queries/table?page=${page}&per_page=${per_page}&q=${encodeURIComponent(q)}`);
+
+export interface ScoredQuery {
+  query_text: string;
+  query_type: string;
+  score: number;
+}
+
+export interface ProbeInsight {
+  query_text: string;
+  brand_overmentioned: boolean;
+  competitors_found: string[];
+  recommendation: string;
+}
+
+export interface ProbeResult {
+  insights: ProbeInsight[];
+  summary: string;
+}
+
+export interface BrandClassification {
+  industry: string;
+  sub_category: string;
+  price_tier: string;
+  target_audience: string;
+  key_features: string[];
+}
+
+export interface CompetitorInfo {
+  name: string;
+  domain: string;
+  relevance_score: number;
+}
+
+export interface QuerySuggestFullResponse {
+  classification: BrandClassification;
+  competitors: CompetitorInfo[];
+  queries: ScoredQuery[];
+  probe_result?: ProbeResult;
+}
+
+export const suggestQueriesFull = (brandId: string, keywords: string[] = []) =>
+  apiFetch<QuerySuggestFullResponse>(`/brands/${brandId}/queries/suggest`, {
+    method: "POST",
+    body: JSON.stringify({ brand_name: "", domain: "", keywords }),
+  });
+
+export const probeQueries = (brandId: string) =>
+  apiFetch<{ queries: ScoredQuery[]; probe_result: ProbeResult }>(`/brands/${brandId}/queries/probe`, {
+    method: "POST",
+  });
 
 // ─── Scans ─────────────────────────────────────────────────────────────────────
 

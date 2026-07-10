@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useBrands, useCreateBrand, useDeleteBrand } from "@/lib/hooks";
 import { AppHeader, PageHeader } from "@/components/AppHeader";
+import { BrandWizard } from "@/components/brands/BrandWizard";
 
 const BRAND_CARD_COLORS = [
   { bg: "#FFF9DB", acc: "var(--primary)", rot: "-0.8deg" },
@@ -29,11 +30,6 @@ function BrandsPageInner() {
   const [searchInput, setSearchInput] = useState(search);
 
   const [showModal, setShowModal] = useState(false);
-  const [name, setName] = useState("");
-  const [domain, setDomain] = useState("");
-  const [nameError, setNameError] = useState("");
-  const [domainError, setDomainError] = useState("");
-
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const navigate = useCallback((p: Record<string, string>) => {
@@ -48,21 +44,11 @@ function BrandsPageInner() {
 
   const handleSearch = () => navigate({ search: searchInput.trim(), page: "1" });
 
-  const validate = useCallback(() => {
-    let valid = true;
-    if (!name.trim()) { setNameError("Required"); valid = false; } else setNameError("");
-    if (!domain.trim()) { setDomainError("Required"); valid = false; }
-    else if (!/^[a-zA-Z0-9][a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(domain.trim())) { setDomainError("Invalid domain"); valid = false; }
-    else setDomainError("");
-    return valid;
-  }, [name, domain]);
-
-  const handleCreate = async () => {
-    if (!validate()) return;
+  const handleCreate = async (name: string, domain: string, competitors: string[]) => {
     try {
-      await createBrand.mutateAsync({ name: name.trim(), domain: domain.trim() });
-      setName(""); setDomain(""); setShowModal(false);
-      setSuccess(`${name.trim()} created`);
+      await createBrand.mutateAsync({ name, domain, competitors });
+      setShowModal(false);
+      setSuccess(`${name} created`);
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setSuccess(null);
@@ -267,37 +253,7 @@ function BrandsPageInner() {
       </div>
 
       {showModal && (
-        <div
-          style={{
-            position: "fixed", inset: 0, zIndex: 100,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: "rgba(0,0,0,0.4)", padding: "var(--page-px)",
-          }}
-          onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
-        >
-          <div className="card" style={{ width: "100%", maxWidth: 420, padding: 20 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <div className="section-label">New brand</div>
-              <button onClick={() => setShowModal(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, fontWeight: 700, color: "var(--text-muted)" }}>x</button>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
-              <div>
-                <label htmlFor="modal-brand-name" style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Brand name</label>
-                <input id="modal-brand-name" className="input" value={name} onChange={(e) => { setName(e.target.value); setNameError(""); }} onKeyDown={(e) => e.key === "Enter" && handleCreate()} placeholder="e.g. Notion" autoComplete="off" />
-                {nameError && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4, fontWeight: 600 }}>{nameError}</div>}
-              </div>
-              <div>
-                <label htmlFor="modal-brand-domain" style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Domain</label>
-                <input id="modal-brand-domain" className="input" value={domain} onChange={(e) => { setDomain(e.target.value); setDomainError(""); }} onKeyDown={(e) => e.key === "Enter" && handleCreate()} placeholder="notion.so" autoComplete="off" />
-                {domainError && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4, fontWeight: 600 }}>{domainError}</div>}
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={handleCreate} disabled={createBrand.isPending} className="btn btn-primary" style={{ flex: 1 }}>{createBrand.isPending ? "Creating..." : "Create brand"}</button>
-              <button onClick={() => setShowModal(false)} className="btn btn-ghost">Cancel</button>
-            </div>
-          </div>
-        </div>
+        <BrandWizard open={showModal} onClose={() => setShowModal(false)} onCreated={handleCreate} creating={createBrand.isPending} />
       )}
     </div>
   );

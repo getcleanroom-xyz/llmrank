@@ -9,6 +9,7 @@ from app.models.models import ScanStatus, Sentiment
 class BrandCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     domain: str = Field(..., min_length=1, max_length=200)
+    competitors: list[str] = Field(default_factory=list)
 
 
 class BrandOut(BaseModel):
@@ -16,6 +17,7 @@ class BrandOut(BaseModel):
     name: str
     domain: str
     owner_id: Optional[UUID] = None
+    competitors: Optional[list] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -24,12 +26,16 @@ class BrandOut(BaseModel):
 # Query schemas
 class QueryCreate(BaseModel):
     query_text: str = Field(..., min_length=3, max_length=500)
+    query_type: Optional[str] = None
+    query_score: Optional[int] = None
 
 
 class QueryOut(BaseModel):
     id: UUID
     brand_id: UUID
     query_text: str
+    query_type: Optional[str] = None
+    query_score: Optional[int] = None
     is_active: bool
     created_at: datetime
 
@@ -46,9 +52,50 @@ class QuerySuggestResponse(BaseModel):
     suggested_queries: list[str]
 
 
+class BrandClassification(BaseModel):
+    industry: str
+    sub_category: str
+    price_tier: str
+    target_audience: str
+    key_features: list[str]
+
+
+class CompetitorInfo(BaseModel):
+    name: str
+    domain: str
+    relevance_score: int = 3
+
+
+class ScoredQuery(BaseModel):
+    query_text: str
+    query_type: str
+    score: int
+
+
+class ProbeInsight(BaseModel):
+    query_text: str
+    brand_overmentioned: bool
+    competitors_found: list[str]
+    recommendation: str
+
+
+class ProbeResult(BaseModel):
+    insights: list[ProbeInsight]
+    summary: str
+
+
+class QuerySuggestFullResponse(BaseModel):
+    classification: BrandClassification
+    competitors: list[CompetitorInfo]
+    queries: list[ScoredQuery]
+    probe_result: Optional[ProbeResult] = None
+
+
 class QueryTableItem(BaseModel):
     id: UUID
     query_text: str
+    query_type: Optional[str] = None
+    query_score: Optional[int] = None
     is_active: bool
     created_at: datetime
     result_count: int = 0
