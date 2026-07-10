@@ -24,7 +24,7 @@ export default function LLMDrilldownPage() {
   const { brandId, llmName } = useParams<{ brandId: string; llmName: string }>();
   const decodedName = decodeURIComponent(llmName);
   const displayName = llmDisplay(decodedName);
-  const { data, isLoading, error } = useLLMDrilldown(brandId, llmName);
+  const { data, isLoading, error } = useLLMDrilldown(brandId, decodedName);
 
   if (isLoading) return <div className="page" style={{ display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "var(--text-muted)" }}>Loading...</div>;
   if (error || !data) return (

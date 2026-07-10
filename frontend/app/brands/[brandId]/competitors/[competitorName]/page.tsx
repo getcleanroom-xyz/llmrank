@@ -14,7 +14,7 @@ const LLM_COLORS: Record<string, string> = {
 export default function CompetitorDrilldownPage() {
   const { brandId, competitorName } = useParams<{ brandId: string; competitorName: string }>();
   const decodedName = decodeURIComponent(competitorName);
-  const { data, isLoading, error } = useCompetitorDrilldown(brandId, competitorName);
+  const { data, isLoading, error } = useCompetitorDrilldown(brandId, decodedName);
 
   const llmGroups = useMemo(() => {
     if (!data) return {};
