@@ -985,8 +985,8 @@ async def get_competitor_drilldown(
         comp_domain = f"{competitor_name.lower().replace(' ', '').replace('-', '')}.com"
 
     # Generate competitive insight
-    brand_result2 = await db.execute(select(Brand).where(Brand.id == brand_id))
-    brand_name = brand_result2.scalar_one_or_none().name if brand_result2.scalar_one_or_none() else ""
+    brand_row = (await db.execute(select(Brand).where(Brand.id == brand_id))).scalar_one_or_none()
+    brand_name = brand_row.name if brand_row else ""
 
     comp_insight = ""
     try:
