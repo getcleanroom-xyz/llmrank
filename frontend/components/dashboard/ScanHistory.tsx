@@ -139,6 +139,7 @@ export function ScanHistory({ brandId }: { brandId: string }) {
                   borderColor: isExpanded ? "var(--primary)" : undefined,
                   transition: "border-color 0.1s, transform 0.15s",
                   transform: `rotate(${scans.indexOf(scan) % 2 === 0 ? "-0.15deg" : "0.15deg"})`,
+                  borderLeft: `4px solid ${scan.status === "completed" ? "var(--primary)" : scan.status === "running" ? "var(--primary)" : scan.status === "failed" ? "#EF4444" : "var(--bg-dark)"}`,
                 }}
             >
               <div
