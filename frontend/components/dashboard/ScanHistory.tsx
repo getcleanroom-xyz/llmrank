@@ -133,7 +133,7 @@ export function ScanHistory({ brandId }: { brandId: string }) {
           return (
             <div
               key={scan.id}
-              className="card"
+              className="card sketchy"
                 style={{
                   padding: 0,
                   borderColor: isExpanded ? "var(--primary)" : undefined,

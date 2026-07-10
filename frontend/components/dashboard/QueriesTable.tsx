@@ -204,7 +204,7 @@ export function QueriesTable({
               return (
                 <div
                   key={q.id}
-                  className="card"
+                  className="card sketchy"
                   onClick={() => router.push(`/brands/${brandId}/queries/${q.id}`)}
                   style={{
                     background: c.bg,
