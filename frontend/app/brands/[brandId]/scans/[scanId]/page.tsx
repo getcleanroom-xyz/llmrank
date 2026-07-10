@@ -169,7 +169,7 @@ export default function ScanDetailPage() {
 
         {/* Summary cards */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "var(--gap)", marginBottom: "var(--gap)" }}>
-          <div className="card" style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", transform: "rotate(-0.3deg)" }}>
+          <div className="card sketchy" style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", transform: "rotate(-0.3deg)" }}>
             <ScoreRing score={data.visibility_score ?? 0} size={48} stroke={4} />
             <div>
               <div className="section-label" style={{ marginBottom: 2 }}>Visibility</div>
