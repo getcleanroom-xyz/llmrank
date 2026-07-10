@@ -336,10 +336,14 @@ async def generate_scored_queries(brand_name: str, domain: str, classification: 
     """Agent loop: generate queries, score, dedup, regenerate weak ones."""
     comp_str = ", ".join(c.get("name", "") for c in competitors[:8])
     user_msg = (
-        f"Generate 25+ queries for {brand_name} ({domain}) targeting these types: brand_category, workflow, competitor, adjacent.\n\n"
+        f"Generate 30 queries for {brand_name} ({domain}) targeting these types: brand_category, workflow, competitor, adjacent.\n\n"
         f"Classification: {json.dumps(classification)}\n"
         f"Known competitors: {comp_str}\n\n"
-        f"Return ONLY a valid JSON array: [{{\"query_text\":\"...\",\"query_type\":\"brand_category|workflow|competitor|adjacent\",\"score\":1-5}}]\n"
+        f"RULES:\n"
+        f"- Do NOT include the brand name ({brand_name}) in any query\n"
+        f"- Competitor names ARE allowed in competitor-type queries\n"
+        f"- Generate at least 25 queries across all 4 types\n\n"
+        f'Return ONLY a valid JSON array: [{{"query_text":"...","query_type":"brand_category|workflow|competitor|adjacent","score":1-5}}]\n'
         f"Score each 1-5 based on how natural and specific the query is.\n"
         f"No text, no markdown, no explanation."
     )
@@ -382,7 +386,7 @@ async def generate_scored_queries(brand_name: str, domain: str, classification: 
     if weak and len(queries) < 25:
         try:
             resp = await _call_openrouter([
-                {"role": "developer", "content": "Return ONLY a valid JSON array of replacement queries. No text, no markdown."},
+                {"role": "developer", "content": "Return ONLY a valid JSON array of replacement queries. No text, no markdown. Do NOT include the brand name in queries."},
                 {"role": "user", "content": (
                     f"These queries for {brand_name} ({domain}) scored poorly:\n{json.dumps(weak)}\n\n"
                     f"Generate {len(weak)} better, more specific, natural replacements.\n"
@@ -392,6 +396,23 @@ async def generate_scored_queries(brand_name: str, domain: str, classification: 
             result = _parse_json(resp)
             if isinstance(result, list):
                 queries = strong + result
+        except Exception:
+            pass
+
+    # Final guard: ensure at least 20 queries
+    if len(queries) < 20:
+        try:
+            resp = await _call_openrouter([
+                {"role": "developer", "content": "Return ONLY a valid JSON array. No text, no markdown. Do NOT include the brand name in queries."},
+                {"role": "user", "content": (
+                    f"Generate {20 - len(queries)} additional queries for {brand_name} ({domain}). "
+                    f"Do NOT include the brand name ({brand_name}) in the queries.\n"
+                    f"Return: [{{\"query_text\":\"...\",\"query_type\":\"workflow|adjacent\",\"score\":4-5}}]"
+                )},
+            ], "chatgpt", client, temperature=0.6, max_tokens=1024)
+            result = _parse_json(resp)
+            if isinstance(result, list):
+                queries.extend(result)
         except Exception:
             pass
 

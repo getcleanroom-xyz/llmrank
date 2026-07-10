@@ -139,7 +139,7 @@ async def run_scan(
             )
 
         all_results.append(result)
-        if not error and response_text:
+        if not error and result_data:
             total_successful += 1
             if result.mentioned:
                 total_mentioned += 1
