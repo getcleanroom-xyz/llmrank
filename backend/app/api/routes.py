@@ -710,7 +710,7 @@ async def get_query_drilldown(
         overall_sentiment = "mixed"
 
     # Generate insights — from successful results only
-    raw_insights = generate_insights_for_query(brand.name, query.query_text, successful)
+    raw_insights = await generate_insights_for_query(brand.name, query.query_text, successful)
     insights = [DrilldownInsight(type=i["type"], text=i["text"]) for i in raw_insights]
 
     return QueryDrilldownOut(
