@@ -37,14 +37,19 @@ ALL_LLM_KEYS = list(MODEL_REGISTRY.keys())
 
 SCAN_DEVELOPER = (
     "You are a product recommendation engine. A user has asked a question. "
-    "Return ONLY a valid JSON object with this exact schema:\n"
-    '{"items":[{"name":"Product Name","position":1,"description":"one sentence why"}],'
+    "Return ONLY a valid JSON object with this exact schema. Do NOT make up products or brands.\n"
+    '{"items":[{"name":"Real Product","position":1,"description":"one sentence why"}],'
     '"brand_mentioned":true_or_false,'
     '"brand_position":1_or_null,'
     '"brand_sentiment":"positive"|"neutral"|"negative"|"not_mentioned",'
-    '"competitors":["Brand1","Brand2"],'
-    '"summary":"natural language summary of the recommendation"}\n'
-    "No text, no markdown, no explanation. Only the JSON object."
+    '"competitors":["Existing Competitor Name"],'
+    '"summary":"natural language summary"}\n'
+    "RULES:\n"
+    "- Only include real products and competitor names you are certain exist\n"
+    "- If you don't know any competitors, return an empty array []\n"
+    "- If the brand was NOT mentioned, set brand_mentioned: false and brand_position: null\n"
+    "- Never make up brands like 'BrandA' or 'Brand1'\n"
+    "- No text, no markdown, no explanation. Only the JSON object."
 )
 
 CLASSIFY_DEVELOPER = (
@@ -266,15 +271,16 @@ async def discover_competitors_from_crawl(content: str, client) -> list[dict]:
 
 
 async def discover_competitors_by_category(classification: dict, client) -> list[dict]:
-    """Get category-typical competitors using structured JSON."""
+    """Get category-typical competitors using structured JSON. Returns empty array if none known."""
     messages = [
-        {"role": "developer", "content": "Return ONLY a valid JSON array. No text, no markdown, no explanation."},
+        {"role": "developer", "content": "Return ONLY a valid JSON array. No text, no markdown, no explanation. Return [] if you don't know any."},
         {"role": "user", "content": (
-            f"List the top 10 known competitors in the {classification.get('industry','')} industry, "
+            f"Name real competitors in the {classification.get('industry','')} industry, "
             f"sub-category: {classification.get('sub_category','')}, "
             f"target audience: {classification.get('target_audience','')}.\n\n"
             f'Return: [{{"name":"BrandName","domain":"domain.com","relevance_score":1-5}}]\n'
-            f'Include real brand names only. No generic category terms.'
+            f'IMPORTANT: Only include real, verified brands. If you are not sure about a competitor, leave it out. '
+            f'It is better to return [] than to make up names.'
         )},
     ]
     for model in ["chatgpt"]:
