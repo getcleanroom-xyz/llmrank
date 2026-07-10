@@ -16,8 +16,10 @@ export const SENTIMENT_LABELS: Record<string, string> = {
 };
 
 export const LLM_NAMES: Record<string, string> = {
-  chatgpt: "ChatGPT", gemini: "Gemini", claude: "Claude", llama: "Llama",
-  deepseek: "DeepSeek", mistral: "Mistral", qwen: "Qwen",
+  chatgpt: "ChatGPT", gpt4o: "GPT-4o", gemini: "Gemini", claude: "Claude",
+  llama: "Llama 3.3", "llama-small": "Llama 3.1 8B",
+  deepseek: "DeepSeek", "deepseek-r1": "DeepSeek R1",
+  mistral: "Mistral", qwen: "Qwen",
 };
 
 export const LLM_COLORS: Record<string, string> = {

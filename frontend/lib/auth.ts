@@ -28,7 +28,7 @@ export const useAuth = create<AuthState>((set) => ({
   setUser: (user) => set({ user, loading: false }),
   setLoading: (loading) => set({ loading }),
   logout: () => {
-    document.cookie = "session=; path=/; max-age=0";
+    document.cookie = "session=; path=/; max-age=0; SameSite=Lax";
     set({ user: null });
   },
   authModalOpen: false,

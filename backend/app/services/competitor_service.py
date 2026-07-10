@@ -1,0 +1,128 @@
+"""Brand classification and competitor discovery via LLMs."""
+import re
+import time
+import json
+import logging
+from datetime import datetime, timezone
+
+import httpx
+
+logger = logging.getLogger(__name__)
+
+_PLACEHOLDER_NAMES = {"branda", "brandb", "brandc", "brand1", "brand2", "competitor1", "competitor2", "competitora", "competitorb", "company1", "company2", "companyx", "companyy", "clienta", "clientb"}
+
+
+def _is_valid_competitor(name: str) -> bool:
+    """Reject obviously fake placeholder competitor names."""
+    lower = name.lower().strip()
+    if lower in _PLACEHOLDER_NAMES:
+        return False
+    if re.match(r"^(brand|competitor|company|client|product|vendor|provider)[a-z0-9]*$", lower):
+        return False
+    if len(lower) <= 1:
+        return False
+    return True
+
+
+async def classify_brand(content: str, brand_name: str, domain: str, client) -> dict:
+    from app.services.llm_core import _call_openrouter, _parse_json
+    messages = [
+        {"role": "developer", "content": "Return ONLY a valid JSON object. No text, no markdown, no explanation."},
+        {"role": "user", "content": (
+            f"Classify {brand_name} ({domain}) based on this content:\n\n"
+            f"<content>{content[:3000]}</content>\n\n"
+            f'Return exactly: {{"industry":"...","sub_category":"...","price_tier":"...","target_audience":"...","key_features":["..."]}}'
+        )},
+    ]
+    for model in ["chatgpt"]:
+        try:
+            resp = await _call_openrouter(messages, model, client, temperature=0.2, max_tokens=512)
+            return _parse_json(resp)
+        except Exception:
+            continue
+    return {"industry": "unknown", "sub_category": "", "price_tier": "", "target_audience": "", "key_features": []}
+
+
+async def discover_competitors_from_crawl(content: str, client) -> list[dict]:
+    from app.services.llm_core import _call_openrouter, _parse_json
+    messages = [
+        {"role": "developer", "content": "Return ONLY a valid JSON array. No text, no markdown, no explanation."},
+        {"role": "user", "content": (
+            f"From this company's website content, identify competing brands mentioned, compared to, or referenced.\n\n"
+            f"<content>{content[:3000]}</content>\n\n"
+            f'Return: [{{"name":"BrandName","domain":"domain.com","relevance_score":1-5}}]\n'
+            f'Maximum 10 entries. Only include real brand names, not generic terms like "competitors" or "alternatives".'
+        )},
+    ]
+    for model in ["chatgpt"]:
+        try:
+            resp = await _call_openrouter(messages, model, client, temperature=0.2, max_tokens=1024)
+            result = _parse_json(resp)
+            if isinstance(result, list):
+                return [c for c in result if isinstance(c, dict) and _is_valid_competitor(c.get("name", ""))][:10]
+        except Exception:
+            continue
+    return []
+
+
+async def discover_competitors_by_category(classification: dict, client) -> list[dict]:
+    from app.services.llm_core import _call_openrouter, _parse_json
+    messages = [
+        {"role": "developer", "content": "Return ONLY a valid JSON array. No text, no markdown, no explanation. Return [] if you don't know any."},
+        {"role": "user", "content": (
+            f"Name real competitors in the {classification.get('industry','')} industry, "
+            f"sub-category: {classification.get('sub_category','')}, "
+            f"target audience: {classification.get('target_audience','')}.\n\n"
+            f'Return: [{{"name":"BrandName","domain":"domain.com","relevance_score":1-5}}]\n'
+            f'IMPORTANT: Only include real, verified brands. If you are not sure about a competitor, leave it out. '
+            f'It is better to return [] than to make up names.'
+        )},
+    ]
+    for model in ["chatgpt"]:
+        try:
+            resp = await _call_openrouter(messages, model, client, temperature=0.3, max_tokens=1024)
+            result = _parse_json(resp)
+            if isinstance(result, list):
+                return [c for c in result if isinstance(c, dict) and _is_valid_competitor(c.get("name", ""))][:10]
+        except Exception:
+            continue
+    return []
+
+
+async def crawl_competitor_sites(competitors: list[dict], max_sites: int = 5) -> list[dict]:
+    results = []
+    async with httpx.AsyncClient(timeout=10, follow_redirects=True, headers={"User-Agent": "LLMRank/1.0"}) as client:
+        for comp in competitors[:max_sites]:
+            domain = comp.get("domain", "")
+            if not domain:
+                continue
+            url = f"https://{domain}" if not domain.startswith("http") else domain
+            try:
+                resp = await client.get(url)
+                if resp.status_code == 200:
+                    text = re.sub(r"<(script|style|noscript)\b[^>]*>.*?</\1>", "", resp.text, flags=re.DOTALL | re.IGNORECASE)
+                    text = re.sub(r"<[^>]+>", " ", text)
+                    text = re.sub(r"\s+", " ", text).strip()[:3000]
+                    comp["crawled_content"] = text
+                    comp["crawled_at"] = datetime.now(timezone.utc).isoformat()
+            except Exception:
+                comp["crawled_content"] = ""
+                comp["crawled_at"] = datetime.now(timezone.utc).isoformat()
+            results.append(comp)
+    return results
+
+
+def competitors_need_refresh(competitors: list[dict], ttl_days: int = 7) -> bool:
+    if not competitors:
+        return True
+    cutoff = time.time() - (ttl_days * 86400)
+    for comp in competitors:
+        fetched = comp.get("crawled_at")
+        if not fetched:
+            return True
+        try:
+            if time.mktime(datetime.fromisoformat(fetched).timetuple()) < cutoff:
+                return True
+        except Exception:
+            return True
+    return False

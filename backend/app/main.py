@@ -8,10 +8,12 @@ import logging
 
 from app.core.config import settings
 from app.core.rate_limit import limiter
-from app.api.routes import router
-from app.api.auth import router as auth_router
+from app.api.routes import router, _run_scan_background  # noqa: F401
+from app.api.webauthn import router as auth_router
 from app.api.payments import router as payments_router
 from app.api.admin import router as admin_router
+from app.api.campaigns import router as campaigns_router
+from app.api.campaign_audience import router as audience_router
 from app.api.tracking import router as tracking_router
 
 logging.basicConfig(
@@ -120,6 +122,8 @@ app.include_router(auth_router, prefix="/api/v1")
 app.include_router(payments_router, prefix="/api/v1")
 app.include_router(router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
+app.include_router(campaigns_router, prefix="/api/v1")
+app.include_router(audience_router, prefix="/api/v1")
 app.include_router(tracking_router, prefix="/api/v1")
 
 

@@ -63,7 +63,7 @@ async def generate_insights_for_query(
         if match:
             insights = json.loads(match.group())
             if isinstance(insights, list):
-                return [insights[0]] if len(insights) >= 1 else []
+                return insights
     except Exception as e:
         logger.warning("LLM insight generation failed for query '%s': %s", query_text, e)
 

@@ -114,7 +114,7 @@ class QueryTableResponse(BaseModel):
 
 # Scan schemas
 class ScanCreate(BaseModel):
-    llms: list[str] = Field(default=["chatgpt", "llama"])
+    llms: list[str] = Field(default_factory=lambda: ["chatgpt", "llama"])
 
 
 class ScanOut(BaseModel):

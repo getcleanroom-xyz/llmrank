@@ -126,7 +126,6 @@ async def dispatch_campaign(db: AsyncSession, campaign_id: uuid.UUID, base_url: 
 
 async def _build_audience(db: AsyncSession, campaign: Campaign):
     from app.models.models import User
-    from app.core.database import AsyncSessionLocal
 
     await db.execute(delete(CampaignRecipient).where(CampaignRecipient.campaign_id == campaign.id))
 
