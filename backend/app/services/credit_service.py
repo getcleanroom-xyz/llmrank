@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.models.models import CreditWallet, CreditTransaction
+from app.core.config import settings
 from app.services.llm_adapters import MODEL_REGISTRY
 
 logger = logging.getLogger(__name__)
@@ -20,7 +21,9 @@ logger = logging.getLogger(__name__)
 # ─── Pricing Constants ────────────────────────────────────────────────────────
 
 CREDITS_PER_DOLLAR = 1000  # 1 credit = $0.001
-FREE_CREDITS = 500         # New users get 500 free credits
+
+# New users get N free credits (set via NEW_USER_CREDITS env var)
+FREE_CREDITS = settings.NEW_USER_CREDITS
 
 # Credits cost per query — derived from actual OpenRouter pricing
 # 1 credit = $0.001, so $0.01/request = 10 credits

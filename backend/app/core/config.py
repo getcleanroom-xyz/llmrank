@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str = ""
     ADMIN_EMAILS: str = ""
     CAMPAIGN_FROM_EMAIL: str = "marketing@emails.getcleanroom.xyz"
+    NEW_USER_CREDITS: int = 500
 
     @property
     def cors_origins_list(self) -> list[str]:
