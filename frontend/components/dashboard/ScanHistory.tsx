@@ -127,7 +127,7 @@ export function ScanHistory({ brandId }: { brandId: string }) {
 
   return (
     <div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap)" }}>
         {scans.map((scan) => {
           const isExpanded = expandedId === scan.id;
           return (

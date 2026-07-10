@@ -50,7 +50,7 @@ export function SentimentPill({ sentiment }: { sentiment: Sentiment | string }) 
     positive: { label: "Positive", cls: "pill pill-pos" },
     neutral: { label: "Neutral", cls: "pill pill-neu" },
     negative: { label: "Negative", cls: "pill pill-neg" },
-    not_mentioned: { label: "Not mentioned", cls: "pill pill-neg" },
+    not_mentioned: { label: "Unmentioned", cls: "pill pill-neg" },
   };
   const { label, cls } = map[sentiment] ?? { label: sentiment, cls: "pill pill-neu" };
   return <span className={cls}>{label}</span>;

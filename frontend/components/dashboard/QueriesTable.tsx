@@ -198,7 +198,7 @@ export function QueriesTable({
         </div>
       ) : (
         <>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 10, marginBottom: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "var(--gap)", marginBottom: 16 }}>
             {items.map((q, i) => {
               const c = CARD_COLORS[i % CARD_COLORS.length];
               return (

@@ -45,6 +45,7 @@ function QueryDrilldownInner() {
   const mentioned = data.results.filter((r) => r.mentioned);
   const notMentioned = data.results.filter((r) => !r.mentioned);
   const coveragePct = data.total_llms > 0 ? Math.round((data.llms_mentioned / data.total_llms) * 100) : 0;
+  const sentimentLabel = data.overall_sentiment === "positive" ? "Positive" : data.overall_sentiment === "negative" ? "Negative" : data.overall_sentiment === "neutral" ? "Neutral" : "Mixed";
   const sentimentColor = data.overall_sentiment === "positive" ? "#166534" : data.overall_sentiment === "negative" ? "#991B1B" : "#F59E0B";
 
   // Collect all competitors mentioned across all LLMs
@@ -96,7 +97,7 @@ function QueryDrilldownInner() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Sentiment</div>
-              <span className="pill" style={{ fontSize: 12, fontWeight: 800, color: sentimentColor, borderColor: sentimentColor, background: "var(--surface)", padding: "4px 10px", textTransform: "capitalize" }}>{data.overall_sentiment}</span>
+              <span className="pill" style={{ fontSize: 12, fontWeight: 800, color: sentimentColor, borderColor: sentimentColor, background: "var(--surface)", padding: "4px 10px" }}>{sentimentLabel}</span>
             </div>
             {data.top_competitor && (
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>

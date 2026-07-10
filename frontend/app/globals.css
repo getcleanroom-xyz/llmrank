@@ -25,16 +25,16 @@
   --shadow-sm:      3px 3px 0px #1A1A1A;
   --shadow-hover:   5px 5px 0px #1A1A1A;
 
-  --page-px:        16px;
-  --gap:            12px;
+  --page-px:        20px;
+  --gap:            16px;
 }
 
 
 
 @media (min-width: 768px) {
   :root {
-    --page-px: 24px;
-    --gap:     16px;
+    --page-px: 32px;
+    --gap:     24px;
   }
 }
 
@@ -68,11 +68,11 @@ body {
   background: var(--surface);
   border: 2px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 20px;
   box-shadow: var(--shadow);
 }
 .card:hover { box-shadow: var(--shadow-hover); transform: translate(-1px, -1px); }
-@media (min-width: 768px) { .card { padding: 20px; } }
+@media (min-width: 768px) { .card { padding: 24px; } }
 
 /* ─── Sketchy Card (organic/hand-drawn border effect) ─── */
 .sketchy {
@@ -145,7 +145,7 @@ body {
 .btn-danger { background: var(--red); color: white; border-color: var(--black); }
 .btn-ghost { background: var(--bg-dark); box-shadow: var(--shadow-sm); border: 2px solid var(--border); }
 .btn-ghost:hover { background: var(--bg); border-color: var(--border); box-shadow: var(--shadow-hover); }
-.btn-sm { font-size: 12px; padding: 7px 14px; }
+.btn-sm { font-size: 12px; padding: 8px 16px; }
 
 /* ─── Input ─── */
 .input {
