@@ -100,16 +100,6 @@ function BrandDashboardPageInner() {
     ? query_summaries
     : queries.map(q => ({ query_id: q.id, query_text: q.query_text, results: [] }));
 
-  const insights: { type: "tip" | "warning"; text: string }[] = [];
-  if (llm_breakdown.length > 0) {
-    const low = llm_breakdown.find((l) => l.visibility_pct < 30);
-    if (low) insights.push({ type: "warning", text: `<strong>${low.llm_name} barely mentions you (${low.visibility_pct}%).</strong> Create structured content it can index.` });
-  }
-  if (top_competitor) insights.push({ type: "warning", text: `<strong>${top_competitor} outranks you.</strong> A comparison page is the highest-leverage move.` });
-  if (mention_rate < 30) insights.push({ type: "warning", text: `<strong>Very low mention rate (${mention_rate}%).</strong> Publish FAQs and "best X for Y" content.` });
-  else if (mention_rate >= 70) insights.push({ type: "tip", text: `<strong>Strong mention rate (${mention_rate}%).</strong> Focus on improving position.` });
-  if (score_history.length < 3) insights.push({ type: "tip", text: "<strong>Run scans weekly</strong> to track changes over time." });
-
   return (
     <div className="page" style={{ display: "flex", flexDirection: "column" }}>
       <AppHeader
@@ -290,7 +280,7 @@ function BrandDashboardPageInner() {
                 </div>
                 <ScoreHistoryChart data={score_history} />
               </div>
-              {insights.length > 0 && (
+              {data.insights?.length > 0 && (
                 <div className="card" style={{ borderColor: "var(--primary)", position: "relative", transform: "rotate(0.2deg)", borderTop: "4px solid var(--primary)" }}>
                   <svg width="22" height="26" viewBox="0 0 22 26" fill="none" style={{ position: "absolute", top: -12, right: 24, zIndex: 2 }}>
                     <ellipse cx="11" cy="5" rx="5.5" ry="5.5" fill="#EF4444" stroke="#1A1A1A" strokeWidth="1.5" />
@@ -300,7 +290,7 @@ function BrandDashboardPageInner() {
                     <div className="section-label" style={{ marginBottom: 0 }}>Insights</div>
                     <Scribble color="var(--primary)" />
                   </div>
-                  {insights.map((ins, i) => <div key={i} style={i === insights.length - 1 ? { borderBottom: "none" } : {}}><InsightRow type={ins.type} text={ins.text} /></div>)}
+                  {data.insights.map((ins, i) => <div key={i} style={i === data.insights.length - 1 ? { borderBottom: "none" } : {}}><InsightRow type={ins.type as "tip" | "warning"} text={ins.text} /></div>)}
                 </div>
               )}
             </div>

@@ -92,6 +92,7 @@ export interface DashboardData {
   competitor_share: CompetitorShareItem[];
   query_summaries: QuerySummary[];
   score_history: { date: string; visibility_score: number; mention_rate: number }[];
+  insights: { type: string; text: string }[];
 }
 
 export interface DrilldownInsight {

@@ -600,6 +600,7 @@ async def get_dashboard(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db))
             competitor_share=[],
             query_summaries=[],
             score_history=[],
+            insights=[],
         )
 
     # All results for latest scan
@@ -695,6 +696,10 @@ async def get_dashboard(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db))
         for s in reversed(history_scans)
     ]
 
+    # Compute dashboard insights
+    raw_dash_insights = await generate_dashboard_insights(brand.name, all_results, brand.domain)
+    dash_insights = [DrilldownInsight(type=i["type"], text=i["text"]) for i in raw_dash_insights]
+
     return DashboardOut(
         brand=BrandOut.model_validate(brand),
         latest_scan=ScanOut.model_validate(latest_scan),
@@ -707,6 +712,7 @@ async def get_dashboard(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db))
         competitor_share=competitor_share,
         query_summaries=query_summaries,
         score_history=score_history,
+        insights=dash_insights,
     )
 
 

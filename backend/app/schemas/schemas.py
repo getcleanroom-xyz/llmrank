@@ -178,6 +178,11 @@ class QuerySummary(BaseModel):
     results: list[dict]
 
 
+class DrilldownInsight(BaseModel):
+    type: str  # "tip" | "warning"
+    text: str
+
+
 class DashboardOut(BaseModel):
     brand: BrandOut
     latest_scan: Optional[ScanOut]
@@ -190,11 +195,7 @@ class DashboardOut(BaseModel):
     competitor_share: list[CompetitorShareItem]
     query_summaries: list[QuerySummary]
     score_history: list[dict]
-
-
-class DrilldownInsight(BaseModel):
-    type: str  # "tip" | "warning"
-    text: str
+    insights: list[DrilldownInsight] = Field(default_factory=list)
 
 
 class QueryDrilldownOut(BaseModel):

@@ -137,7 +137,7 @@ export function AdminDashboard() {
                 ].map((s, i) => (
                   <div
                     key={s.label}
-                    className="card"
+                    className="card sketchy"
                     style={{
                       textAlign: "center",
                       position: "relative",
@@ -165,7 +165,7 @@ export function AdminDashboard() {
           </>
         )}
 
-        <div className="card" style={{ overflow: "hidden", padding: 0 }}>
+        <div className="card sketchy" style={{ overflow: "hidden", padding: 0 }}>
           <div
             style={{
               display: "flex",
@@ -178,7 +178,10 @@ export function AdminDashboard() {
               flexWrap: "wrap",
             }}
           >
-            <div className="section-label">Campaigns</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div className="section-label">Campaigns</div>
+              <svg width="30" height="8" viewBox="0 0 30 8" fill="none"><path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg>
+            </div>
             <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
               <input
                 type="text"
