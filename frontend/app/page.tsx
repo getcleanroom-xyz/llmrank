@@ -407,7 +407,7 @@ export default function HomePage() {
 
       <footer
         style={{
-          padding: "16px var(--page-px)",
+          padding: "24px var(--page-px)",
           borderTop: "2px solid var(--border)",
           marginTop: "auto",
           fontSize: 12,
@@ -416,6 +416,29 @@ export default function HomePage() {
           textAlign: "center",
         }}
       >
+        {/* Product Hunt badge */}
+        <div
+          className="card sketchy"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "10px 16px",
+            marginBottom: 14,
+            transform: "rotate(-0.5deg)",
+            background: "#FFF9DB",
+          }}
+        >
+          <svg width="16" height="20" viewBox="0 0 16 20" fill="none" style={{ flexShrink: 0 }}>
+            <ellipse cx="8" cy="4.5" rx="3.5" ry="3.5" fill="#EF4444" stroke="#1A1A1A" strokeWidth="1.2" />
+            <rect x="6.5" y="8" width="3" height="6" rx="0.5" fill="#DC2626" stroke="#1A1A1A" strokeWidth="1.2" />
+          </svg>
+          <span style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 14, fontWeight: 700, lineHeight: 1 }}>Featured on</span>
+          <a href="https://www.producthunt.com/products/llmrank?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-llmrank" target="_blank" rel="noopener noreferrer" style={{ display: "block", lineHeight: 0 }}>
+            <img alt="LLMRank on Product Hunt" width="200" height="43" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1192976&theme=light&t=1783692046158" style={{ display: "block" }} />
+          </a>
+        </div>
+
         <div style={{ marginBottom: 4 }}>
           <Link href="/blog" style={{ color: "var(--text-muted)", textDecoration: "underline", fontWeight: 600 }}>
             Blog

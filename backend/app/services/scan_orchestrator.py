@@ -123,7 +123,11 @@ async def run_scan(
             if sentiment not in ("positive", "neutral", "negative", "not_mentioned"):
                 sentiment = "not_mentioned"
             # Build competitors list from the LLM's structured output
-            competitors = [{"name": c, "position": 0} for c in result_data.get("competitors", [])]
+            comps_raw = result_data.get("competitors", [])
+            brand_lower = brand.name.lower()
+            competitors = [{"name": c, "position": 0} for c in comps_raw
+                          if isinstance(c, str) and c.lower() != brand_lower and
+                          c.lower() != brand.domain.split(".")[0]]
             # Compute score from LLM's structured data
             score = _compute_score(mentioned, position, sentiment)
 
