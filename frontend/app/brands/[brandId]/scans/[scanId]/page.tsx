@@ -7,13 +7,7 @@ import { getScanResults } from "@/lib/api";
 import type { ScanDetail, ScanDetailQuerySummary, ScanDetailResult } from "@/lib/api";
 import { AppHeader, PageHeader } from "@/components/AppHeader";
 import { ScoreRing } from "@/components/ui";
-
-function PositionBadge({ mentioned, position }: { mentioned: boolean; position: number | null }) {
-  if (!mentioned) return <span className="pill pill-neg" style={{ fontSize: 10 }}>&ndash;</span>;
-  if (position === null || position === undefined) return <span className="pill pill-neu" style={{ fontSize: 10 }}>?</span>;
-  const cls = position <= 2 ? "pill pill-pos" : position <= 4 ? "pill pill-neu" : "pill pill-neg";
-  return <span className={cls} style={{ fontSize: 10 }}>#{position}</span>;
-}
+import { PositionBadge, SENTIMENT_LABELS } from "@/lib/utils";
 
 function SentimentBadge({ sentiment }: { sentiment: string }) {
   const map: Record<string, { label: string; cls: string }> = {

@@ -4,24 +4,7 @@ import { useState, useEffect } from "react";
 import { useScans } from "@/lib/hooks";
 import { getScanResults } from "@/lib/api";
 import type { ScanDetail, ScanDetailQuerySummary } from "@/lib/api";
-
-function timeAgo(date: string): string {
-  const diff = Date.now() - new Date(date).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
-function PositionBadge({ mentioned, position }: { mentioned: boolean; position: number | null }) {
-  if (!mentioned) return <span className="pill pill-neg" style={{ fontSize: 9 }}>&ndash;</span>;
-  if (position === null || position === undefined) return <span className="pill pill-neu" style={{ fontSize: 9 }}>?</span>;
-  const cls = position <= 2 ? "pill pill-pos" : position <= 4 ? "pill pill-neu" : "pill pill-neg";
-  return <span className={cls} style={{ fontSize: 9 }}>#{position}</span>;
-}
+import { timeAgo, SENTIMENT_LABELS, PositionBadge } from "@/lib/utils";
 
 function ExpandedScan({ scanId, brandId }: { scanId: string; brandId: string }) {
   const [data, setData] = useState<ScanDetail | null>(null);
@@ -117,8 +100,6 @@ function ExpandedScan({ scanId, brandId }: { scanId: string; brandId: string }) 
     </div>
   );
 }
-
-const SENTIMENT_LABELS: Record<string, string> = { positive: "Positive", neutral: "Neutral", negative: "Negative", not_mentioned: "Unmentioned" };
 
 export function ScanHistory({ brandId }: { brandId: string }) {
   const { data: scans = [], isLoading } = useScans(brandId);

@@ -68,6 +68,12 @@ export function QuerySwipeOverlay({
   };
 
   if (!open) return null;
+  if (!queries.length) return <div style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div className="card" style={{ padding: 24, textAlign: "center" }}>
+      <div style={{ fontSize: 13, color: "var(--text-muted)" }}>No query suggestions available.</div>
+      <button onClick={onClose} className="btn btn-ghost btn-sm" style={{ marginTop: 8 }}>Close</button>
+    </div>
+  </div>;
   const current = queries[index];
   const isDone = index >= queries.length;
   const selCount = selected.size;

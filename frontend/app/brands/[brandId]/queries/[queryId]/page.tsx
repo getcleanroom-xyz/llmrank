@@ -6,13 +6,8 @@ import Link from "next/link";
 import { getQueryDrilldown, rescanQuery, getQueryDrilldown as fetchDrilldown } from "@/lib/api";
 import type { QueryDrilldown } from "@/types";
 import { AppHeader, PageHeader } from "@/components/AppHeader";
-import { InsightRow, ScoreRing, getLLMColor } from "@/components/ui";
-
-const SENTIMENT_LABELS: Record<string, string> = { positive: "Positive", neutral: "Neutral", negative: "Negative", not_mentioned: "Unmentioned" };
-const LLM_NAMES: Record<string, string> = {
-  chatgpt: "ChatGPT", gemini: "Gemini", claude: "Claude", llama: "Llama",
-  deepseek: "DeepSeek", mistral: "Mistral", qwen: "Qwen",
-};
+import { InsightRow, getLLMColor } from "@/components/ui";
+import { SENTIMENT_LABELS, LLM_NAMES } from "@/lib/utils";
 
 function QueryDrilldownInner() {
   const { brandId, queryId } = useParams<{ brandId: string; queryId: string }>();
@@ -116,7 +111,7 @@ function QueryDrilldownInner() {
         {/* Stat pills — redesigned row */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "var(--gap)", marginBottom: "var(--gap)" }}>
           {[
-            { val: data.avg_position ? `#${data.avg_position}` : "-", label: "Position", sub: data.avg_position && data.avg_position <= 2 ? "Strong" : data.avg_position ? "Room to improve" : "Not ranked", bg: "#FFF9DB", acc: data.avg_position && data.avg_position <= 2 ? "var(--primary)" : "var(--text-muted)" },
+            { val: data.avg_position != null ? `#${data.avg_position}` : "-", label: "Position", sub: data.avg_position != null && data.avg_position <= 2 ? "Strong" : data.avg_position ? "Room to improve" : "Not ranked", bg: "#FFF9DB", acc: data.avg_position != null && data.avg_position <= 2 ? "var(--primary)" : "var(--text-muted)" },
             { val: `${coveragePct}%`, label: "Coverage", sub: `${data.llms_mentioned}/${data.total_llms} models`, bg: "#DBEAFF", acc: coveragePct >= 60 ? "#166534" : coveragePct >= 30 ? "#333" : "#991B1B" },
             { val: data.top_competitor ?? "-", label: "Top rival", sub: data.top_competitor ? "Most-cited" : "None detected", bg: "#FEE2E2", acc: data.top_competitor ? "#991B1B" : "#999" },
             { val: sentimentLabel, label: "Sentiment", sub: data.overall_sentiment === "positive" ? "Favorable" : data.overall_sentiment === "negative" ? "Unfavorable" : data.overall_sentiment === "neutral" ? "Neutral" : "Mixed", bg: "#E6F9ED", acc: sentimentColor },
@@ -144,7 +139,7 @@ function QueryDrilldownInner() {
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
                       <span style={{ fontSize: 12, fontWeight: 700, textTransform: "capitalize", minWidth: 80 }}>{LLM_NAMES[r.llm_name] ?? r.llm_name}</span>
                       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        {r.position ? (
+                        {r.position != null && r.position > 0 ? (
                           <span className="pill" style={{ fontSize: 10, fontWeight: 800, background: r.position <= 2 ? "#DCFCE7" : "var(--bg-dark)", color: r.position <= 2 ? "#166534" : "var(--text)", border: "2px solid var(--border)" }}>#{r.position}</span>
                         ) : (
                           <span className="pill pill-neg" style={{ fontSize: 10 }}>--</span>

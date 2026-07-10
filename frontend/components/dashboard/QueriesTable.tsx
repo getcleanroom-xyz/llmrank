@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQueriesTable, useAddQuery, useDeleteQuery, useSuggestQueries } from "@/lib/hooks";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
+import { timeAgo } from "@/lib/utils";
 
 function useDebounce(value: string, delay: number) {
   const [debounced, setDebounced] = useState(value);
@@ -12,17 +13,6 @@ function useDebounce(value: string, delay: number) {
     return () => clearTimeout(id);
   }, [value, delay]);
   return debounced;
-}
-
-function timeAgo(date: string): string {
-  const diff = Date.now() - new Date(date).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
 }
 
 const CARD_COLORS = [
