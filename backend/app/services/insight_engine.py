@@ -143,16 +143,33 @@ async def generate_competitor_insight(
     you_win_count: int,
     they_win_count: int,
     you_absent_count: int,
+    branded_total: int = 0,
+    brand_position: float | None = None,
+    competitor_position: float | None = None,
+    top_queries: list[str] | None = None,
 ) -> str:
     """Generate a specific, actionable competitive insight using LLM."""
-    user_msg = (
+    prompt = (
         f"Brand: {brand_name} | Competitor: {competitor_name}\n"
-        f"Mention rate: {mention_pct}% | Brand wins: {you_win_count} | Competitor wins: {they_win_count} | Brand absent: {you_absent_count}\n\n"
-        f"Generate ONE specific, actionable sentence about how {brand_name} can compete better. Reference the data. Return ONLY the sentence."
+    )
+    if top_queries:
+        prompt += f"Queries where {competitor_name} competes: {', '.join(top_queries[:5])}\n"
+    prompt += (
+        f"Your mention rate vs them: {mention_pct}% | "
+        f"You rank higher: {you_win_count}x | They rank higher: {they_win_count}x | You're absent: {you_absent_count}x\n"
+    )
+    if brand_position is not None:
+        prompt += f"Your avg position: {brand_position}\n"
+    if competitor_position is not None:
+        prompt += f"Their avg position: {competitor_position}\n"
+    prompt += (
+        "\nGive ONE specific, actionable recommendation for how this brand can improve "
+        "its AI visibility against this competitor. Reference the actual data. "
+        "Return ONLY the sentence."
     )
     messages = [
         {"role": "developer", "content": "You are a competitive strategist. Output a single short sentence. No JSON, no lists, no preamble."},
-        {"role": "user", "content": user_msg},
+        {"role": "user", "content": prompt},
     ]
     try:
         from app.services.llm_adapters import _call_openrouter

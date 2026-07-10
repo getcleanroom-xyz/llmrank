@@ -170,6 +170,7 @@ class LLMBreakdown(BaseModel):
 class CompetitorShareItem(BaseModel):
     name: str
     mention_pct: float
+    beats_you: int = 0
 
 
 class QuerySummary(BaseModel):

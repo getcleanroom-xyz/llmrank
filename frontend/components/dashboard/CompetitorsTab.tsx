@@ -55,7 +55,7 @@ export function CompetitorsTab({ brandId }: { brandId: string }) {
           </div>
           {competitorShare.slice(0, 3).map((c, i) => (
             <div key={c.name} style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: i < 2 ? 6 : 0, paddingLeft: 12, borderLeft: `2px solid ${COMP_COLORS[i % COMP_COLORS.length]}` }}>
-              <strong>{c.name}</strong> appears in {c.mention_pct}% of responses. Publishing a <strong>&quot;{brandName} vs {c.name}&quot;</strong> comparison page is your highest-impact action.
+              <strong>{c.name}</strong> appears in {c.mention_pct}% of responses{c.beats_you !== undefined ? `, beating you in ${c.beats_you} queries` : ""}. <a href={`/brands/${bid}/competitors/${encodeURIComponent(c.name)}`} style={{ color: "var(--primary)", fontWeight: 600, textDecoration: "underline" }}>See detailed analysis &rarr;</a>
             </div>
           ))}
         </div>

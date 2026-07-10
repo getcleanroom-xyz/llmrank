@@ -109,6 +109,7 @@ async def get_dashboard(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db))
 
     # Competitor share of voice — based on successful results only
     comp_counts: dict[str, dict] = {}
+    comp_beats: dict[str, int] = {}
     total_results_count = len(successful_results)
     for r in successful_results:
         for comp in (r.competitors_mentioned or []):
@@ -119,11 +120,20 @@ async def get_dashboard(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db))
             if norm not in comp_counts:
                 comp_counts[norm] = {"name": raw_name, "count": 0}
             comp_counts[norm]["count"] += 1
+            # Track when competitor outranks the brand
+            comp_pos = comp.get("position")
+            if r.mentioned and r.position is not None and comp_pos is not None:
+                if comp_pos < r.position:
+                    comp_beats[norm] = comp_beats.get(norm, 0) + 1
 
     competitor_share = sorted(
         [
-            CompetitorShareItem(name=entry["name"], mention_pct=round(entry["count"] / total_results_count * 100, 1))
-            for entry in comp_counts.values()
+            CompetitorShareItem(
+                name=entry["name"],
+                mention_pct=round(entry["count"] / total_results_count * 100, 1),
+                beats_you=comp_beats.get(norm, 0),
+            )
+            for norm, entry in comp_counts.items()
         ],
         key=lambda x: x.mention_pct,
         reverse=True,

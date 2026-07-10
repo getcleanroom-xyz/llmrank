@@ -264,24 +264,33 @@ async def get_competitor_drilldown(
     if not comp_domain:
         comp_domain = f"{competitor_name.lower().replace(' ', '').replace('-', '')}.com"
 
-    # Generate competitive insight
+    # Generate competitive insight with richer data
     brand_row = (await db.execute(select(Brand).where(Brand.id == brand_id))).scalar_one_or_none()
     brand_name = brand_row.name if brand_row else ""
 
     comp_insight = ""
     try:
+        top_queries = [q.query_text for q in [query_map.get(r.query_id) for r, _ in comp_results] if q]
+        brand_positions = [r.position for r, _ in comp_results if r.mentioned and r.position]
+        comp_positions = [p for _, p in comp_results if p is not None]
+        brand_avg_pos = round(sum(brand_positions) / len(brand_positions), 1) if brand_positions else None
+        comp_avg_pos = round(sum(comp_positions) / len(comp_positions), 1) if comp_positions else None
         comp_insight = await generate_competitor_insight(
             brand_name, competitor_name,
             round(len(comp_results) / len(all_results) * 100, 1) if all_results else 0,
             brand_wins, beats_count,
             len({r.query_id for r, _ in comp_results}) - beats_count - brand_wins,
+            branded_total=total_queries,
+            brand_position=brand_avg_pos,
+            competitor_position=comp_avg_pos,
+            top_queries=top_queries,
         )
     except Exception as e:
         logger.warning("Competitor insight failed: %s", e)
 
     comp_insight = comp_insight or (
         f"{competitor_name} beats you in {beats_count} out of {total_queries} queries. "
-        f"A comparison page targeting their weaknesses is your highest-impact move."
+        f"You could target their weaknesses in your content to improve your AI visibility."
     )
 
     return CompetitorDrilldownOut(

@@ -66,6 +66,7 @@ export interface LLMBreakdown {
 export interface CompetitorShareItem {
   name: string;
   mention_pct: number;
+  beats_you?: number;
 }
 
 export interface QuerySummary {
