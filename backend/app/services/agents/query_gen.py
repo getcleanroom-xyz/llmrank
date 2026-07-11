@@ -147,6 +147,7 @@ class QueryGenAgent(BaseAgent):
                         mode="refresh",
                     )
                     if result.success:
+                        await db.commit()
                         logger.info("Query refresh complete for brand %s", brand_id)
         except Exception as e:
             logger.exception("Query Gen refresh failed: %s", e)

@@ -75,6 +75,7 @@ class CompetitorIntelAgent(BaseAgent):
                     db=db,
                 )
                 if result.success:
+                    await db.commit()
                     logger.info("Competitor Intel analysis complete for brand %s", brand_id)
                 else:
                     logger.warning("Competitor Intel analysis failed: %s", result.error)

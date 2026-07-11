@@ -92,9 +92,8 @@ async def analyze_competitors(brand_id: str, scan_id: str,
         }
 
     if db:
-        result = await _execute(db)
-        await db.commit()
-        return result
+        # Caller owns the transaction — don't commit here
+        return await _execute(db)
 
     async with AsyncSessionLocal() as session:
         result = await _execute(session)
