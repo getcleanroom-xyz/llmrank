@@ -1,0 +1,102 @@
+"""Answer Question skill — answer user questions using brand scan data."""
+import json
+import logging
+from typing import AsyncGenerator
+
+from app.services.tools.llm import call_llm, stream_llm
+from app.services.tools.domain import build_brand_context
+from app.services.tools.event import emit_event
+
+logger = logging.getLogger(__name__)
+
+RECOMMENDATION_SYSTEM_PROMPT = (
+    "You are lai, the AI visibility copilot inside LLMRank. "
+    "You talk like a smart friend who actually knows this stuff, not a consultant "
+    "reading from a slide deck. Think: someone scribbling notes in a notebook, "
+    "then turning to you and saying what matters.\n\n"
+    "You have REAL data about this brand below. Every query, number, and competitor "
+    "name is pulled straight from their scan results.\n\n"
+    "CRITICAL RULES:\n"
+    "- NEVER assume or guess what the brand's features, products, or value propositions are. "
+    "You do NOT know what this brand does beyond what is in the data below.\n"
+    "- NEVER say things like 'If you have X feature...' or 'If your product does Y...'. "
+    "You don't know. Only reference what is explicitly in the data.\n"
+    "- ONLY use the brand name, domain, queries, scan results, and competitor data provided.\n"
+    "- If the user asks about their product features, say you don't have that information "
+    "and suggest they focus on the visibility data you DO have.\n\n"
+    "HOW TO TALK:\n"
+    "- Match the user's energy. If they ask a quick question, give a quick answer. "
+    "If they want depth, go deep.\n"
+    "- Be direct. No filler like 'Great question!' or 'I'd be happy to help!'\n"
+    "- Use the actual data. Quote real query texts, real percentages, real positions.\n"
+    "- When something is bad, say it's bad. When something is working, say so.\n"
+    "- Give specific next steps, not vague advice like 'improve your content'\n"
+    "- No emojis. No em dashes. No corporate jargon. Write like a human.\n"
+    "- Use markdown when it helps (headers, bullet points, bold for emphasis)\n"
+    "- Use newlines SPARINGLY. One blank line between sections, never more. "
+    "Dense responses feel more natural than spaced-out ones.\n"
+    "- If you don't have data for something, say so. Don't make it up."
+)
+
+
+async def answer_question(brand_id: str, user_message: str,
+                          history: list[dict] | None = None,
+                          conversation_id: str | None = None,
+                          agent_name: str = "recommendations") -> str:
+    """Answer a user question about brand visibility.
+
+    Returns the full response text.
+    """
+    context = await build_brand_context(brand_id)
+
+    messages = [{"role": "developer", "content": RECOMMENDATION_SYSTEM_PROMPT + f"\n\n## Actual Brand Data\n\n{context}"}]
+    if history:
+        for msg in history[-6:]:
+            messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
+    messages.append({"role": "user", "content": user_message})
+
+    response = await call_llm(messages, model_key="claude", temperature=0.5, max_tokens=2048)
+
+    # Emit chat event for persistence
+    if conversation_id:
+        await emit_event("chat", "chat.messages_created", {
+            "brand_id": brand_id,
+            "conversation_id": conversation_id,
+            "user_message": user_message,
+            "assistant_response": response,
+        }, agent_name=agent_name)
+
+    return response
+
+
+async def stream_answer(brand_id: str, user_message: str,
+                        history: list[dict] | None = None,
+                        conversation_id: str | None = None,
+                        agent_name: str = "recommendations") -> AsyncGenerator[str, None]:
+    """Stream an answer to a user question.
+
+    Yields SSE-formatted tokens.
+    """
+    context = await build_brand_context(brand_id)
+
+    messages = [{"role": "developer", "content": RECOMMENDATION_SYSTEM_PROMPT + f"\n\n## Actual Brand Data\n\n{context}"}]
+    if history:
+        for msg in history[-6:]:
+            messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
+    messages.append({"role": "user", "content": user_message})
+
+    full_response = ""
+    async for token in stream_llm(messages, model_key="claude", temperature=0.5, max_tokens=2048):
+        full_response += token
+        yield f"data: {json.dumps({'token': token})}\n\n"
+
+    # Emit chat event for persistence after streaming completes
+    if conversation_id and full_response:
+        await emit_event("chat", "chat.messages_created", {
+            "brand_id": brand_id,
+            "conversation_id": conversation_id,
+            "user_message": user_message,
+            "assistant_response": full_response,
+        }, agent_name=agent_name)
+
+    yield "data: [DONE]\n\n"

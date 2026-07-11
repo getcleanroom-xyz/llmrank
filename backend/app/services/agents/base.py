@@ -69,7 +69,7 @@ class BaseAgent:
 
     Subclasses should:
     1. Set name, description, system_prompt
-    2. Register tools in __init__
+    2. Register tools/skills in __init__
     3. Optionally override run() for custom logic
     """
 
@@ -79,9 +79,9 @@ class BaseAgent:
     max_steps: int = 10
     model_key: str = "chatgpt"  # cheap model for agent reasoning
 
-    def __init__(self, event_bus: EventBus):
+    def __init__(self, event_bus: EventBus, allowed_permissions: list[str] | None = None):
         self.event_bus = event_bus
-        self.tools = ToolRegistry()
+        self.tools = ToolRegistry(allowed_permissions=allowed_permissions)
         self._register_default_tools()
 
     def _register_default_tools(self):
@@ -99,6 +99,7 @@ class BaseAgent:
                 },
                 "required": ["topic", "event_type", "payload"],
             },
+            permissions=["event:emit"],
         ))
 
     async def _emit_event(self, topic: str, event_type: str, payload: dict) -> dict:
@@ -110,15 +111,17 @@ class BaseAgent:
         raise NotImplementedError
 
     async def run_with_react(self, context: AgentContext, task: str, **kwargs) -> AgentResult:
-        """ReAct loop: Think → Act → Observe → repeat."""
-        from app.services.llm_core import _call_openrouter, _parse_json
+        """ReAct loop: Think -> Act -> Observe -> repeat."""
+        from app.services.tools.llm import call_llm_json
 
         steps = []
         for step_num in range(self.max_steps):
             # Build prompt with tool schemas
             tools_desc = json.dumps(self.tools.list_schemas(), indent=2)
-            history = "\n".join(f"Step {s['step']}: {s['action']} -> {s['result'][:200]}"
-                               for s in steps[-3:])  # last 3 steps for context
+            history = "\n".join(
+                f"Step {s['step']}: {s['action']} -> {s['result'][:200]}"
+                for s in steps[-3:]
+            )
 
             prompt = (
                 f"{self.system_prompt}\n\n"
@@ -133,13 +136,11 @@ class BaseAgent:
             )
 
             try:
-                import httpx
-                async with httpx.AsyncClient(timeout=30) as client:
-                    resp = await _call_openrouter(
-                        [{"role": "user", "content": prompt}],
-                        self.model_key, client, temperature=0.3, max_tokens=1024,
-                    )
-                decision = _parse_json(resp)
+                messages = [{"role": "user", "content": prompt}]
+                decision = await call_llm_json(
+                    messages, model_key=self.model_key,
+                    temperature=0.3, max_tokens=1024,
+                )
             except Exception as e:
                 logger.error("Agent %s step %d LLM error: %s", self.name, step_num, e)
                 return AgentResult(False, error=f"LLM error at step {step_num}: {e}", steps=steps)
