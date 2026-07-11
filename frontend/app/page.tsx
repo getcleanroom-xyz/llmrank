@@ -46,7 +46,7 @@ export const metadata: Metadata = {
   },
 };
 
-const SUPPORTED_LLMS = ["ChatGPT", "Gemini", "Claude", "Llama", "DeepSeek", "Mistral", "Qwen"];
+const SUPPORTED_LLMS = ["ChatGPT", "GPT-4o", "Gemini", "Claude", "Llama", "DeepSeek", "Mistral", "Qwen"];
 
 const STEPS = [
   {
@@ -83,7 +83,7 @@ const FEATURES = [
   },
   {
     title: "Competitor Intelligence",
-    desc: "Who's getting mentioned instead of you. How often. In what context.",
+    desc: "Threat levels, not just mentions. Know who's actually beating you and why.",
   },
   {
     title: "Per-Query Drilldown",
@@ -94,8 +94,8 @@ const FEATURES = [
     desc: "Not sure what to track? We'll tell you what your market is asking.",
   },
   {
-    title: "Actionable Fixes",
-    desc: "Publish a comparison page. Add structured data. Claim your profiles. We tell you exactly what to do.",
+    title: "AI Copilot",
+    desc: "Ask lai anything. Get content plans, gap analysis, and competitor strategy on demand.",
   },
 ];
 
@@ -106,7 +106,7 @@ const Q_AND_A = [
   },
   {
     q: "Which models do you check?",
-    a: "ChatGPT (GPT-4o), Gemini, Claude, Llama 3.3, DeepSeek, Mistral, Qwen. We add new ones as they get traction.",
+    a: "ChatGPT, GPT-4o, Gemini 3 Flash, Claude Sonnet 4.5, Llama 3.3, Llama 3.1, DeepSeek, DeepSeek R1, Mistral, and Qwen. We add new ones as they emerge.",
   },
   {
     q: "Is there a free plan?",
