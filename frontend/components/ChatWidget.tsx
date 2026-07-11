@@ -11,6 +11,7 @@ import {
   useDeleteConversation,
 } from "@/lib/hooks/conversations";
 import type { Conversation } from "@/lib/api/conversations";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 
 function LaiIcon({ size = 24, color = "currentColor" }: { size?: number; color?: string }) {
   return (
@@ -39,6 +40,7 @@ export function ChatWidget({ brandId }: { brandId: string }) {
   const [streaming, setStreaming] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [error, setError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const qc = useQueryClient();
@@ -90,16 +92,21 @@ export function ChatWidget({ brandId }: { brandId: string }) {
     setSidebarOpen(false);
   }, []);
 
-  const handleDeleteConversation = useCallback(async (convId: string, e: React.MouseEvent) => {
+  const handleDeleteConversation = useCallback((convId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm("Delete this conversation?")) return;
-    await deleteConv.mutateAsync({ brandId, conversationId: convId });
-    if (activeConvId === convId) {
+    setDeleteTarget(convId);
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    await deleteConv.mutateAsync({ brandId, conversationId: deleteTarget });
+    if (activeConvId === deleteTarget) {
       setActiveConvId(null);
       setLocalMessages([]);
       setStreamingMsg("");
     }
-  }, [brandId, activeConvId, deleteConv]);
+    setDeleteTarget(null);
+  }, [brandId, activeConvId, deleteConv, deleteTarget]);
 
   const send = async (text: string) => {
     if (!text.trim() || streaming) return;
@@ -553,6 +560,18 @@ export function ChatWidget({ brandId }: { brandId: string }) {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete conversation"
+        confirmLabel="Delete"
+        destructive
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+        loading={deleteConv.isPending}
+      >
+        This will permanently delete this conversation and all its messages. This cannot be undone.
+      </ConfirmDialog>
 
       <style>{`
         @keyframes blink { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
