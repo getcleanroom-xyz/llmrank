@@ -174,21 +174,44 @@ export function ChatWidget({ brandId }: { brandId: string }) {
                     {msg.role === "assistant" ? (
                       <Markdown
                         components={{
-                          h1: ({children}) => <h1 style={{ fontSize: 15, fontWeight: 800 }}>{children}</h1>,
-                          h2: ({children}) => <h2 style={{ fontSize: 14, fontWeight: 700 }}>{children}</h2>,
-                          h3: ({children}) => <h3 style={{ fontSize: 13, fontWeight: 700 }}>{children}</h3>,
-                          p: ({children}) => <p>{children}</p>,
-                          ul: ({children}) => <ul style={{ paddingLeft: 14 }}>{children}</ul>,
-                          ol: ({children}) => <ol style={{ paddingLeft: 14 }}>{children}</ol>,
-                          li: ({children}) => <li>{children}</li>,
-                          strong: ({children}) => <strong style={{ fontWeight: 700 }}>{children}</strong>,
+                          h1: ({children}) => (
+                            <div style={{ margin: "6px 0 2px" }}>
+                              <h1 style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 18, fontWeight: 700, margin: 0, lineHeight: 1.2 }}>{children}</h1>
+                              <svg width="50%" height="6" viewBox="0 0 120 6" preserveAspectRatio="none" style={{ display: "block", marginTop: 2 }}>
+                                <path d="M0 3 Q10 0 20 4 Q30 6 40 2 Q50 0 60 5 Q70 6 80 2 Q90 0 100 4 Q110 6 120 3" fill="none" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" />
+                              </svg>
+                            </div>
+                          ),
+                          h2: ({children}) => (
+                            <div style={{ margin: "5px 0 2px" }}>
+                              <h2 style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 16, fontWeight: 700, margin: 0, lineHeight: 1.2 }}>{children}</h2>
+                              <svg width="40%" height="5" viewBox="0 0 120 5" preserveAspectRatio="none" style={{ display: "block", marginTop: 1 }}>
+                                <path d="M0 2 Q10 0 20 3 Q30 5 40 2 Q50 0 60 4 Q70 5 80 1 Q90 0 100 3 Q110 5 120 2" fill="none" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" />
+                              </svg>
+                            </div>
+                          ),
+                          h3: ({children}) => <h3 style={{ fontFamily: "var(--font-sans), sans-serif", fontSize: 13, fontWeight: 700, margin: "4px 0 1px" }}>{children}</h3>,
+                          p: ({children}) => <p style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: 13, lineHeight: 1.5, margin: "2px 0" }}>{children}</p>,
+                          ul: ({children}) => <ul style={{ margin: "2px 0", paddingLeft: 16, listStyleType: '"- "' }}>{children}</ul>,
+                          ol: ({children}) => <ol style={{ margin: "2px 0", paddingLeft: 16 }}>{children}</ol>,
+                          li: ({children}) => <li style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: 13, lineHeight: 1.5, margin: "1px 0" }}>{children}</li>,
+                          strong: ({children}) => (
+                            <strong style={{ fontWeight: 700, background: "linear-gradient(to bottom, transparent 60%, var(--primary) 60%)", padding: "0 2px" }}>
+                              {children}
+                            </strong>
+                          ),
+                          blockquote: ({children}) => (
+                            <div style={{ margin: "4px 0", padding: "8px 12px", background: "#FFF9DB", border: "2px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "2px 2px 0 #1A1A1A", transform: "rotate(0.3deg)", fontSize: 12 }}>
+                              {children}
+                            </div>
+                          ),
                           code: ({children, className}) => {
                             const isInline = !className;
                             return isInline
-                              ? <code style={{ background: "rgba(0,0,0,0.06)", padding: "1px 4px", borderRadius: 3, fontSize: 12 }}>{children}</code>
-                              : <code style={{ display: "block", background: "rgba(0,0,0,0.06)", padding: 8, borderRadius: 4, fontSize: 12, overflow: "auto" }}>{children}</code>;
+                              ? <code style={{ fontFamily: "monospace", fontSize: 12, background: "rgba(0,0,0,0.06)", padding: "1px 4px", borderRadius: 3 }}>{children}</code>
+                              : <code style={{ display: "block", fontFamily: "monospace", fontSize: 11, background: "rgba(0,0,0,0.06)", padding: 8, borderRadius: 4, overflow: "auto" }}>{children}</code>;
                           },
-                          a: ({href, children}) => <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: "var(--primary)", fontWeight: 600, textDecoration: "underline" }}>{children}</a>,
+                          a: ({href, children}) => <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: "var(--primary)", fontWeight: 600, textDecoration: "underline", fontSize: 13 }}>{children}</a>,
                         }}
                       >
                         {msg.content}
