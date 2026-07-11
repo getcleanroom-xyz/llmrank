@@ -186,9 +186,9 @@ export function ChatWidget({ brandId }: { brandId: string }) {
                           ),
                           h3: ({children}) => <h3 style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 14, fontWeight: 700, margin: "3px 0 1px" }}>{children}</h3>,
                           p: ({children}) => <p style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: 13, lineHeight: 1.5, margin: "3px 0" }}>{children}</p>,
-                          ul: ({children}) => <ul style={{ margin: "2px 0", paddingLeft: 16 }}>{children}</ul>,
-                          ol: ({children}) => <ol style={{ margin: "2px 0", paddingLeft: 16 }}>{children}</ol>,
-                          li: ({children}) => <li style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: 13, lineHeight: 1.5, margin: "1px 0" }}>{children}</li>,
+                          ul: ({children}) => <ul style={{ margin: 0, paddingLeft: 16 }}>{children}</ul>,
+                          ol: ({children}) => <ol style={{ margin: 0, paddingLeft: 16 }}>{children}</ol>,
+                          li: ({children}) => <li style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: 13, lineHeight: 1.5, margin: 0 }}>{children}</li>,
                           strong: ({children}) => (
                             <strong style={{ fontWeight: 700, background: "linear-gradient(to bottom, transparent 60%, var(--primary) 60%)", padding: "0 2px" }}>
                               {children}
