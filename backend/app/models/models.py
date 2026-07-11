@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, Text, Float, Integer, DateTime, ForeignKey, Enum, JSON, Boolean, BigInteger
+from sqlalchemy import String, Text, Float, Integer, DateTime, ForeignKey, Enum, JSON, Boolean, BigInteger, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 import enum
@@ -237,3 +237,52 @@ class CampaignLink(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
     campaign: Mapped["Campaign"] = relationship("Campaign", back_populates="links")
+
+
+# ─── Agent Infrastructure ─────────────────────────────────────────────────────
+
+class AgentEvent(Base):
+    """Event store for agent-to-agent communication."""
+    __tablename__ = "agent_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    topic: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    event_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    extra: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+
+class AgentFailedEvent(Base):
+    """Dead letter queue for events that failed processing."""
+    __tablename__ = "agent_failed_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    event_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    error: Mapped[str] = mapped_column(Text, nullable=False)
+    subscription: Mapped[str] = mapped_column(String(100), nullable=False)
+    attempts: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+
+class BrandAgentContext(Base):
+    """Per-brand context store for agent memory and state."""
+    __tablename__ = "brand_agent_context"
+
+    brand_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("brands.id"), primary_key=True)
+    context: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+
+class AgentRateLimit(Base):
+    """Hourly rate limits for user-facing agents."""
+    __tablename__ = "agent_rate_limits"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    hour_bucket: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    request_count: Mapped[int] = mapped_column(Integer, default=0)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "hour_bucket", name="uq_agent_rate_limits_user_hour"),
+    )

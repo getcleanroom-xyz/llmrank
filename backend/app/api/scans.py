@@ -16,7 +16,7 @@ from app.core.config import settings
 from app.core.rate_limit import limiter
 from app.models.models import User, Brand, MonitoredQuery, Scan, QueryResult, ScanStatus
 from app.schemas.schemas import BrandOut, ScanCreate, ScanOut, QuerySummary
-from app.services.scan_orchestrator import run_scan, generate_query_suggestions
+from app.services.scan_orchestrator import generate_query_suggestions
 from app.services.credit_service import check_credits, deduct_credits
 from app.api.auth import get_current_user
 
@@ -121,44 +121,44 @@ async def trigger_scan(
 
 
 async def _run_scan_background(brand_id: uuid.UUID, scan_id: uuid.UUID, llm_names: list[str]):
-    """Background task wrapper for scan execution."""
+    """Background task — runs scan via the Scan Orchestrator Agent."""
     from app.core.database import AsyncSessionLocal
-    from app.services.credit_service import grant_credits
+    from app.services.agents.context_store import AgentContext
+    from app.services.agents.registry import agent_registry
     logger.info("Background scan started: scan_id=%s brand_id=%s llms=%s", scan_id, brand_id, llm_names)
     async with AsyncSessionLocal() as db:
         try:
-            await run_scan(brand_id, db, llm_names, scan_id=scan_id)
-            logger.info("Background scan completed: scan_id=%s", scan_id)
-        except Exception as e:
-            logger.exception("Background scan failed: scan_id=%s error=%s", scan_id, e)
-            try:
-                result = await db.execute(select(Scan).where(Scan.id == scan_id))
-                scan = result.scalar_one_or_none()
+            ctx = AgentContext(str(brand_id))
+            result = await agent_registry.scan_orchestrator.run(
+                ctx, brand_id=brand_id, db=db, llm_names=llm_names, scan_id=scan_id,
+            )
+            if result.success:
+                logger.info("Background scan completed: scan_id=%s", scan_id)
+            else:
+                logger.error("Background scan failed: scan_id=%s error=%s", scan_id, result.error)
+                # Mark scan as failed and refund credits
+                scan_result = await db.execute(select(Scan).where(Scan.id == scan_id))
+                scan = scan_result.scalar_one_or_none()
                 if scan:
                     scan.status = ScanStatus.failed
                     scan.completed_at = _utcnow()
                     await db.commit()
-                    logger.info("Background scan marked as failed: scan_id=%s", scan_id)
-
-                # Refund credits for the failed scan
+                from app.services.credit_service import grant_credits
                 from app.models.models import CreditTransaction
                 tx_result = await db.execute(
                     select(CreditTransaction)
                     .where(CreditTransaction.description.ilike(f"%Scan: %{scan_id}%"))
-                    .order_by(CreditTransaction.created_at.desc())
-                    .limit(1)
+                    .order_by(CreditTransaction.created_at.desc()).limit(1)
                 )
                 last_tx = tx_result.scalar_one_or_none()
                 if last_tx and last_tx.amount < 0:
-                    refund_amount = abs(last_tx.amount)
-                    brand_result = await db.execute(select(Brand).where(Brand.id == scan.brand_id))
+                    brand_result = await db.execute(select(Brand).where(Brand.id == brand_id))
                     brand = brand_result.scalar_one_or_none()
                     if brand:
-                        await grant_credits(db, refund_amount, f"Refund: failed scan {scan_id}", "refund", brand.owner_id)
+                        await grant_credits(db, abs(last_tx.amount), f"Refund: failed scan {scan_id}", "refund", brand.owner_id)
                         await db.commit()
-                        logger.info("Refunded %d credits for failed scan %s", refund_amount, scan_id)
-            except Exception as inner_e:
-                logger.exception("Failed to mark scan as failed: scan_id=%s error=%s", scan_id, inner_e)
+        except Exception as e:
+            logger.exception("Background scan failed: scan_id=%s error=%s", scan_id, e)
 
 
 @router.get("/brands/{brand_id}/scans", response_model=list[ScanOut], tags=["Scans"])
