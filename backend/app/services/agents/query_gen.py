@@ -256,65 +256,34 @@ class QueryGenAgent(BaseAgent):
             discover_competitors_by_category, crawl_competitor_sites, competitors_need_refresh,
         )
         from app.services.skills.manage_queries import generate_queries
+        from app.services.crawler import crawl_website
         import httpx
 
-        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
-            # Crawl the brand's homepage to understand what it does
-            crawl_content = ""
-            url = f"https://{brand.domain}"
-            try:
-                resp = await client.get(url)
-                logger.info("Crawl %s: HTTP %d, %d bytes", url, resp.status_code, len(resp.text))
-                if resp.status_code == 200 and len(resp.text) > 500:
-                    from html.parser import HTMLParser
-                    class TextExtractor(HTMLParser):
-                        def __init__(self):
-                            super().__init__()
-                            self.text = []
-                            self.skip = False
-                        def handle_starttag(self, tag, attrs):
-                            if tag in ("script", "style", "nav", "footer"):
-                                self.skip = True
-                        def handle_endtag(self, tag):
-                            if tag in ("script", "style", "nav", "footer"):
-                                self.skip = False
-                        def handle_data(self, data):
-                            if not self.skip:
-                                t = data.strip()
-                                if t:
-                                    self.text.append(t)
-                    parser = TextExtractor()
-                    parser.feed(resp.text[:15000])
-                    crawl_content = " ".join(parser.text)[:4000]
-                    logger.info("Crawled %s: %d chars extracted", url, len(crawl_content))
-                else:
-                    logger.warning("Crawl %s returned %d or too small", url, resp.status_code)
-            except Exception as e:
-                logger.warning("Failed to crawl %s: %s", url, e)
+        # Crawl the brand's website (up to 6 pages)
+        crawl_content = await crawl_website(brand.domain)
 
-            if not crawl_content:
-                logger.warning("No content crawled for %s — queries will use brand name only", brand.domain)
-
+        async with httpx.AsyncClient(timeout=30) as client:
             classification = await classify_brand(crawl_content, brand.name, brand.domain, client)
             from_crawl = await discover_competitors_from_crawl(crawl_content, client)
             from_category = await discover_competitors_by_category(classification, client)
 
-            seen = {}
-            for c in from_crawl + from_category:
-                name_lower = c.get("name", "").lower()
-                if name_lower and name_lower != brand.name.lower():
-                    seen[name_lower] = c
-            for name in user_competitors:
-                if name.lower() not in seen:
-                    seen[name.lower()] = {"name": name, "domain": "", "relevance_score": 5}
-            competitors = sorted(seen.values(), key=lambda c: c.get("relevance_score", 0), reverse=True)[:10]
+        seen = {}
+        for c in from_crawl + from_category:
+            name_lower = c.get("name", "").lower()
+            if name_lower and name_lower != brand.name.lower():
+                seen[name_lower] = c
+        for name in user_competitors:
+            if name.lower() not in seen:
+                seen[name.lower()] = {"name": name, "domain": "", "relevance_score": 5}
+        competitors = sorted(seen.values(), key=lambda c: c.get("relevance_score", 0), reverse=True)[:10]
 
-            if competitors_need_refresh(competitors):
+        if competitors_need_refresh(competitors):
+            async with httpx.AsyncClient(timeout=30) as client:
                 competitors = await crawl_competitor_sites(competitors)
 
-            queries = await generate_queries(
-                str(brand.id), brand.name, brand.domain, classification, competitors, crawl_content, self.name
-            )
+        queries = await generate_queries(
+            str(brand.id), brand.name, brand.domain, classification, competitors, crawl_content, self.name
+        )
 
         return {"classification": classification, "competitors": competitors, "queries": queries}
 
@@ -323,41 +292,12 @@ class QueryGenAgent(BaseAgent):
         from app.services.llm_core import scan_all_llms, _call_openrouter, _parse_json
         from app.services.competitor_service import classify_brand, discover_competitors_from_crawl, discover_competitors_by_category
         from app.services.skills.manage_queries import generate_queries
+        from app.services.crawler import crawl_website
         import httpx
 
-        async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
-            # Crawl the brand's homepage
-            crawl_content = ""
-            url = f"https://{brand.domain}"
-            try:
-                resp = await client.get(url)
-                logger.info("Probe crawl %s: HTTP %d, %d bytes", url, resp.status_code, len(resp.text))
-                if resp.status_code == 200 and len(resp.text) > 500:
-                    from html.parser import HTMLParser
-                    class TextExtractor(HTMLParser):
-                        def __init__(self):
-                            super().__init__()
-                            self.text = []
-                            self.skip = False
-                        def handle_starttag(self, tag, attrs):
-                            if tag in ("script", "style", "nav", "footer"):
-                                self.skip = True
-                        def handle_endtag(self, tag):
-                            if tag in ("script", "style", "nav", "footer"):
-                                self.skip = False
-                        def handle_data(self, data):
-                            if not self.skip:
-                                t = data.strip()
-                                if t:
-                                    self.text.append(t)
-                    parser = TextExtractor()
-                    parser.feed(resp.text[:15000])
-                    crawl_content = " ".join(parser.text)[:4000]
-                    logger.info("Probe crawled %s: %d chars", url, len(crawl_content))
-                else:
-                    logger.warning("Probe crawl %s returned %d or too small", url, resp.status_code)
-            except Exception as e:
-                logger.warning("Failed to crawl %s: %s", url, e)
+        async with httpx.AsyncClient(timeout=60) as client:
+            # Crawl the brand's website (up to 6 pages)
+            crawl_content = await crawl_website(brand.domain)
 
             classification = await classify_brand(crawl_content, brand.name, brand.domain, client)
             from_crawl = await discover_competitors_from_crawl(crawl_content, client)
