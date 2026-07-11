@@ -17,7 +17,8 @@ def _utcnow() -> datetime:
 
 
 async def analyze_competitors(brand_id: str, scan_id: str,
-                               agent_name: str = "competitor_intel") -> dict:
+                               agent_name: str = "competitor_intel",
+                               db: AsyncSession | None = None) -> dict:
     """Analyze competitor data from a completed scan.
 
     Steps:
@@ -31,9 +32,9 @@ async def analyze_competitors(brand_id: str, scan_id: str,
     from app.core.database import AsyncSessionLocal
     from app.models.models import QueryResult
 
-    async with AsyncSessionLocal() as db:
+    async def _execute(session: AsyncSession):
         # 1. Get scan results
-        results = await db.execute(
+        results = await session.execute(
             select(QueryResult).where(QueryResult.scan_id == uuid.UUID(scan_id))
         )
         all_results = results.scalars().all()
@@ -75,7 +76,7 @@ async def analyze_competitors(brand_id: str, scan_id: str,
             top = competitors[0]
             notes += f" Top: {top['name']} ({top['mention_count']} mentions, avg pos {top['avg_position']})."
 
-        await store_memory(agent_name, brand_id, notes, db=db)
+        await store_memory(agent_name, brand_id, notes, db=session)
 
         # 4. Emit event
         await emit_event("competitors", "competitors.updated", {
@@ -85,9 +86,17 @@ async def analyze_competitors(brand_id: str, scan_id: str,
             "top_competitor": competitors[0]["name"] if competitors else None,
         }, agent_name=agent_name)
 
-        await db.commit()
-
         return {
             "competitors": competitors,
             "total_results": len(all_results),
         }
+
+    if db:
+        result = await _execute(db)
+        await db.commit()
+        return result
+
+    async with AsyncSessionLocal() as session:
+        result = await _execute(session)
+        await session.commit()
+        return result

@@ -237,7 +237,7 @@ class QueryGenAgent(BaseAgent):
 
         result = await refresh_queries(
             str(brand_id), brand.name, brand.domain,
-            agent_name=self.name,
+            agent_name=self.name, db=db,
         )
         return AgentResult(success=True, output=result)
 

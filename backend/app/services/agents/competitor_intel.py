@@ -54,10 +54,10 @@ class CompetitorIntelAgent(BaseAgent):
         event_bus.subscribe("scans", self._on_scan_completed, name="competitor_intel_handler",
                            event_types=["scan.completed"])
 
-    async def _analyze_skill(self, brand_id: str, scan_id: str) -> dict:
+    async def _analyze_skill(self, brand_id: str, scan_id: str, db=None) -> dict:
         """Execute competitor analysis using the skill."""
         from app.services.skills.analyze_competitors import analyze_competitors
-        return await analyze_competitors(brand_id, scan_id, agent_name=self.name)
+        return await analyze_competitors(brand_id, scan_id, agent_name=self.name, db=db)
 
     async def _on_scan_completed(self, event):
         """Handle scan.completed events — triggers analysis."""
@@ -88,6 +88,7 @@ class CompetitorIntelAgent(BaseAgent):
         """
         brand_id = kwargs.get("brand_id")
         scan_id = kwargs.get("scan_id")
+        db = kwargs.get("db")
 
         if not brand_id or not scan_id:
             return AgentResult(False, error="brand_id and scan_id required")
@@ -95,7 +96,7 @@ class CompetitorIntelAgent(BaseAgent):
         try:
             from app.services.skills.analyze_competitors import analyze_competitors
             result = await analyze_competitors(
-                str(brand_id), str(scan_id), agent_name=self.name
+                str(brand_id), str(scan_id), agent_name=self.name, db=db
             )
             return AgentResult(success=True, output=result)
         except Exception as e:

@@ -157,7 +157,8 @@ async def prune_queries(brand_id: str, min_score: int = 2,
 async def refresh_queries(brand_id: str, brand_name: str, domain: str,
                           classification: dict | None = None,
                           competitors: list[dict] | None = None,
-                          agent_name: str = "query_gen") -> dict:
+                          agent_name: str = "query_gen",
+                          db: AsyncSession | None = None) -> dict:
     """Full refresh cycle: score, prune, generate replacements.
 
     Returns {pruned: [...], new_queries: [...], active_count: int}.
@@ -165,17 +166,17 @@ async def refresh_queries(brand_id: str, brand_name: str, domain: str,
     from app.core.database import AsyncSessionLocal
     from app.models.models import Brand, MonitoredQuery
 
-    async with AsyncSessionLocal() as db:
+    async def _execute(session: AsyncSession):
         # 1. Score existing
-        scored = await score_queries(brand_id, db)
+        scored = await score_queries(brand_id, session)
 
         # 2. Prune low-performing
-        pruned = await prune_queries(brand_id, min_score=2, db=db)
+        pruned = await prune_queries(brand_id, min_score=2, db=session)
 
         # 3. Count active
         active_count = await count_records("MonitoredQuery", {
             "brand_id": uuid.UUID(brand_id), "is_active": True
-        }, db=db)
+        }, db=session)
 
         # 4. Generate replacements if below threshold
         new_queries = []
@@ -187,7 +188,7 @@ async def refresh_queries(brand_id: str, brand_name: str, domain: str,
             for q in generated:
                 if q["query_text"].lower() not in existing_texts and active_count + len(new_queries) < 8:
                     from app.models.models import MonitoredQuery as MQ
-                    db.add(MQ(
+                    session.add(MQ(
                         id=uuid.uuid4(),
                         brand_id=uuid.UUID(brand_id),
                         query_text=q["query_text"],
@@ -196,7 +197,7 @@ async def refresh_queries(brand_id: str, brand_name: str, domain: str,
                     ))
                     new_queries.append(q["query_text"])
 
-        await db.flush()
+        await session.flush()
 
         # 5. Emit events
         if pruned:
@@ -210,12 +211,20 @@ async def refresh_queries(brand_id: str, brand_name: str, domain: str,
 
         # 6. Store memory
         notes = f"Refreshed queries: pruned {len(pruned)}, added {len(new_queries)}, {active_count} active."
-        await store_memory(agent_name, brand_id, notes, db=db)
-
-        await db.commit()
+        await store_memory(agent_name, brand_id, notes, db=session)
 
         return {
             "pruned": pruned,
             "new_queries": new_queries,
             "active_count": active_count,
         }
+
+    if db:
+        result = await _execute(db)
+        await db.commit()
+        return result
+
+    async with AsyncSessionLocal() as session:
+        result = await _execute(session)
+        await session.commit()
+        return result
