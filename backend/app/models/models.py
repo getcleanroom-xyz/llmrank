@@ -39,6 +39,7 @@ class User(Base):
     passkeys: Mapped[list["Passkey"]] = relationship("Passkey", back_populates="user", cascade="all, delete-orphan")
     wallet: Mapped["CreditWallet | None"] = relationship("CreditWallet", back_populates="user", uselist=False)
     brands: Mapped[list["Brand"]] = relationship("Brand", back_populates="owner")
+    conversations: Mapped[list["Conversation"]] = relationship("Conversation", back_populates="user")
 
 
 class Passkey(Base):
@@ -70,6 +71,7 @@ class Brand(Base):
     owner: Mapped["User | None"] = relationship("User", back_populates="brands")
     queries: Mapped[list["MonitoredQuery"]] = relationship("MonitoredQuery", back_populates="brand", cascade="all, delete-orphan")
     scans: Mapped[list["Scan"]] = relationship("Scan", back_populates="brand", cascade="all, delete-orphan")
+    conversations: Mapped[list["Conversation"]] = relationship("Conversation", back_populates="brand")
 
 
 class MonitoredQuery(Base):
@@ -286,3 +288,34 @@ class AgentRateLimit(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "hour_bucket", name="uq_agent_rate_limits_user_hour"),
     )
+
+
+# ─── Conversations ────────────────────────────────────────────────────────────
+
+class Conversation(Base):
+    """Chat conversation scoped to a brand."""
+    __tablename__ = "conversations"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    brand_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("brands.id"), nullable=False, index=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False, default="New chat")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+    brand: Mapped["Brand"] = relationship("Brand")
+    user: Mapped["User"] = relationship("User")
+    messages: Mapped[list["ChatMessage"]] = relationship("ChatMessage", back_populates="conversation", cascade="all, delete-orphan", order_by="ChatMessage.created_at")
+
+
+class ChatMessage(Base):
+    """Individual message within a conversation."""
+    __tablename__ = "chat_messages"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("conversations.id"), nullable=False, index=True)
+    role: Mapped[str] = mapped_column(String(20), nullable=False)  # "user" or "assistant"
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+    conversation: Mapped["Conversation"] = relationship("Conversation", back_populates="messages")

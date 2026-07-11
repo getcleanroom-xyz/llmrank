@@ -15,4 +15,6 @@ export const queryKeys = {
   campaign: (id: string) => ["campaigns", id] as const,
   adminUsers: (search?: string) => ["adminUsers", search ?? ""] as const,
   adminStats: ["adminStats"] as const,
+  conversations: (brandId: string, page: number = 1) => ["conversations", brandId, page] as const,
+  conversationMessages: (brandId: string, conversationId: string) => ["conversationMessages", brandId, conversationId] as const,
 };

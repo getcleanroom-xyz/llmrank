@@ -10,16 +10,17 @@ export interface ChatMessage {
   content: string;
 }
 
-export const sendRecommendation = (brandId: string, message: string, history?: ChatMessage[]) =>
+export const sendRecommendation = (brandId: string, message: string, history?: ChatMessage[], conversationId?: string) =>
   apiFetch<RecommendationResponse>(`/brands/${brandId}/recommend`, {
     method: "POST",
-    body: JSON.stringify({ message, history }),
+    body: JSON.stringify({ message, history, conversation_id: conversationId }),
   });
 
 export const streamRecommendation = async function* (
   brandId: string,
   message: string,
   history?: ChatMessage[],
+  conversationId?: string,
 ): AsyncGenerator<string, void, unknown> {
   const resp = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1"}/brands/${brandId}/recommend/stream`,
@@ -27,7 +28,7 @@ export const streamRecommendation = async function* (
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ message, history }),
+      body: JSON.stringify({ message, history, conversation_id: conversationId }),
     }
   );
 

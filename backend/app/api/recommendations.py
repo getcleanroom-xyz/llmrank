@@ -12,7 +12,7 @@ from sqlalchemy import select, func
 from app.core.database import get_db
 from app.core.config import settings
 from app.core.rate_limit import limiter
-from app.models.models import User, Brand, AgentRateLimit
+from app.models.models import User, Brand, AgentRateLimit, Conversation, ChatMessage
 from app.schemas.schemas import RecommendationRequest
 from app.api.auth import get_current_user
 
@@ -63,6 +63,22 @@ async def _increment_rate_limit(db: AsyncSession, user_id: uuid.UUID):
     await db.flush()
 
 
+async def _publish_chat_messages(brand_id: uuid.UUID, conversation_id: uuid.UUID | None,
+                                  user_message: str, assistant_response: str):
+    """Publish chat messages via event bus for deferred DB persistence."""
+    from app.services.event_bus.broker import event_bus
+    await event_bus.publish(
+        topic="chat",
+        event_type="chat.messages_created",
+        payload={
+            "brand_id": str(brand_id),
+            "conversation_id": str(conversation_id) if conversation_id else None,
+            "user_message": user_message,
+            "assistant_response": assistant_response,
+        },
+    )
+
+
 @router.post("/brands/{brand_id}/recommend", tags=["Recommendations"])
 @limiter.limit("30/minute")
 async def recommend(
@@ -103,6 +119,10 @@ async def recommend(
         ctx, brand_id=brand_id, db=db, message=body.message,
     )
 
+    # Publish for deferred persistence
+    conversation_id = body.conversation_id if hasattr(body, 'conversation_id') else None
+    await _publish_chat_messages(brand_id, conversation_id, body.message, result.output)
+
     return {"response": result.output, "success": result.success}
 
 
@@ -140,12 +160,26 @@ async def recommend_stream(
     await _increment_rate_limit(db, user.id)
 
     history = body.history or []
+    conversation_id = body.conversation_id if hasattr(body, 'conversation_id') else None
     from app.services.agents.registry import agent_registry
 
     async def generate():
+        full_response = ""
         async for chunk in agent_registry.recommendations.stream_response(
             brand_id, db, body.message, history,
         ):
+            # Accumulate the full response for deferred persistence
+            if chunk.startswith("data: ") and chunk.strip() != "data: [DONE]":
+                try:
+                    data = json.loads(chunk[6:])
+                    if "token" in data:
+                        full_response += data["token"]
+                except (json.JSONDecodeError, KeyError):
+                    pass
             yield chunk
+
+        # After streaming completes, publish for deferred DB write
+        if full_response:
+            await _publish_chat_messages(brand_id, conversation_id, body.message, full_response)
 
     return StreamingResponse(generate(), media_type="text/event-stream")

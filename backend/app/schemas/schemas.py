@@ -291,3 +291,46 @@ class CreditTransactionOut(BaseModel):
 class RecommendationRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=2000)
     history: list[dict] | None = Field(default=None, description="Chat history [{role, content}]")
+    conversation_id: str | None = Field(default=None, description="Conversation ID to persist messages to")
+
+
+# Conversation schemas
+class ConversationCreate(BaseModel):
+    title: str | None = Field(default=None, max_length=200)
+
+
+class ConversationUpdate(BaseModel):
+    title: str | None = Field(default=None, max_length=200)
+
+
+class ConversationOut(BaseModel):
+    id: UUID
+    brand_id: UUID
+    user_id: UUID
+    title: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ChatMessageCreate(BaseModel):
+    role: str = Field(..., pattern="^(user|assistant)$")
+    content: str = Field(..., min_length=1)
+
+
+class ChatMessageOut(BaseModel):
+    id: UUID
+    conversation_id: UUID
+    role: str
+    content: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ConversationListResponse(BaseModel):
+    items: list[ConversationOut]
+    total: int
+    page: int
+    per_page: int

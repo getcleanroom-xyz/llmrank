@@ -16,6 +16,7 @@ from app.api.campaigns import router as campaigns_router
 from app.api.campaign_audience import router as audience_router
 from app.api.tracking import router as tracking_router
 from app.api.recommendations import router as recommendations_router
+from app.api.conversations import router as conversations_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -86,6 +87,10 @@ async def lifespan(app: FastAPI):
     from app.services.scheduler import init_scheduler, shutdown_scheduler
     await init_scheduler()
 
+    # Start chat persistence subscriber
+    from app.services.chat_persistence import init_chat_persistence
+    init_chat_persistence()
+
     logger.info("LLMRank API started (CORS: %s)", settings.cors_origins_list)
     yield
 
@@ -127,6 +132,7 @@ app.include_router(campaigns_router, prefix="/api/v1")
 app.include_router(audience_router, prefix="/api/v1")
 app.include_router(tracking_router, prefix="/api/v1")
 app.include_router(recommendations_router, prefix="/api/v1")
+app.include_router(conversations_router, prefix="/api/v1")
 
 
 @app.get("/health")
