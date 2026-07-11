@@ -175,24 +175,18 @@ export function ChatWidget({ brandId }: { brandId: string }) {
                       <Markdown
                         components={{
                           h1: ({children}) => (
-                            <div style={{ margin: "6px 0 2px" }}>
-                              <h1 style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 18, fontWeight: 700, margin: 0, lineHeight: 1.2 }}>{children}</h1>
-                              <svg width="50%" height="6" viewBox="0 0 120 6" preserveAspectRatio="none" style={{ display: "block", marginTop: 2 }}>
-                                <path d="M0 3 Q10 0 20 4 Q30 6 40 2 Q50 0 60 5 Q70 6 80 2 Q90 0 100 4 Q110 6 120 3" fill="none" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" />
-                              </svg>
+                            <div style={{ margin: "4px 0 1px" }}>
+                              <h1 style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 16, fontWeight: 700, margin: 0, lineHeight: 1.2 }}>{children}</h1>
                             </div>
                           ),
                           h2: ({children}) => (
-                            <div style={{ margin: "5px 0 2px" }}>
-                              <h2 style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 16, fontWeight: 700, margin: 0, lineHeight: 1.2 }}>{children}</h2>
-                              <svg width="40%" height="5" viewBox="0 0 120 5" preserveAspectRatio="none" style={{ display: "block", marginTop: 1 }}>
-                                <path d="M0 2 Q10 0 20 3 Q30 5 40 2 Q50 0 60 4 Q70 5 80 1 Q90 0 100 3 Q110 5 120 2" fill="none" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" />
-                              </svg>
+                            <div style={{ margin: "4px 0 1px" }}>
+                              <h2 style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 15, fontWeight: 700, margin: 0, lineHeight: 1.2 }}>{children}</h2>
                             </div>
                           ),
-                          h3: ({children}) => <h3 style={{ fontFamily: "var(--font-sans), sans-serif", fontSize: 13, fontWeight: 700, margin: "4px 0 1px" }}>{children}</h3>,
-                          p: ({children}) => <p style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: 13, lineHeight: 1.5, margin: "2px 0" }}>{children}</p>,
-                          ul: ({children}) => <ul style={{ margin: "2px 0", paddingLeft: 16, listStyleType: '"- "' }}>{children}</ul>,
+                          h3: ({children}) => <h3 style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 14, fontWeight: 700, margin: "3px 0 1px" }}>{children}</h3>,
+                          p: ({children}) => <p style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: 13, lineHeight: 1.5, margin: "3px 0" }}>{children}</p>,
+                          ul: ({children}) => <ul style={{ margin: "2px 0", paddingLeft: 16 }}>{children}</ul>,
                           ol: ({children}) => <ol style={{ margin: "2px 0", paddingLeft: 16 }}>{children}</ol>,
                           li: ({children}) => <li style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: 13, lineHeight: 1.5, margin: "1px 0" }}>{children}</li>,
                           strong: ({children}) => (
