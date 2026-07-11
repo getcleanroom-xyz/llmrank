@@ -135,7 +135,7 @@ async def _run_scan_background(brand_id: uuid.UUID, scan_id: uuid.UUID, llm_name
                 )
                 last_tx = tx_result.scalar_one_or_none()
                 if last_tx and last_tx.amount < 0:
-                    brand_result = await db.execute(select(Brand).where(Brand.id == brand_id))
+    brand_result = await db.execute(select(Brand).where(Brand.id == brand_id, Brand.deleted_at.is_(None)))
                     brand = brand_result.scalar_one_or_none()
                     if brand:
                         await grant_credits(db, abs(last_tx.amount), f"Refund: failed scan {scan_id}", "refund", brand.owner_id)

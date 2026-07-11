@@ -50,7 +50,7 @@ async def list_brands(
     search: str = "",
 ):
     per_page = min(per_page, 100)
-    stmt = select(Brand).where(Brand.owner_id == user.id)
+    stmt = select(Brand).where(Brand.owner_id == user.id, Brand.deleted_at.is_(None))
     if search:
         stmt = stmt.where(
             (Brand.name.ilike(f"%{search}%")) | (Brand.domain.ilike(f"%{search}%"))
@@ -62,7 +62,9 @@ async def list_brands(
 
 @router.get("/brands/{brand_id}", response_model=BrandOut, tags=["Brands"])
 async def get_brand(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    result = await db.execute(select(Brand).where(Brand.id == brand_id, Brand.owner_id == user.id))
+    result = await db.execute(
+        select(Brand).where(Brand.id == brand_id, Brand.owner_id == user.id, Brand.deleted_at.is_(None))
+    )
     brand = result.scalar_one_or_none()
     if not brand:
         raise HTTPException(404, "Brand not found")
@@ -72,9 +74,18 @@ async def get_brand(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db), use
 @router.delete("/brands/{brand_id}", status_code=204, tags=["Brands"])
 @limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")
 async def delete_brand(request: Request, brand_id: uuid.UUID, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    result = await db.execute(select(Brand).where(Brand.id == brand_id, Brand.owner_id == user.id))
+    """Soft delete a brand: obfuscate data and set deleted_at timestamp."""
+    result = await db.execute(
+        select(Brand).where(Brand.id == brand_id, Brand.owner_id == user.id, Brand.deleted_at.is_(None))
+    )
     brand = result.scalar_one_or_none()
     if not brand:
         raise HTTPException(404, "Brand not found")
-    await db.delete(brand)
+
+    # Obfuscate data for audit trail
+    brand.name = f"[deleted-{brand.id}]"
+    brand.domain = f"deleted-{brand.id}.invalid"
+    brand.competitors = None
+    brand.deleted_at = _utcnow()
+
     await db.commit()

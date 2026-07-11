@@ -35,7 +35,7 @@ def _utcnow() -> datetime:
 
 @router.get("/brands/{brand_id}/queries", response_model=list[QueryOut], tags=["Queries"])
 async def list_queries(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    brand_result = await db.execute(select(Brand).where(Brand.id == brand_id, Brand.owner_id == user.id))
+    brand_result = await db.execute(select(Brand).where(Brand.id == brand_id, Brand.owner_id == user.id, Brand.deleted_at.is_(None)))
     if not brand_result.scalar_one_or_none():
         raise HTTPException(404, "Brand not found")
     result = await db.execute(

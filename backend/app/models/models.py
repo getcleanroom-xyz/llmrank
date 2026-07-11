@@ -67,11 +67,12 @@ class Brand(Base):
     domain: Mapped[str] = mapped_column(String(200), nullable=False)
     competitors: Mapped[list | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
 
     owner: Mapped["User | None"] = relationship("User", back_populates="brands")
     queries: Mapped[list["MonitoredQuery"]] = relationship("MonitoredQuery", back_populates="brand", cascade="all, delete-orphan")
     scans: Mapped[list["Scan"]] = relationship("Scan", back_populates="brand", cascade="all, delete-orphan")
-    conversations: Mapped[list["Conversation"]] = relationship("Conversation", back_populates="brand")
+    conversations: Mapped[list["Conversation"]] = relationship("Conversation", back_populates="brand", cascade="all, delete-orphan")
 
 
 class MonitoredQuery(Base):
