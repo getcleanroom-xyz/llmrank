@@ -295,3 +295,74 @@ class QueryGenAgent(BaseAgent):
         return AgentResult(success=True, output={
             "pruned": pruned, "new_queries": new_queries, "active_count": active,
         })
+
+    async def suggest(self, brand: "Brand", user_competitors: list[str]) -> dict:
+        """Full query suggestion pipeline (for the suggest_queries endpoint)."""
+        from app.services.competitor_service import (
+            classify_brand, discover_competitors_from_crawl,
+            discover_competitors_by_category, crawl_competitor_sites, competitors_need_refresh,
+        )
+        import httpx
+
+        async with httpx.AsyncClient(timeout=30) as client:
+            classification = await classify_brand("", brand.name, brand.domain, client)
+            from_crawl = await discover_competitors_from_crawl("", client)
+            from_category = await discover_competitors_by_category(classification, client)
+
+            seen = {}
+            for c in from_crawl + from_category:
+                name_lower = c.get("name", "").lower()
+                if name_lower and name_lower != brand.name.lower():
+                    seen[name_lower] = c
+            for name in user_competitors:
+                if name.lower() not in seen:
+                    seen[name.lower()] = {"name": name, "domain": "", "relevance_score": 5}
+            competitors = sorted(seen.values(), key=lambda c: c.get("relevance_score", 0), reverse=True)[:10]
+
+            if competitors_need_refresh(competitors):
+                competitors = await crawl_competitor_sites(competitors)
+
+            queries = await _generate_queries_llm(brand.name, brand.domain, "", classification, competitors)
+
+        return {"classification": classification, "competitors": competitors, "queries": queries}
+
+    async def probe(self, brand: "Brand") -> dict:
+        """Run probe scan on generated queries (for the probe endpoint)."""
+        import httpx
+        from app.services.llm_core import scan_all_llms, _call_openrouter, _parse_json
+
+        async with httpx.AsyncClient(timeout=60) as client:
+            from app.services.competitor_service import classify_brand, discover_competitors_from_crawl, discover_competitors_by_category
+            classification = await classify_brand("", brand.name, brand.domain, client)
+            from_crawl = await discover_competitors_from_crawl("", client)
+            from_category = await discover_competitors_by_category(classification, client)
+            user_comps = [c.get("name", "") for c in (brand.competitors or [])]
+            seen = {c.get("name", "").lower(): c for c in from_crawl + from_category if c.get("name", "").lower() != brand.name.lower()}
+            for n in user_comps:
+                if n.lower() not in seen:
+                    seen[n.lower()] = {"name": n, "domain": "", "relevance_score": 5}
+            competitors = sorted(seen.values(), key=lambda c: c.get("relevance_score", 0), reverse=True)[:10]
+            queries = await _generate_queries_llm(brand.name, brand.domain, "", classification, competitors)
+
+            # Run probe scan on top 3 queries
+            probe_queries = sorted(queries, key=lambda q: q.get("score", 0), reverse=True)[:3]
+            raw = await scan_all_llms(
+                [(q["query_text"], q["query_text"]) for q in probe_queries],
+                ["chatgpt", "gemini", "llama"], client,
+            )
+            results_text = []
+            for q_id, llm_name, result_data, error in raw:
+                status = error or (result_data.get("summary", "") if isinstance(result_data, dict) else "empty")
+                results_text.append(f"Query: {q_id}\nLLM: {llm_name}\nResponse: {status}\n")
+
+            messages = [
+                {"role": "developer", "content": "Return ONLY a valid JSON object with keys 'insights' (array) and 'summary' (string)."},
+                {"role": "user", "content": f"Analyze probe scan for {brand.name}:\n\n{''.join(results_text)}"},
+            ]
+            try:
+                resp = await _call_openrouter(messages, "chatgpt", client, temperature=0.3, max_tokens=1024)
+                probe = _parse_json(resp)
+            except Exception:
+                probe = {"insights": [], "summary": "Probe analysis unavailable"}
+
+        return {"queries": queries, "probe_result": probe}

@@ -19,7 +19,7 @@ from app.schemas.schemas import (
     QueryTableItem, QueryTableResponse,
     ScanCreate, ScanOut, BrandOut,
 )
-from app.services.llm_adapters import scan_all_llms, scan_query, OpenRouterAdapter, _call_openrouter, _parse_json, SCAN_DEVELOPER, orchestrate_query_generation
+from app.services.llm_adapters import scan_all_llms, scan_query, OpenRouterAdapter, _call_openrouter, _parse_json, SCAN_DEVELOPER
 from app.api.auth import get_current_user
 
 router = APIRouter()
@@ -153,11 +153,8 @@ async def suggest_queries(request: Request, brand_id: uuid.UUID, body: QuerySugg
     brand = brand_result.scalar_one_or_none()
     if not brand:
         raise HTTPException(404, "Brand not found")
-    user_comps = [c.get("name", "") for c in (brand.competitors or [])]
-    import httpx as _httpx
-    async with _httpx.AsyncClient(timeout=30) as client:
-        result = await orchestrate_query_generation(brand.name, brand.domain, "", user_comps, client)
-    # Persist competitors back to brand if new ones were found
+    from app.services.agents.registry import agent_registry
+    result = await agent_registry.query_gen.suggest(brand, [c.get("name", "") for c in (brand.competitors or [])])
     if result.get("competitors"):
         brand.competitors = result["competitors"]
         await db.commit()
@@ -172,21 +169,8 @@ async def probe_queries(request: Request, brand_id: uuid.UUID, db: AsyncSession 
     brand = brand_result.scalar_one_or_none()
     if not brand:
         raise HTTPException(404, "Brand not found")
-    user_comps = [c.get("name", "") for c in (brand.competitors or [])]
-    import httpx as _httpx
-    async with _httpx.AsyncClient(timeout=60) as client:
-        from app.services.llm_adapters import classify_brand, discover_competitors_from_crawl, discover_competitors_by_category, generate_scored_queries, run_probe_scan
-        classification = await classify_brand("", brand.name, brand.domain, client)
-        from_crawl = await discover_competitors_from_crawl("", client)
-        from_category = await discover_competitors_by_category(classification, client)
-        seen = {c.get("name", "").lower(): c for c in from_crawl + from_category if c.get("name", "").lower() != brand.name.lower()}
-        for n in user_comps:
-            if n.lower() not in seen:
-                seen[n.lower()] = {"name": n, "domain": "", "relevance_score": 5}
-        competitors = sorted(seen.values(), key=lambda c: c.get("relevance_score", 0), reverse=True)[:10]
-        queries = await generate_scored_queries(brand.name, brand.domain, classification, competitors, client)
-        probe = await run_probe_scan(brand.name, brand.domain, queries, client)
-    return {"queries": queries, "probe_result": probe}
+    from app.services.agents.registry import agent_registry
+    return await agent_registry.query_gen.probe(brand)
 
 
 @router.post("/brands/{brand_id}/queries/{query_id}/rescan", tags=["Queries"])

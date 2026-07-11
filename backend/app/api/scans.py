@@ -16,7 +16,6 @@ from app.core.config import settings
 from app.core.rate_limit import limiter
 from app.models.models import User, Brand, MonitoredQuery, Scan, QueryResult, ScanStatus
 from app.schemas.schemas import BrandOut, ScanCreate, ScanOut, QuerySummary
-from app.services.scan_orchestrator import generate_query_suggestions
 from app.services.credit_service import check_credits, deduct_credits
 from app.api.auth import get_current_user
 
