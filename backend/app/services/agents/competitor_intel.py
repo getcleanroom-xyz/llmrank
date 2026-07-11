@@ -74,8 +74,8 @@ class CompetitorIntelAgent(BaseAgent):
                     scan_id=uuid.UUID(scan_id),
                     db=db,
                 )
+                # Skill commits internally — just check success
                 if result.success:
-                    await db.commit()
                     logger.info("Competitor Intel analysis complete for brand %s", brand_id)
                 else:
                     logger.warning("Competitor Intel analysis failed: %s", result.error)

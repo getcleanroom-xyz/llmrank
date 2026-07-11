@@ -83,15 +83,16 @@ async def analyze_competitors(brand_id: str, scan_id: str,
             "total_results": len(all_results),
         }
 
-    # Run DB operations and commit
+    # Run DB operations and commit BEFORE emitting events
     if db:
         result = await _execute(db)
+        await db.commit()
     else:
         async with AsyncSessionLocal() as session:
             result = await _execute(session)
             await session.commit()
 
-    # 4. Emit event AFTER session closes — no connection held during event chain
+    # 4. Emit event AFTER commit — connection is back in the pool
     await emit_event("competitors", "competitors.updated", {
         "brand_id": brand_id,
         "scan_id": scan_id,

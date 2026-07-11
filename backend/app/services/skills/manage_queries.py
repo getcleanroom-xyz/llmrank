@@ -242,8 +242,9 @@ async def refresh_queries(brand_id: str, brand_name: str, domain: str,
         }
 
     if db:
-        # Caller owns the transaction — don't commit here
-        return await _execute(db)
+        result = await _execute(db)
+        await db.commit()
+        return result
 
     async with AsyncSessionLocal() as session:
         result = await _execute(session)
