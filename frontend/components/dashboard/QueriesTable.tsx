@@ -1,9 +1,14 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useQueriesTable, useAddQuery, useDeleteQuery, useSuggestQueries } from "@/lib/hooks";
+import {
+  useQueriesTable, useAddQuery, useDeleteQuery,
+  useSuggestQueries, useQueryTrend, useBulkUpdateQueries,
+} from "@/lib/hooks";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
+import { Sparkline } from "@/components/ui/Sparkline";
+import { FilterBar, type FilterState } from "./FilterBar";
 import { timeAgo } from "@/lib/utils";
 
 function useDebounce(value: string, delay: number) {
@@ -14,14 +19,6 @@ function useDebounce(value: string, delay: number) {
   }, [value, delay]);
   return debounced;
 }
-
-const CARD_COLORS = [
-  { bg: "#FFF9DB", acc: "var(--primary)", rot: "-0.3deg" },
-  { bg: "#DBEAFF", acc: "#3B82F6", rot: "0.4deg" },
-  { bg: "#E6F9ED", acc: "#22C55E", rot: "-0.35deg" },
-  { bg: "#F3E8FF", acc: "#A855F7", rot: "0.3deg" },
-  { bg: "#FFE8DB", acc: "#F97316", rot: "-0.25deg" },
-];
 
 export function QueriesTable({
   brandId,
@@ -34,7 +31,6 @@ export function QueriesTable({
 }) {
   const router = useRouter();
   const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
   const [input, setInput] = useState("");
   const [showSuggest, setShowSuggest] = useState(false);
   const [keywords, setKeywords] = useState("");
@@ -43,13 +39,26 @@ export function QueriesTable({
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; text: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const debouncedSearch = useDebounce(search, 300);
+  // Selection state
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [lastClicked, setLastClicked] = useState<string | null>(null);
+
+  // Filters
+  const [filters, setFilters] = useState<FilterState>({
+    dateRange: "30d",
+    scoreMin: "",
+    scoreMax: "",
+    search: "",
+    status: "all",
+  });
+
+  const debouncedSearch = useDebounce(filters.search, 300);
   const { data, isLoading } = useQueriesTable(brandId, page, 20, debouncedSearch);
+  const { data: trendData } = useQueryTrend(brandId, filters.dateRange === "all" ? 365 : parseInt(filters.dateRange) || 30);
   const addQuery = useAddQuery();
   const deleteQuery = useDeleteQuery();
   const suggestQueries = useSuggestQueries();
-
-  useEffect(() => { setPage(1); }, [debouncedSearch]);
+  const bulkUpdate = useBulkUpdateQueries();
 
   const handleAdd = useCallback(async (text: string) => {
     if (!text.trim()) return;
@@ -59,7 +68,6 @@ export function QueriesTable({
       setInput("");
       setSuggestions((prev) => prev.filter((s) => s !== text));
       setPage(1);
-      setSearch("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to add query");
     }
@@ -88,11 +96,73 @@ export function QueriesTable({
     }
   }, [brandId, brandName, domain, keywords, suggestQueries, data]);
 
-  const items = data?.items ?? [];
+  // Selection handlers
+  const toggleSelect = useCallback((id: string, shiftKey: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (shiftKey && lastClicked) {
+        // Range select
+        const items = data?.items ?? [];
+        const startIdx = items.findIndex((q) => q.id === lastClicked);
+        const endIdx = items.findIndex((q) => q.id === id);
+        if (startIdx !== -1 && endIdx !== -1) {
+          const [from, to] = startIdx < endIdx ? [startIdx, endIdx] : [endIdx, startIdx];
+          for (let i = from; i <= to; i++) {
+            next.add(items[i].id);
+          }
+        }
+      } else {
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+      }
+      return next;
+    });
+    setLastClicked(id);
+  }, [lastClicked, data]);
+
+  const toggleSelectAll = useCallback(() => {
+    const items = data?.items ?? [];
+    if (selected.size === items.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(items.map((q) => q.id)));
+    }
+  }, [data, selected.size]);
+
+  const handleBulkAction = useCallback(async (action: "activate" | "deactivate" | "delete") => {
+    if (selected.size === 0) return;
+    setError(null);
+    try {
+      await bulkUpdate.mutateAsync({
+        brandId,
+        action,
+        queryIds: Array.from(selected),
+      });
+      setSelected(new Set());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : `Failed to ${action} queries`);
+    }
+  }, [brandId, selected, bulkUpdate]);
+
+  // Filter items
+  const items = useMemo(() => data?.items ?? [], [data]);
   const total = data?.total ?? 0;
   const pages = data?.pages ?? 1;
-  const scanned = items.filter((q) => q.result_count > 0).length;
-  const lastAt = items.find((q) => q.last_scan_at)?.last_scan_at ?? null;
+  const scanned = useMemo(() => items.filter((q) => q.result_count > 0).length, [items]);
+
+  const filteredItems = useMemo(() => {
+    return items.filter((q) => {
+      if (filters.status === "active" && !q.is_active) return false;
+      if (filters.status === "inactive" && q.is_active) return false;
+      if (filters.status === "scanned" && q.result_count === 0) return false;
+      if (filters.status === "unscanned" && q.result_count > 0) return false;
+      if (filters.scoreMin && (q.query_score ?? 0) < parseInt(filters.scoreMin)) return false;
+      if (filters.scoreMax && (q.query_score ?? 0) > parseInt(filters.scoreMax)) return false;
+      return true;
+    });
+  }, [items, filters]);
+
+  const allSelected = filteredItems.length > 0 && filteredItems.every((q) => selected.has(q.id));
 
   return (
     <div>
@@ -103,7 +173,7 @@ export function QueriesTable({
         </div>
       )}
 
-      {/* Hero row: heading + stat pills */}
+      {/* Hero row */}
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, flexWrap: "wrap", marginBottom: 16 }}>
         <div>
           <h1 style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: "clamp(24px, 3.5vw, 34px)", fontWeight: 700, margin: "0 0 2px", lineHeight: 1, transform: "rotate(-0.3deg)" }}>
@@ -117,7 +187,6 @@ export function QueriesTable({
           {[
             { val: total, label: "total", bg: "#FFF9DB", acc: "var(--primary)" },
             { val: scanned, label: "scanned", bg: "#E6F9ED", acc: "#22C55E" },
-            { val: lastAt ? timeAgo(lastAt) : "never", label: "last scan", bg: "#DBEAFF", acc: "#3B82F6" },
           ].map((s, i) => (
             <div key={s.label} style={{ background: s.bg, border: "2px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow-sm)", padding: "8px 14px", transform: `rotate(${i % 2 === 0 ? "-0.2deg" : "0.2deg"})`, textAlign: "center" }}>
               <div style={{ fontSize: 18, fontWeight: 800, color: s.acc, lineHeight: 1 }}>{s.val}</div>
@@ -127,140 +196,337 @@ export function QueriesTable({
         </div>
       </div>
 
-      {/* Search + Add — spread across columns */}
-      <div style={{ position: "relative", background: "#FFF9DB", border: "2px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "3px 3px 0 #1A1A1A", padding: "16px 18px 12px", marginBottom: 16, transform: "rotate(-0.15deg)" }}>
-        <svg width="18" height="22" viewBox="0 0 18 22" fill="none" style={{ position: "absolute", top: -10, right: 20 }}>
-          <ellipse cx="9" cy="4.5" rx="4.5" ry="4.5" fill="#EF4444" stroke="#1A1A1A" strokeWidth="1.5" />
-          <rect x="7" y="9" width="4" height="7" rx="1" fill="#DC2626" stroke="#1A1A1A" strokeWidth="1.5" />
+      {/* Add query input */}
+      <div style={{ position: "relative", background: "#FFF9DB", border: "2px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "3px 3px 0 #1A1A1A", padding: "12px 14px", marginBottom: 12, transform: "rotate(-0.1deg)" }}>
+        <svg width="16" height="20" viewBox="0 0 16 20" fill="none" style={{ position: "absolute", top: -9, right: 14, zIndex: 2 }}>
+          <ellipse cx="8" cy="4" rx="4" ry="4" fill="#EF4444" stroke="#1A1A1A" strokeWidth="1.2" />
+          <rect x="6.5" y="8" width="3" height="6" rx="0.5" fill="#DC2626" stroke="#1A1A1A" strokeWidth="1.2" />
         </svg>
 
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 180, position: "relative" }}>
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search queries..."
-              style={{ width: "100%", background: "var(--surface)", border: "1.5px solid var(--border)", borderRadius: "var(--radius)", padding: "8px 12px 8px 32px", fontSize: 13, color: "var(--text)", outline: "none" }} />
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
-              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-          </div>
-          <input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAdd(input)} placeholder="Add a query..."
-            style={{ flex: 1, minWidth: 160, background: "var(--surface)", border: "1.5px solid var(--border)", borderRadius: "var(--radius)", padding: "8px 12px", fontSize: 13, color: "var(--text)", outline: "none" }} />
-          <button onClick={() => handleAdd(input)} disabled={addQuery.isPending || !input.trim()} className="btn btn-primary btn-sm">
+        <div style={{ display: "flex", gap: 8 }}>
+          <input
+            ref={inputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleAdd(input)}
+            placeholder="Add a query..."
+            style={{
+              flex: 1, minWidth: 0,
+              background: "var(--surface)", border: "1.5px solid var(--border)",
+              borderRadius: "var(--radius)", padding: "8px 12px",
+              fontSize: 13, color: "var(--text)", outline: "none",
+            }}
+          />
+          <button
+            onClick={() => handleAdd(input)}
+            disabled={addQuery.isPending || !input.trim()}
+            className="btn btn-primary btn-sm"
+          >
             {addQuery.isPending ? "..." : "Add"}
           </button>
         </div>
 
-        <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-          <button onClick={() => setShowSuggest((s) => !s)} style={{ fontWeight: 600, background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 16 }}>
+        <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <button
+            onClick={() => setShowSuggest((s) => !s)}
+            style={{
+              fontWeight: 600, background: "none", border: "none", cursor: "pointer",
+              color: "var(--text-secondary)", fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 16,
+            }}
+          >
             {showSuggest ? "hide AI suggestions" : "+ AI suggestions"}
           </button>
           {showSuggest && (
             <>
-              <input value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="keywords, comma separated"
-                style={{ flex: 1, minWidth: 120, background: "var(--surface)", border: "1.5px solid var(--border)", borderRadius: "var(--radius)", padding: "5px 8px", fontSize: 12, color: "var(--text)", outline: "none" }} />
-              <button onClick={handleSuggest} disabled={suggestQueries.isPending} className="btn btn-sm">{suggestQueries.isPending ? "..." : "Generate"}</button>
+              <input
+                value={keywords}
+                onChange={(e) => setKeywords(e.target.value)}
+                placeholder="keywords, comma separated"
+                style={{
+                  flex: 1, minWidth: 120,
+                  background: "var(--surface)", border: "1.5px solid var(--border)",
+                  borderRadius: "var(--radius)", padding: "5px 8px",
+                  fontSize: 12, color: "var(--text)", outline: "none",
+                }}
+              />
+              <button onClick={handleSuggest} disabled={suggestQueries.isPending} className="btn btn-sm">
+                {suggestQueries.isPending ? "..." : "Generate"}
+              </button>
             </>
           )}
         </div>
 
         {suggestions.length > 0 && (
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10, paddingTop: 10, borderTop: "2px dashed var(--border)" }}>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8, paddingTop: 8, borderTop: "2px dashed var(--border)" }}>
             {suggestions.map((s) => (
-              <button key={s} onClick={() => handleAdd(s)} disabled={addQuery.isPending}
-                style={{ fontSize: 12, fontWeight: 600, padding: "5px 12px", background: "var(--surface)", border: "1.5px solid var(--border)", borderRadius: "var(--radius)", cursor: "pointer", transform: "rotate(0.5deg)", boxShadow: "var(--shadow-sm)", fontFamily: "var(--font-serif), Georgia, serif", fontStyle: "italic", color: "var(--text-secondary)" }}>
-                "{s}" <span style={{ marginLeft: 4, color: "#22C55E", fontWeight: 700 }}>+</span>
+              <button
+                key={s}
+                onClick={() => handleAdd(s)}
+                disabled={addQuery.isPending}
+                style={{
+                  fontSize: 12, fontWeight: 600, padding: "5px 12px",
+                  background: "var(--surface)", border: "1.5px solid var(--border)",
+                  borderRadius: "var(--radius)", cursor: "pointer",
+                  transform: "rotate(0.5deg)", boxShadow: "var(--shadow-sm)",
+                  fontFamily: "var(--font-serif), Georgia, serif", fontStyle: "italic",
+                  color: "var(--text-secondary)",
+                }}
+              >
+                &quot;{s}&quot; <span style={{ marginLeft: 4, color: "#22C55E", fontWeight: 700 }}>+</span>
               </button>
             ))}
           </div>
         )}
       </div>
 
-      {/* Query cards grid */}
+      {/* Filter bar */}
+      <FilterBar
+        filters={filters}
+        onChange={setFilters}
+        showStatus={true}
+        showScore={true}
+        statusOptions={[
+          { label: "All", value: "all" },
+          { label: "Active", value: "active" },
+          { label: "Inactive", value: "inactive" },
+          { label: "Scanned", value: "scanned" },
+          { label: "Unscanned", value: "unscanned" },
+        ]}
+      />
+
+      {/* Bulk action bar */}
+      {selected.size > 0 && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
+          marginBottom: 12, background: "#DBEAFF", border: "2px solid var(--border)",
+          borderRadius: "var(--radius)", boxShadow: "2px 2px 0 #1A1A1A",
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "#1E40AF" }}>
+            {selected.size} selected
+          </span>
+          <button
+            onClick={() => handleBulkAction("activate")}
+            disabled={bulkUpdate.isPending}
+            className="btn btn-sm"
+            style={{ fontSize: 11 }}
+          >
+            Activate
+          </button>
+          <button
+            onClick={() => handleBulkAction("deactivate")}
+            disabled={bulkUpdate.isPending}
+            className="btn btn-sm"
+            style={{ fontSize: 11 }}
+          >
+            Deactivate
+          </button>
+          <button
+            onClick={() => {
+              if (confirm(`Delete ${selected.size} queries?`)) {
+                handleBulkAction("delete");
+              }
+            }}
+            disabled={bulkUpdate.isPending}
+            className="btn btn-sm btn-danger"
+            style={{ fontSize: 11 }}
+          >
+            Delete
+          </button>
+          <button
+            onClick={() => setSelected(new Set())}
+            className="btn btn-sm btn-ghost"
+            style={{ fontSize: 11, marginLeft: "auto" }}
+          >
+            Clear selection
+          </button>
+        </div>
+      )}
+
+      {/* Table */}
       {isLoading ? (
         <div style={{ textAlign: "center", padding: 32, color: "var(--text-muted)", fontSize: 13, fontWeight: 600 }}>Loading queries...</div>
-      ) : items.length === 0 ? (
+      ) : filteredItems.length === 0 ? (
         <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
           <div style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 24, color: "var(--text-muted)", marginBottom: 4 }}>
-            {search ? "Nothing found" : "No queries yet"}
+            {filters.search || filters.status !== "all" ? "Nothing found" : "No queries yet"}
           </div>
           <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
-            {search ? "Try a different search term." : "Add your first query above."}
+            {filters.search || filters.status !== "all" ? "Try adjusting your filters." : "Add your first query above."}
           </p>
         </div>
       ) : (
-        <>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "var(--gap)", marginBottom: 16 }}>
-            {items.map((q, i) => {
-              const c = CARD_COLORS[i % CARD_COLORS.length];
-              return (
-                <div
-                  key={q.id}
-                  className="card sketchy"
-                  onClick={() => router.push(`/brands/${brandId}/queries/${q.id}`)}
-                  style={{
-                    background: c.bg,
-                    padding: "14px 16px",
-                    cursor: "pointer",
-                    transform: `rotate(${c.rot})`,
-                    transition: "box-shadow 0.15s, transform 0.15s",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 6,
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "var(--shadow-hover)"; e.currentTarget.style.transform = "rotate(0deg) translate(-1px, -1px)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "var(--shadow)"; e.currentTarget.style.transform = `rotate(${c.rot})`; }}
-                >
-                  <div style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                    {q.query_text}
-                  </div>
-
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                      {q.result_count > 0 ? (
-                        <span style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 600 }}>
-                          {q.result_count} result{q.result_count !== 1 ? "s" : ""}
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>unscanned</span>
-                      )}
-                      {q.last_scan_at && <span style={{ fontSize: 10, color: "var(--text-muted)" }}>scanned {timeAgo(q.last_scan_at)}</span>}
-                    </div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: q.id, text: q.query_text }); }}
-                      title="Delete"
-                      style={{ width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: "transparent", border: "1.5px solid transparent", borderRadius: "var(--radius)", color: "var(--text-muted)", cursor: "pointer", fontSize: 12, lineHeight: 1 }}
-                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--red)"; e.currentTarget.style.color = "#991B1B"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-muted)"; }}
-                    >
-                      x
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+        <div style={{
+          background: "var(--surface)",
+          border: "2px solid var(--border)",
+          borderRadius: "var(--radius)",
+          overflow: "hidden",
+        }}>
+          {/* Table header */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "36px 1fr 70px 90px 80px 90px 60px",
+            gap: 0,
+            padding: "8px 12px",
+            background: "var(--bg-dark)",
+            borderBottom: "2px solid var(--border)",
+            fontSize: 11,
+            fontWeight: 700,
+            color: "var(--text-muted)",
+            textTransform: "uppercase",
+            letterSpacing: "0.03em",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={toggleSelectAll}
+                style={{ cursor: "pointer" }}
+              />
+            </div>
+            <div>Query</div>
+            <div style={{ textAlign: "center" }}>Score</div>
+            <div style={{ textAlign: "center" }}>Trend</div>
+            <div style={{ textAlign: "center" }}>Status</div>
+            <div style={{ textAlign: "center" }}>Last Scanned</div>
+            <div style={{ textAlign: "center" }}>Actions</div>
           </div>
 
-          {pages > 1 && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}
-                className="btn btn-sm btn-ghost" style={{ opacity: page <= 1 ? 0.3 : 1, cursor: page <= 1 ? "not-allowed" : "pointer" }}>Prev</button>
-              {Array.from({ length: Math.min(pages, 7) }, (_, i) => {
-                let n: number;
-                if (pages <= 7) n = i + 1;
-                else if (page <= 4) n = i + 1;
-                else if (page >= pages - 3) n = pages - 6 + i;
-                else n = page - 3 + i;
-                return (
-                  <button key={n} onClick={() => setPage(n)} className="btn btn-sm"
-                    style={{ minWidth: 32, fontWeight: n === page ? 800 : 500, background: n === page ? "var(--primary)" : "var(--bg-dark)", color: n === page ? "#0A0A0B" : "var(--text)" }}>
-                    {n}
+          {/* Table rows */}
+          {filteredItems.map((q, i) => {
+            const trendPoints = trendData?.[q.id] ?? [];
+            const trendScores = trendPoints.map((t) => t.score);
+            const isSelected = selected.has(q.id);
+
+            return (
+              <div
+                key={q.id}
+                onClick={(e) => {
+                  if ((e.target as HTMLElement).closest("input[type='checkbox']")) return;
+                  if ((e.target as HTMLElement).closest("button")) return;
+                  router.push(`/brands/${brandId}/queries/${q.id}`);
+                }}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "36px 1fr 70px 90px 80px 90px 60px",
+                  gap: 0,
+                  padding: "10px 12px",
+                  borderBottom: i < filteredItems.length - 1 ? "1px solid var(--bg-dark)" : "none",
+                  background: isSelected ? "#FFF9DB" : "transparent",
+                  cursor: "pointer",
+                  transition: "background 0.1s",
+                }}
+                onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "var(--bg)"; }}
+                onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
+              >
+                {/* Checkbox */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      toggleSelect(q.id, e.shiftKey);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ cursor: "pointer" }}
+                  />
+                </div>
+
+                {/* Query text */}
+                <div style={{ minWidth: 0 }}>
+                  <div style={{
+                    fontSize: 13, fontWeight: 600, lineHeight: 1.3,
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}>
+                    {q.query_text}
+                  </div>
+                  <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>
+                    {q.query_type ?? "general"}
+                  </div>
+                </div>
+
+                {/* Score */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {q.query_score != null ? (
+                    <span style={{
+                      fontSize: 14, fontWeight: 800,
+                      color: q.query_score >= 4 ? "#166534" : q.query_score >= 3 ? "var(--text)" : "#991B1B",
+                    }}>
+                      {q.query_score}
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: 12, color: "var(--text-muted)" }}>-</span>
+                  )}
+                </div>
+
+                {/* Trend sparkline */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Sparkline data={trendScores} width={80} height={24} />
+                </div>
+
+                {/* Status */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span
+                    className={`pill ${q.is_active ? "pill-pos" : "pill-neu"}`}
+                    style={{ fontSize: 10, padding: "2px 8px" }}
+                  >
+                    {q.is_active ? "active" : "inactive"}
+                  </span>
+                </div>
+
+                {/* Last scanned */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "var(--text-muted)" }}>
+                  {q.last_scan_at ? timeAgo(q.last_scan_at) : "never"}
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteTarget({ id: q.id, text: q.query_text });
+                    }}
+                    title="Delete"
+                    style={{
+                      width: 24, height: 24,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      background: "transparent", border: "1px solid transparent",
+                      borderRadius: "var(--radius)", color: "var(--text-muted)",
+                      cursor: "pointer", fontSize: 12,
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--red)"; e.currentTarget.style.color = "#991B1B"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-muted)"; }}
+                  >
+                    x
                   </button>
-                );
-              })}
-              <button onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={page >= pages}
-                className="btn btn-sm btn-ghost" style={{ opacity: page >= pages ? 0.3 : 1, cursor: page >= pages ? "not-allowed" : "pointer" }}>Next</button>
-            </div>
-          )}
-        </>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {pages > 1 && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 16 }}>
+          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}
+            className="btn btn-sm btn-ghost" style={{ opacity: page <= 1 ? 0.3 : 1, cursor: page <= 1 ? "not-allowed" : "pointer" }}>Prev</button>
+          {Array.from({ length: Math.min(pages, 7) }, (_, i) => {
+            let n: number;
+            if (pages <= 7) n = i + 1;
+            else if (page <= 4) n = i + 1;
+            else if (page >= pages - 3) n = pages - 6 + i;
+            else n = page - 3 + i;
+            return (
+              <button key={n} onClick={() => setPage(n)} className="btn btn-sm"
+                style={{ minWidth: 32, fontWeight: n === page ? 800 : 500, background: n === page ? "var(--primary)" : "var(--bg-dark)", color: n === page ? "#0A0A0B" : "var(--text)" }}>
+                {n}
+              </button>
+            );
+          })}
+          <button onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={page >= pages}
+            className="btn btn-sm btn-ghost" style={{ opacity: page >= pages ? 0.3 : 1, cursor: page >= pages ? "not-allowed" : "pointer" }}>Next</button>
+        </div>
       )}
 
       <ConfirmDialog

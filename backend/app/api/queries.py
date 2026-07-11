@@ -146,6 +146,127 @@ async def list_queries_table(
     return QueryTableResponse(items=items, total=total, page=page, per_page=per_page, pages=pages)
 
 
+@router.get("/brands/{brand_id}/queries/trend", tags=["Queries"])
+async def query_trend(
+    brand_id: uuid.UUID,
+    days: int = 30,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get score history per query for sparkline rendering.
+
+    Returns: {query_id: [{date, score, mention_rate}, ...]}
+    """
+    from app.models.models import Scan, ScanStatus
+    from datetime import timedelta
+
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
+
+    # Get all completed scans for this brand since cutoff
+    scans_result = await db.execute(
+        select(Scan)
+        .where(
+            Scan.brand_id == brand_id,
+            Scan.status == ScanStatus.completed,
+            Scan.completed_at >= cutoff,
+        )
+        .order_by(Scan.completed_at.asc())
+    )
+    scans = scans_result.scalars().all()
+
+    if not scans:
+        return {}
+
+    scan_ids = [s.id for s in scans]
+    scan_dates = {s.id: s.completed_at.isoformat() for s in scans}
+
+    # Get all query results for these scans
+    results_result = await db.execute(
+        select(QueryResult)
+        .where(QueryResult.scan_id.in_(scan_ids))
+    )
+    results = results_result.scalars().all()
+
+    # Group by query_id, then by scan
+    trend: dict[str, list[dict]] = {}
+    for r in results:
+        qid = str(r.query_id)
+        if qid not in trend:
+            trend[qid] = []
+
+        # Compute score for this result
+        score = r.score
+        if score is None and r.mentioned:
+            base = 40.0
+            pos_bonus = {1: 35, 2: 25, 3: 15, 4: 8}.get(r.position or 99, 3)
+            sent_bonus = {"positive": 20, "neutral": 10, "negative": 0}.get(
+                r.sentiment.value if hasattr(r.sentiment, "value") else r.sentiment, 0
+            )
+            score = round(min(100.0, base + pos_bonus + sent_bonus), 1)
+        elif score is None:
+            score = 5.0
+
+        trend[qid].append({
+            "date": scan_dates.get(str(r.scan_id), ""),
+            "score": score,
+            "scan_id": str(r.scan_id),
+        })
+
+    # Sort each query's trend by date
+    for qid in trend:
+        trend[qid].sort(key=lambda x: x["date"])
+
+    return trend
+
+
+@router.post("/brands/{brand_id}/queries/bulk", tags=["Queries"])
+async def bulk_update_queries(
+    brand_id: uuid.UUID,
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+):
+    """Bulk update queries: activate, deactivate, or delete.
+
+    Body: {action: "activate"|"deactivate"|"delete", query_ids: [uuid, ...]}
+    """
+    action = body.get("action")
+    query_ids = body.get("query_ids", [])
+
+    if action not in ("activate", "deactivate", "delete"):
+        raise HTTPException(400, "Invalid action. Must be: activate, deactivate, delete")
+    if not query_ids:
+        raise HTTPException(400, "No query IDs provided")
+
+    # Convert string IDs to UUIDs
+    try:
+        uuids = [uuid.UUID(qid) for qid in query_ids]
+    except ValueError:
+        raise HTTPException(400, "Invalid query ID format")
+
+    # Verify all queries belong to this brand
+    result = await db.execute(
+        select(MonitoredQuery).where(
+            MonitoredQuery.id.in_(uuids),
+            MonitoredQuery.brand_id == brand_id,
+        )
+    )
+    queries = result.scalars().all()
+    if len(queries) != len(uuids):
+        raise HTTPException(404, "Some queries not found or don't belong to this brand")
+
+    if action == "delete":
+        for q in queries:
+            await db.delete(q)
+    elif action == "activate":
+        for q in queries:
+            q.is_active = True
+    elif action == "deactivate":
+        for q in queries:
+            q.is_active = False
+
+    await db.commit()
+    return {"ok": True, "affected": len(queries), "action": action}
+
+
 @router.post("/brands/{brand_id}/queries/suggest", tags=["Queries"])
 @limiter.limit("5/minute")
 async def suggest_queries(request: Request, brand_id: uuid.UUID, body: QuerySuggestRequest, db: AsyncSession = Depends(get_db)):

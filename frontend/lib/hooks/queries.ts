@@ -64,3 +64,26 @@ export function useProbeQueries() {
     mutationFn: (brandId: string) => api.probeQueries(brandId),
   });
 }
+
+export function useQueryTrend(brandId: string, days: number = 30) {
+  return useQuery({
+    queryKey: ["queryTrend", brandId, days],
+    queryFn: () => api.getQueryTrend(brandId, days),
+    staleTime: 60_000,
+  });
+}
+
+export function useBulkUpdateQueries() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ brandId, action, queryIds }: {
+      brandId: string;
+      action: "activate" | "deactivate" | "delete";
+      queryIds: string[];
+    }) => api.bulkUpdateQueries(brandId, action, queryIds),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: queryKeys.queries(variables.brandId) });
+      qc.invalidateQueries({ queryKey: ["queriesTable", variables.brandId] });
+    },
+  });
+}

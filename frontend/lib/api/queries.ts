@@ -90,3 +90,18 @@ export const probeQueries = (brandId: string) =>
   apiFetch<{ queries: ScoredQuery[]; probe_result: ProbeResult }>(`/brands/${brandId}/queries/probe`, {
     method: "POST",
   });
+
+export interface QueryTrendPoint {
+  date: string;
+  score: number;
+  scan_id: string;
+}
+
+export const getQueryTrend = (brandId: string, days: number = 30) =>
+  apiFetch<Record<string, QueryTrendPoint[]>>(`/brands/${brandId}/queries/trend?days=${days}`);
+
+export const bulkUpdateQueries = (brandId: string, action: "activate" | "deactivate" | "delete", queryIds: string[]) =>
+  apiFetch<{ ok: boolean; affected: number; action: string }>(`/brands/${brandId}/queries/bulk`, {
+    method: "POST",
+    body: JSON.stringify({ action, query_ids: queryIds }),
+  });
