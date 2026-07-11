@@ -17,7 +17,7 @@ MODEL_REGISTRY: dict[str, dict] = {
     "gemini":      {"id": "google/gemini-2.5-flash",          "label": "Gemini 2.5 Flash"},
     "llama":       {"id": "meta-llama/llama-3.3-70b-instruct","label": "Llama 3.3 70B"},
     "llama-small": {"id": "meta-llama/llama-3.1-8b-instruct", "label": "Llama 3.1 8B"},
-    "claude":      {"id": "anthropic/claude-haiku-4.5",       "label": "Claude Haiku"},
+    "claude":      {"id": "anthropic/claude-3.5-sonnet",      "label": "Claude Sonnet 3.5"},
     "deepseek":    {"id": "deepseek/deepseek-chat",           "label": "DeepSeek Chat"},
     "deepseek-r1": {"id": "deepseek/deepseek-r1",             "label": "DeepSeek R1"},
     "mistral":     {"id": "mistralai/mistral-large",          "label": "Mistral Large"},

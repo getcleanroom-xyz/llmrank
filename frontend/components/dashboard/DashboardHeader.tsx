@@ -11,7 +11,7 @@ export const LLM_OPTIONS = [
   { id: "chatgpt", label: "GPT-4o Mini", provider: "OpenAI" },
   { id: "deepseek", label: "DeepSeek Chat", provider: "DeepSeek" },
   { id: "gemini", label: "Gemini 2.5 Flash", provider: "Google" },
-  { id: "claude", label: "Claude Haiku", provider: "Anthropic" },
+  { id: "claude", label: "Claude Sonnet 3.5", provider: "Anthropic" },
   { id: "mistral", label: "Mistral Large", provider: "Mistral" },
   { id: "qwen", label: "Qwen 2.5 72B", provider: "Alibaba" },
 ];

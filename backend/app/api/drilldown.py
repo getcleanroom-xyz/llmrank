@@ -30,6 +30,17 @@ def _normalize_competitor(name: str) -> str:
     return re.sub(r'[\s\-_\.]+', '', name).lower()
 
 
+def _is_valid_domain(domain: str) -> bool:
+    """Check if a domain string looks like a real domain (not hallucinated)."""
+    if not domain or len(domain) < 4:
+        return False
+    if "." not in domain:
+        return False
+    tld = domain.rsplit(".", 1)[-1].lower()
+    valid_tlds = {"com", "io", "co", "net", "org", "ai", "dev", "app", "us", "uk", "ca", "de", "fr", "jp", "cn", "in", "br", "au", "ru", "xyz", "me", "tv", "cc", "shop", "site", "online", "tech", "store", "cloud"}
+    return tld in valid_tlds
+
+
 # ─── Query drilldown ────────────────────────────────────────────────────────────
 
 @router.get("/brands/{brand_id}/queries/{query_id}/drilldown", response_model=QueryDrilldownOut, tags=["Dashboard"])
@@ -258,11 +269,10 @@ async def get_competitor_drilldown(
     if competitors_data:
         for c in competitors_data:
             if _normalize_competitor(c.get("name", "")) == _normalize_competitor(competitor_name):
-                comp_domain = c.get("domain", "") or ""
+                stored = c.get("domain", "") or ""
+                if _is_valid_domain(stored):
+                    comp_domain = stored
                 break
-    # Fallback: construct domain from competitor name
-    if not comp_domain:
-        comp_domain = f"{competitor_name.lower().replace(' ', '').replace('-', '')}.com"
 
     # Generate competitive insight with richer data
     brand_row = (await db.execute(select(Brand).where(Brand.id == brand_id))).scalar_one_or_none()

@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 
 _PLACEHOLDER_NAMES = {"branda", "brandb", "brandc", "brand1", "brand2", "competitor1", "competitor2", "competitora", "competitorb", "company1", "company2", "companyx", "companyy", "clienta", "clientb"}
 
+_VALID_TLDS = {"com", "io", "co", "net", "org", "ai", "dev", "app", "us", "uk", "ca", "de", "fr", "jp", "cn", "in", "br", "au", "ru", "xyz", "me", "tv", "cc", "shop", "site", "online", "tech", "store", "cloud"}
+
 
 def _is_valid_competitor(name: str) -> bool:
     """Reject obviously fake placeholder competitor names."""
@@ -22,6 +24,25 @@ def _is_valid_competitor(name: str) -> bool:
     if len(lower) <= 1:
         return False
     return True
+
+
+def _is_valid_domain(domain: str) -> bool:
+    """Validate a domain string looks real (not hallucinated by LLM)."""
+    if not domain or "." not in domain:
+        return False
+    tld = domain.rsplit(".", 1)[-1].lower()
+    return tld in _VALID_TLDS
+
+
+def _clean_competitor(c: dict) -> dict | None:
+    """Validate and clean a competitor dict from LLM response. Returns None if invalid."""
+    name = c.get("name", "").strip()
+    if not _is_valid_competitor(name):
+        return None
+    domain = c.get("domain", "").strip()
+    if domain and not _is_valid_domain(domain):
+        domain = ""  # drop hallucinated domains
+    return {"name": name, "domain": domain, "relevance_score": c.get("relevance_score", 3)}
 
 
 async def classify_brand(content: str, brand_name: str, domain: str, client) -> dict:
@@ -59,7 +80,8 @@ async def discover_competitors_from_crawl(content: str, client) -> list[dict]:
             resp = await _call_openrouter(messages, model, client, temperature=0.2, max_tokens=1024)
             result = _parse_json(resp)
             if isinstance(result, list):
-                return [c for c in result if isinstance(c, dict) and _is_valid_competitor(c.get("name", ""))][:10]
+                cleaned = [c for c in (_clean_competitor(item) for item in result if isinstance(item, dict)) if c]
+                return cleaned[:10]
         except Exception:
             continue
     return []
@@ -83,7 +105,8 @@ async def discover_competitors_by_category(classification: dict, client) -> list
             resp = await _call_openrouter(messages, model, client, temperature=0.3, max_tokens=1024)
             result = _parse_json(resp)
             if isinstance(result, list):
-                return [c for c in result if isinstance(c, dict) and _is_valid_competitor(c.get("name", ""))][:10]
+                cleaned = [c for c in (_clean_competitor(item) for item in result if isinstance(item, dict)) if c]
+                return cleaned[:10]
         except Exception:
             continue
     return []
