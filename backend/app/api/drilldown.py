@@ -132,6 +132,13 @@ async def get_llm_drilldown(
     llm_name: str,
     db: AsyncSession = Depends(get_db),
 ):
+    # Verify brand exists and not deleted
+    brand_result = await db.execute(
+        select(Brand).where(Brand.id == brand_id, Brand.deleted_at.is_(None))
+    )
+    if not brand_result.scalar_one_or_none():
+        raise HTTPException(404, "Brand not found")
+
     # Get latest completed scan
     scan_result = await db.execute(
         select(Scan)
@@ -199,6 +206,13 @@ async def get_competitor_drilldown(
     competitor_name: str,
     db: AsyncSession = Depends(get_db),
 ):
+    # Verify brand exists and not deleted
+    brand_result = await db.execute(
+        select(Brand).where(Brand.id == brand_id, Brand.deleted_at.is_(None))
+    )
+    if not brand_result.scalar_one_or_none():
+        raise HTTPException(404, "Brand not found")
+
     # Get latest completed scan
     scan_result = await db.execute(
         select(Scan)
@@ -264,7 +278,7 @@ async def get_competitor_drilldown(
 
     # Look up domain from brand's competitors list
     comp_domain = ""
-    brand_result = await db.execute(select(Brand.competitors).where(Brand.id == brand_id))
+    brand_result = await db.execute(select(Brand.competitors).where(Brand.id == brand_id, Brand.deleted_at.is_(None)))
     competitors_data = brand_result.scalar_one_or_none()
     if competitors_data:
         for c in competitors_data:

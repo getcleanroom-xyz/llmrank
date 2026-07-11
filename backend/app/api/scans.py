@@ -45,7 +45,9 @@ async def trigger_scan(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    brand_result = await db.execute(select(Brand).where(Brand.id == brand_id))
+    brand_result = await db.execute(
+        select(Brand).where(Brand.id == brand_id, Brand.owner_id == user.id, Brand.deleted_at.is_(None))
+    )
     brand = brand_result.scalar_one_or_none()
     if not brand:
         raise HTTPException(404, "Brand not found")
@@ -152,7 +154,9 @@ async def list_scans(
     page: int = 1,
     per_page: int = 20,
 ):
-    brand_result = await db.execute(select(Brand).where(Brand.id == brand_id, Brand.owner_id == user.id))
+    brand_result = await db.execute(
+        select(Brand).where(Brand.id == brand_id, Brand.owner_id == user.id, Brand.deleted_at.is_(None))
+    )
     if not brand_result.scalar_one_or_none():
         raise HTTPException(404, "Brand not found")
     result = await db.execute(
@@ -167,7 +171,9 @@ async def list_scans(
 
 @router.get("/brands/{brand_id}/scans/{scan_id}", response_model=ScanOut, tags=["Scans"])
 async def get_scan(brand_id: uuid.UUID, scan_id: uuid.UUID, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    brand_result = await db.execute(select(Brand).where(Brand.id == brand_id, Brand.owner_id == user.id))
+    brand_result = await db.execute(
+        select(Brand).where(Brand.id == brand_id, Brand.owner_id == user.id, Brand.deleted_at.is_(None))
+    )
     if not brand_result.scalar_one_or_none():
         raise HTTPException(404, "Brand not found")
     result = await db.execute(

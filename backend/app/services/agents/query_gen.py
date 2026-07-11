@@ -135,7 +135,9 @@ class QueryGenAgent(BaseAgent):
             from app.core.database import AsyncSessionLocal
             from app.models.models import Brand
             async with AsyncSessionLocal() as db:
-                brand_result = await db.execute(select(Brand).where(Brand.id == uuid.UUID(brand_id)))
+                brand_result = await db.execute(
+                    select(Brand).where(Brand.id == uuid.UUID(brand_id), Brand.deleted_at.is_(None))
+                )
                 brand = brand_result.scalar_one_or_none()
                 if brand:
                     result = await self.run(
@@ -179,7 +181,9 @@ class QueryGenAgent(BaseAgent):
         from app.models.models import Brand, MonitoredQuery
         from app.services.skills.manage_queries import generate_queries
 
-        brand_result = await db.execute(select(Brand).where(Brand.id == brand_id))
+        brand_result = await db.execute(
+            select(Brand).where(Brand.id == brand_id, Brand.deleted_at.is_(None))
+        )
         brand = brand_result.scalar_one_or_none()
         if not brand:
             return AgentResult(False, error="Brand not found")
@@ -231,7 +235,9 @@ class QueryGenAgent(BaseAgent):
         from app.models.models import Brand
         from app.services.skills.manage_queries import refresh_queries
 
-        brand_result = await db.execute(select(Brand).where(Brand.id == brand_id))
+        brand_result = await db.execute(
+            select(Brand).where(Brand.id == brand_id, Brand.deleted_at.is_(None))
+        )
         brand = brand_result.scalar_one_or_none()
         if not brand:
             return AgentResult(False, error="Brand not found")

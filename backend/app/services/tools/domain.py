@@ -65,7 +65,9 @@ async def build_brand_context(brand_id: str, db: AsyncSession | None = None) -> 
     from app.models.models import Brand, MonitoredQuery, Scan, QueryResult, ScanStatus
 
     async def _execute(session: AsyncSession):
-        brand_result = await session.execute(select(Brand).where(Brand.id == uuid.UUID(brand_id)))
+        brand_result = await session.execute(
+            select(Brand).where(Brand.id == uuid.UUID(brand_id), Brand.deleted_at.is_(None))
+        )
         brand = brand_result.scalar_one_or_none()
         if not brand:
             return "Brand not found."

@@ -48,8 +48,10 @@ async def list_queries(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db), 
 
 @router.post("/brands/{brand_id}/queries", response_model=QueryOut, status_code=201, tags=["Queries"])
 @limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")
-async def add_query(request: Request, brand_id: uuid.UUID, body: QueryCreate, db: AsyncSession = Depends(get_db)):
-    brand_result = await db.execute(select(Brand).where(Brand.id == brand_id))
+async def add_query(request: Request, brand_id: uuid.UUID, body: QueryCreate, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    brand_result = await db.execute(
+        select(Brand).where(Brand.id == brand_id, Brand.owner_id == user.id, Brand.deleted_at.is_(None))
+    )
     if not brand_result.scalar_one_or_none():
         raise HTTPException(404, "Brand not found")
 
@@ -269,8 +271,10 @@ async def bulk_update_queries(
 
 @router.post("/brands/{brand_id}/queries/suggest", tags=["Queries"])
 @limiter.limit("5/minute")
-async def suggest_queries(request: Request, brand_id: uuid.UUID, body: QuerySuggestRequest, db: AsyncSession = Depends(get_db)):
-    brand_result = await db.execute(select(Brand).where(Brand.id == brand_id))
+async def suggest_queries(request: Request, brand_id: uuid.UUID, body: QuerySuggestRequest, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    brand_result = await db.execute(
+        select(Brand).where(Brand.id == brand_id, Brand.owner_id == user.id, Brand.deleted_at.is_(None))
+    )
     brand = brand_result.scalar_one_or_none()
     if not brand:
         raise HTTPException(404, "Brand not found")
@@ -284,9 +288,11 @@ async def suggest_queries(request: Request, brand_id: uuid.UUID, body: QuerySugg
 
 @router.post("/brands/{brand_id}/queries/probe", tags=["Queries"])
 @limiter.limit("5/minute")
-async def probe_queries(request: Request, brand_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+async def probe_queries(request: Request, brand_id: uuid.UUID, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     """Run a probe scan on generated queries and return insights."""
-    brand_result = await db.execute(select(Brand).where(Brand.id == brand_id))
+    brand_result = await db.execute(
+        select(Brand).where(Brand.id == brand_id, Brand.owner_id == user.id, Brand.deleted_at.is_(None))
+    )
     brand = brand_result.scalar_one_or_none()
     if not brand:
         raise HTTPException(404, "Brand not found")

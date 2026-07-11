@@ -90,7 +90,7 @@ async def recommend(
 ):
     """Non-streaming recommendation (for quick action buttons)."""
     brand_result = await db.execute(
-        select(Brand).where(Brand.id == brand_id, Brand.owner_id == user.id)
+        select(Brand).where(Brand.id == brand_id, Brand.owner_id == user.id, Brand.deleted_at.is_(None))
     )
     brand = brand_result.scalar_one_or_none()
     if not brand:
@@ -137,7 +137,7 @@ async def recommend_stream(
 ):
     """Streaming recommendation via SSE."""
     brand_result = await db.execute(
-        select(Brand).where(Brand.id == brand_id, Brand.owner_id == user.id)
+        select(Brand).where(Brand.id == brand_id, Brand.owner_id == user.id, Brand.deleted_at.is_(None))
     )
     brand = brand_result.scalar_one_or_none()
     if not brand:

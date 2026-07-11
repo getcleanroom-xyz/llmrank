@@ -41,7 +41,9 @@ async def run_scan(brand_id: str, scan_id: str, llm_names: list[str],
 
     async with AsyncSessionLocal() as db:
         # 1. Get brand
-        brand_result = await db.execute(select(Brand).where(Brand.id == uuid.UUID(brand_id)))
+        brand_result = await db.execute(
+            select(Brand).where(Brand.id == uuid.UUID(brand_id), Brand.deleted_at.is_(None))
+        )
         brand = brand_result.scalar_one_or_none()
         if not brand:
             raise ValueError(f"Brand {brand_id} not found")
