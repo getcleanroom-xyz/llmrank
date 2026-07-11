@@ -14,5 +14,12 @@ async def get_db() -> AsyncSession:
     async with AsyncSessionLocal() as session:
         try:
             yield session
+        except Exception:
+            # Let the exception propagate — don't swallow it
+            raise
         finally:
-            await session.close()
+            try:
+                await session.close()
+            except Exception:
+                # Connection may already be closed (e.g., background tasks)
+                pass

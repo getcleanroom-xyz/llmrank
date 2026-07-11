@@ -166,6 +166,11 @@ async def refresh_queries(brand_id: str, brand_name: str, domain: str,
     from app.core.database import AsyncSessionLocal
     from app.models.models import Brand, MonitoredQuery
 
+    # Generate queries OUTSIDE the session to avoid holding a connection during LLM calls
+    generated = await generate_queries(
+        brand_id, brand_name, domain, classification, competitors, agent_name
+    )
+
     async def _execute(session: AsyncSession):
         # 1. Score existing
         scored = await score_queries(brand_id, session)
@@ -178,12 +183,9 @@ async def refresh_queries(brand_id: str, brand_name: str, domain: str,
             "brand_id": uuid.UUID(brand_id), "is_active": True
         }, db=session)
 
-        # 4. Generate replacements if below threshold
+        # 4. Add generated replacements if below threshold
         new_queries = []
         if active_count < 8:
-            generated = await generate_queries(
-                brand_id, brand_name, domain, classification, competitors, agent_name
-            )
             existing_texts = {q["query_text"].lower() for q in scored}
             for q in generated:
                 if q["query_text"].lower() not in existing_texts and active_count + len(new_queries) < 8:
