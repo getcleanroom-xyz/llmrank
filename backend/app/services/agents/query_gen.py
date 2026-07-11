@@ -257,9 +257,37 @@ class QueryGenAgent(BaseAgent):
         from app.services.skills.manage_queries import generate_queries
         import httpx
 
-        async with httpx.AsyncClient(timeout=30) as client:
-            classification = await classify_brand("", brand.name, brand.domain, client)
-            from_crawl = await discover_competitors_from_crawl("", client)
+        async with httpx.AsyncClient(timeout=15) as client:
+            # Crawl the brand's homepage to understand what it does
+            crawl_content = ""
+            try:
+                resp = await client.get(f"https://{brand.domain}", follow_redirects=True)
+                if resp.status_code == 200:
+                    from html.parser import HTMLParser
+                    class TextExtractor(HTMLParser):
+                        def __init__(self):
+                            super().__init__()
+                            self.text = []
+                            self.skip = False
+                        def handle_starttag(self, tag, attrs):
+                            if tag in ("script", "style", "nav", "footer"):
+                                self.skip = True
+                        def handle_endtag(self, tag):
+                            if tag in ("script", "style", "nav", "footer"):
+                                self.skip = False
+                        def handle_data(self, data):
+                            if not self.skip:
+                                t = data.strip()
+                                if t:
+                                    self.text.append(t)
+                    parser = TextExtractor()
+                    parser.feed(resp.text[:10000])
+                    crawl_content = " ".join(parser.text)[:3000]
+            except Exception as e:
+                logger.warning("Failed to crawl %s: %s", brand.domain, e)
+
+            classification = await classify_brand(crawl_content, brand.name, brand.domain, client)
+            from_crawl = await discover_competitors_from_crawl(crawl_content, client)
             from_category = await discover_competitors_by_category(classification, client)
 
             seen = {}
@@ -289,8 +317,36 @@ class QueryGenAgent(BaseAgent):
         import httpx
 
         async with httpx.AsyncClient(timeout=60) as client:
-            classification = await classify_brand("", brand.name, brand.domain, client)
-            from_crawl = await discover_competitors_from_crawl("", client)
+            # Crawl the brand's homepage
+            crawl_content = ""
+            try:
+                resp = await client.get(f"https://{brand.domain}", follow_redirects=True)
+                if resp.status_code == 200:
+                    from html.parser import HTMLParser
+                    class TextExtractor(HTMLParser):
+                        def __init__(self):
+                            super().__init__()
+                            self.text = []
+                            self.skip = False
+                        def handle_starttag(self, tag, attrs):
+                            if tag in ("script", "style", "nav", "footer"):
+                                self.skip = True
+                        def handle_endtag(self, tag):
+                            if tag in ("script", "style", "nav", "footer"):
+                                self.skip = False
+                        def handle_data(self, data):
+                            if not self.skip:
+                                t = data.strip()
+                                if t:
+                                    self.text.append(t)
+                    parser = TextExtractor()
+                    parser.feed(resp.text[:10000])
+                    crawl_content = " ".join(parser.text)[:3000]
+            except Exception as e:
+                logger.warning("Failed to crawl %s: %s", brand.domain, e)
+
+            classification = await classify_brand(crawl_content, brand.name, brand.domain, client)
+            from_crawl = await discover_competitors_from_crawl(crawl_content, client)
             from_category = await discover_competitors_by_category(classification, client)
             user_comps = [c.get("name", "") for c in (brand.competitors or [])]
             seen = {c.get("name", "").lower(): c for c in from_crawl + from_category if c.get("name", "").lower() != brand.name.lower()}
