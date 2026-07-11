@@ -210,7 +210,7 @@ export function ChatWidget({ brandId }: { brandId: string }) {
                             </div>
                           ),
                           h3: ({children}) => <h3 style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 14, fontWeight: 700, margin: "3px 0 1px" }}>{children}</h3>,
-                          p: ({children}) => <p style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: 13, lineHeight: 1.5, margin: "3px 0" }}>{children}</p>,
+                          p: ({children}) => <p style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: 13, lineHeight: 1.5, margin: 0 }}>{children}</p>,
                           ul: ({children}) => <ul style={{ margin: 0, paddingLeft: 16 }}>{children}</ul>,
                           ol: ({children}) => <ol style={{ margin: 0, paddingLeft: 16 }}>{children}</ol>,
                           li: ({children}) => <li style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: 13, lineHeight: 1.5, margin: 0 }}>{children}</li>,
@@ -255,53 +255,119 @@ export function ChatWidget({ brandId }: { brandId: string }) {
             </div>
           )}
 
-          {/* Input */}
+          {/* Input area */}
           <div style={{
-            padding: "12px 16px", borderTop: "2px solid var(--border)",
+            borderTop: "2px solid var(--border)",
             background: "#FFF9DB", position: "relative",
-            display: "flex", gap: 8, alignItems: "flex-end",
           }}>
-            {/* Notebook lines */}
-            <svg width="100%" height="100%" viewBox="0 0 400 60" preserveAspectRatio="none" style={{ position: "absolute", inset: 0, pointerEvents: "none", opacity: 0.15 }}>
-              {[12, 24, 36, 48].map((y) => (
+            {/* Notebook lines background */}
+            <svg width="100%" height="100%" viewBox="0 0 400 100" preserveAspectRatio="none" style={{ position: "absolute", inset: 0, pointerEvents: "none", opacity: 0.12 }}>
+              {[14, 26, 38, 50, 62, 74, 86].map((y) => (
                 <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="#3B82F6" strokeWidth="0.5" />
               ))}
-              <line x1="40" y1="0" x2="40" y2="60" stroke="#EF4444" strokeWidth="0.5" />
+              <line x1="40" y1="0" x2="40" y2="100" stroke="#EF4444" strokeWidth="0.5" />
             </svg>
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  send(input);
-                }
-              }}
-              placeholder="jot something down..."
-              rows={1}
-              style={{
-                flex: 1, resize: "none", border: "none", outline: "none",
-                borderRadius: 0, padding: "8px 12px",
-                fontSize: 13, fontFamily: "var(--font-hand), Caveat, cursive", lineHeight: 1.4,
-                background: "transparent", color: "var(--text)",
-                minHeight: 40, maxHeight: 120,
-              }}
-              disabled={streaming}
-            />
-            <button
-              onClick={() => send(input)}
-              disabled={!input.trim() || streaming}
-              style={{
-                height: 36, padding: "0 14px", flexShrink: 0,
-                background: "var(--primary)", color: "#1A1A1A",
-                border: "2px solid var(--border)", borderRadius: "var(--radius)",
-                boxShadow: "2px 2px 0 #1A1A1A", cursor: "pointer",
-                fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 14, fontWeight: 700,
-              }}
-            >
-              {streaming ? "..." : "send"}
-            </button>
+
+            {/* Toolbar */}
+            <div style={{
+              display: "flex", gap: 2, padding: "6px 12px 4px 48px",
+              borderBottom: "1px solid rgba(0,0,0,0.06)", position: "relative", zIndex: 1,
+            }}>
+              {[
+                { label: "B", title: "Bold", insert: "**", wrap: true },
+                { label: "I", title: "Italic", insert: "_", wrap: true },
+                { label: "H", title: "Heading", insert: "### ", wrap: false },
+                { label: "\u2022", title: "List", insert: "- ", wrap: false },
+                { label: "1.", title: "Numbered list", insert: "1. ", wrap: false },
+                { label: "</>", title: "Code", insert: "`", wrap: true },
+                { label: "\u201C", title: "Quote", insert: "> ", wrap: false },
+              ].map((btn) => (
+                <button
+                  key={btn.title}
+                  title={btn.title}
+                  onClick={() => {
+                    const ta = inputRef.current;
+                    if (!ta) return;
+                    const start = ta.selectionStart;
+                    const end = ta.selectionEnd;
+                    const selected = input.substring(start, end);
+                    let newText: string;
+                    let newCursor: number;
+                    if (btn.wrap && selected) {
+                      newText = input.substring(0, start) + btn.insert + selected + btn.insert + input.substring(end);
+                      newCursor = start + btn.insert.length + selected.length + btn.insert.length;
+                    } else if (btn.wrap) {
+                      newText = input.substring(0, start) + btn.insert + btn.insert + input.substring(end);
+                      newCursor = start + btn.insert.length;
+                    } else {
+                      newText = input.substring(0, start) + btn.insert + input.substring(end);
+                      newCursor = start + btn.insert.length;
+                    }
+                    setInput(newText);
+                    setTimeout(() => { ta.selectionStart = ta.selectionEnd = newCursor; ta.focus(); }, 0);
+                  }}
+                  style={{
+                    width: 28, height: 24, display: "flex", alignItems: "center", justifyContent: "center",
+                    border: "none", borderRadius: 4, cursor: "pointer", fontSize: 12,
+                    fontWeight: btn.label === "B" ? 800 : btn.label === "I" ? 400 : 600,
+                    fontStyle: btn.label === "I" ? "italic" : "normal",
+                    fontFamily: btn.label === "</>" ? "monospace" : "var(--font-sans), sans-serif",
+                    color: "var(--text-muted)", background: "transparent",
+                    transition: "background 0.1s",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(0,0,0,0.06)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                >
+                  {btn.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Textarea + send */}
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-end", padding: "6px 12px 10px 48px", position: "relative", zIndex: 1 }}>
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    send(input);
+                  }
+                  // Tab inserts 2 spaces
+                  if (e.key === "Tab") {
+                    e.preventDefault();
+                    const ta = e.currentTarget;
+                    const start = ta.selectionStart;
+                    setInput(input.substring(0, start) + "  " + input.substring(ta.selectionEnd));
+                    setTimeout(() => { ta.selectionStart = ta.selectionEnd = start + 2; }, 0);
+                  }
+                }}
+                placeholder="jot something down..."
+                rows={1}
+                style={{
+                  flex: 1, resize: "none", border: "none", outline: "none",
+                  borderRadius: 0, padding: "4px 0",
+                  fontSize: 13, fontFamily: "var(--font-hand), Caveat, cursive", lineHeight: 1.4,
+                  background: "transparent", color: "var(--text)",
+                  minHeight: 36, maxHeight: 120,
+                }}
+                disabled={streaming}
+              />
+              <button
+                onClick={() => send(input)}
+                disabled={!input.trim() || streaming}
+                style={{
+                  height: 34, padding: "0 14px", flexShrink: 0,
+                  background: "var(--primary)", color: "#1A1A1A",
+                  border: "2px solid var(--border)", borderRadius: "var(--radius)",
+                  boxShadow: "2px 2px 0 #1A1A1A", cursor: "pointer",
+                  fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 14, fontWeight: 700,
+                }}
+              >
+                {streaming ? "..." : "send"}
+              </button>
+            </div>
           </div>
         </div>
       )}
