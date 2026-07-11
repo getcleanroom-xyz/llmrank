@@ -112,7 +112,7 @@ class RecommendationsAgent(BaseAgent):
     async def _build_context(self, brand_id: uuid.UUID, db: AsyncSession) -> str:
         """Fetch ALL real data and build context for the LLM."""
         brand_result = await db.execute(select(Brand).where(Brand.id == brand_id))
-        brand = brand_result.scalar_one_none()
+        brand = brand_result.scalar_one_or_none()
         if not brand:
             return "Brand not found."
 

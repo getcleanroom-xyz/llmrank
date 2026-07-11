@@ -167,8 +167,8 @@ export function ChatWidget({ brandId }: { brandId: string }) {
                   fontSize: 13,
                   lineHeight: 1.5,
                   ...(msg.role === "user"
-                    ? { background: "var(--primary)", color: "#fff", border: "2px solid var(--border)" }
-                    : { background: "var(--bg-dark)", border: "2px solid var(--border)" }),
+                    ? { background: "var(--primary)", color: "#1A1A1A", border: "2px solid var(--border)" }
+                    : { background: "var(--bg-dark)", color: "var(--text)", border: "2px solid var(--border)" }),
                 }}>
                   <div style={{ whiteSpace: "pre-wrap" }}>
                     {msg.role === "assistant" ? (
