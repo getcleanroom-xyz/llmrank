@@ -88,8 +88,11 @@ export default function CompetitorDrilldownPage() {
                 {/* Quick details row */}
                 <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
                   <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.6, margin: 0, fontFamily: "var(--font-serif), Georgia, serif" }}>
-                    Appears in <strong>{data.mention_pct}%</strong> of results across <strong>{data.total_queries}</strong> queries.
-                    Beats you in <strong style={{ color: "#991B1B" }}>{data.beats_brand_count}</strong> of <strong>{data.total_appearances}</strong> appearances.
+                    Mentioned in <strong>{data.mention_pct}%</strong> of all results ({data.total_appearances} out of {data.total_queries * 4}).
+                    {data.beats_brand_count > 0
+                      ? <> Ranks higher than you in <strong style={{ color: "#991B1B" }}>{data.beats_brand_count}</strong> of those results.</>
+                      : <> Never ranked higher than you when both were mentioned.</>
+                    }
                   </p>
                   {data.domain && (
                     <a href={`https://${data.domain}`} target="_blank" rel="noopener noreferrer"
