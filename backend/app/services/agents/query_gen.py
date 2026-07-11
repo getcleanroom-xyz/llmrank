@@ -136,7 +136,7 @@ class QueryGenAgent(BaseAgent):
             from app.models.models import Brand
             async with AsyncSessionLocal() as db:
                 brand_result = await db.execute(
-                    select(Brand).where(Brand.id == uuid.UUID(brand_id), Brand.deleted_at.is_(None))
+                    Brand.active().where(Brand.id == uuid.UUID(brand_id))
                 )
                 brand = brand_result.scalar_one_or_none()
                 if brand:
@@ -182,7 +182,7 @@ class QueryGenAgent(BaseAgent):
         from app.services.skills.manage_queries import generate_queries
 
         brand_result = await db.execute(
-            select(Brand).where(Brand.id == brand_id, Brand.deleted_at.is_(None))
+            Brand.active().where(Brand.id == brand_id)
         )
         brand = brand_result.scalar_one_or_none()
         if not brand:
@@ -236,7 +236,7 @@ class QueryGenAgent(BaseAgent):
         from app.services.skills.manage_queries import refresh_queries
 
         brand_result = await db.execute(
-            select(Brand).where(Brand.id == brand_id, Brand.deleted_at.is_(None))
+            Brand.active().where(Brand.id == brand_id)
         )
         brand = brand_result.scalar_one_or_none()
         if not brand:

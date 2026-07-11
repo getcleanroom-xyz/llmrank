@@ -46,7 +46,7 @@ async def trigger_scan(
     user: User = Depends(get_current_user),
 ):
     brand_result = await db.execute(
-        select(Brand).where(Brand.id == brand_id, Brand.owner_id == user.id, Brand.deleted_at.is_(None))
+        Brand.active().where(Brand.id == brand_id, Brand.owner_id == user.id)
     )
     brand = brand_result.scalar_one_or_none()
     if not brand:
@@ -137,7 +137,7 @@ async def _run_scan_background(brand_id: uuid.UUID, scan_id: uuid.UUID, llm_name
                 )
                 last_tx = tx_result.scalar_one_or_none()
                 if last_tx and last_tx.amount < 0:
-                    brand_result = await db.execute(select(Brand).where(Brand.id == brand_id, Brand.deleted_at.is_(None)))
+                    brand_result = await db.execute(Brand.active().where(Brand.id == brand_id))
                     brand = brand_result.scalar_one_or_none()
                     if brand:
                         await grant_credits(db, abs(last_tx.amount), f"Refund: failed scan {scan_id}", "refund", brand.owner_id)
@@ -155,7 +155,7 @@ async def list_scans(
     per_page: int = 20,
 ):
     brand_result = await db.execute(
-        select(Brand).where(Brand.id == brand_id, Brand.owner_id == user.id, Brand.deleted_at.is_(None))
+        Brand.active().where(Brand.id == brand_id, Brand.owner_id == user.id)
     )
     if not brand_result.scalar_one_or_none():
         raise HTTPException(404, "Brand not found")
@@ -172,7 +172,7 @@ async def list_scans(
 @router.get("/brands/{brand_id}/scans/{scan_id}", response_model=ScanOut, tags=["Scans"])
 async def get_scan(brand_id: uuid.UUID, scan_id: uuid.UUID, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     brand_result = await db.execute(
-        select(Brand).where(Brand.id == brand_id, Brand.owner_id == user.id, Brand.deleted_at.is_(None))
+        Brand.active().where(Brand.id == brand_id, Brand.owner_id == user.id)
     )
     if not brand_result.scalar_one_or_none():
         raise HTTPException(404, "Brand not found")

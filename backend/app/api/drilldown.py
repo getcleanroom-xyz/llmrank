@@ -50,7 +50,7 @@ async def get_query_drilldown(
     db: AsyncSession = Depends(get_db),
 ):
     # Brand
-    brand_result = await db.execute(select(Brand).where(Brand.id == brand_id, Brand.deleted_at.is_(None)))
+    brand_result = await db.execute(Brand.active().where(Brand.id == brand_id))
     brand = brand_result.scalar_one_or_none()
     if not brand:
         raise HTTPException(404, "Brand not found")
@@ -134,7 +134,7 @@ async def get_llm_drilldown(
 ):
     # Verify brand exists and not deleted
     brand_result = await db.execute(
-        select(Brand).where(Brand.id == brand_id, Brand.deleted_at.is_(None))
+        Brand.active().where(Brand.id == brand_id)
     )
     if not brand_result.scalar_one_or_none():
         raise HTTPException(404, "Brand not found")
@@ -208,7 +208,7 @@ async def get_competitor_drilldown(
 ):
     # Verify brand exists and not deleted
     brand_result = await db.execute(
-        select(Brand).where(Brand.id == brand_id, Brand.deleted_at.is_(None))
+        Brand.active().where(Brand.id == brand_id)
     )
     if not brand_result.scalar_one_or_none():
         raise HTTPException(404, "Brand not found")
@@ -289,7 +289,7 @@ async def get_competitor_drilldown(
                 break
 
     # Generate competitive insight with richer data
-    brand_row = (await db.execute(select(Brand).where(Brand.id == brand_id, Brand.deleted_at.is_(None)))).scalar_one_or_none()
+    brand_row = (await db.execute(Brand.active().where(Brand.id == brand_id))).scalar_one_or_none()
     brand_name = brand_row.name if brand_row else ""
 
     # Look up logo from brand's competitors list

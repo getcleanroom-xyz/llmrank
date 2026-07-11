@@ -135,7 +135,7 @@ async def periodic_query_refresh():
 
     logger.info("Starting periodic query refresh")
     async with AsyncSessionLocal() as db:
-        result = await db.execute(select(Brand).where(Brand.deleted_at.is_(None)))
+        result = await db.execute(Brand.active())
         brands = result.scalars().all()
 
         for brand in brands:

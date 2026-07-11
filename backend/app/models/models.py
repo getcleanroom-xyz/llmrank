@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, Text, Float, Integer, DateTime, ForeignKey, Enum, JSON, Boolean, BigInteger, UniqueConstraint
+from sqlalchemy import String, Text, Float, Integer, DateTime, ForeignKey, Enum, JSON, Boolean, BigInteger, UniqueConstraint, select
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 import enum
@@ -73,6 +73,15 @@ class Brand(Base):
     queries: Mapped[list["MonitoredQuery"]] = relationship("MonitoredQuery", back_populates="brand", cascade="all, delete-orphan")
     scans: Mapped[list["Scan"]] = relationship("Scan", back_populates="brand", cascade="all, delete-orphan")
     conversations: Mapped[list["Conversation"]] = relationship("Conversation", back_populates="brand", cascade="all, delete-orphan")
+
+    @property
+    def is_deleted(self) -> bool:
+        return self.deleted_at is not None
+
+    @classmethod
+    def active(cls):
+        """Return a base SELECT that filters out soft-deleted brands."""
+        return select(cls).where(cls.deleted_at.is_(None))
 
 
 class MonitoredQuery(Base):

@@ -63,7 +63,7 @@ async def list_brands(
 @router.get("/brands/{brand_id}", response_model=BrandOut, tags=["Brands"])
 async def get_brand(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     result = await db.execute(
-        select(Brand).where(Brand.id == brand_id, Brand.owner_id == user.id, Brand.deleted_at.is_(None))
+        Brand.active().where(Brand.id == brand_id, Brand.owner_id == user.id)
     )
     brand = result.scalar_one_or_none()
     if not brand:
@@ -76,7 +76,7 @@ async def get_brand(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db), use
 async def delete_brand(request: Request, brand_id: uuid.UUID, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     """Soft delete a brand: obfuscate data and set deleted_at timestamp."""
     result = await db.execute(
-        select(Brand).where(Brand.id == brand_id, Brand.owner_id == user.id, Brand.deleted_at.is_(None))
+        Brand.active().where(Brand.id == brand_id, Brand.owner_id == user.id)
     )
     brand = result.scalar_one_or_none()
     if not brand:
