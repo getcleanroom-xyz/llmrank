@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { useDashboard, useCredits } from "@/lib/hooks";
@@ -40,8 +40,30 @@ function DoodleCircle({ color = "var(--primary)", style }: { color?: string; sty
 
 function BrandDashboardPageInner() {
   const { brandId } = useParams<{ brandId: string }>();
+  const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTabState] = useState<Tab>((searchParams.get("tab") as Tab) ?? "overview");
+
+  // Sync tab state with URL without triggering navigation
+  const setTab = useCallback((t: Tab) => {
+    setTabState(t);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", t);
+    window.history.pushState({}, "", url.toString());
+  }, []);
+
+  // Handle browser back/forward
+  useEffect(() => {
+    const handler = () => {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get("tab") as Tab;
+      if (t && ["overview", "queries", "scans", "competitors"].includes(t)) {
+        setTabState(t);
+      }
+    };
+    window.addEventListener("popstate", handler);
+    return () => window.removeEventListener("popstate", handler);
+  }, []);
 
   const { data: dashResult, isLoading, error: loadError, refetch } = useDashboard(brandId);
   const { data: credits } = useCredits();
