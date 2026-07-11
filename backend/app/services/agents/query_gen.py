@@ -132,39 +132,28 @@ class QueryGenAgent(BaseAgent):
             return
         logger.info("Query Gen agent triggered by competitor update for brand %s", brand_id)
 
-        from app.core.database import AsyncSessionLocal
-        from app.models.models import Brand
-        from sqlalchemy.exc import InterfaceError
-
-        # Try up to 2 times (connection may close during long operations)
-        for attempt in range(2):
-            try:
-                async with AsyncSessionLocal() as db:
-                    brand_result = await db.execute(
-                        Brand.active().where(Brand.id == uuid.UUID(brand_id))
+        try:
+            from app.core.database import AsyncSessionLocal
+            from app.models.models import Brand
+            async with AsyncSessionLocal() as db:
+                brand_result = await db.execute(
+                    Brand.active().where(Brand.id == uuid.UUID(brand_id))
+                )
+                brand = brand_result.scalar_one_or_none()
+                if brand:
+                    result = await self.run(
+                        AgentContext(brand_id),
+                        brand_id=uuid.UUID(brand_id),
+                        brand_name=brand.name,
+                        domain=brand.domain,
+                        db=db,
+                        mode="refresh",
                     )
-                    brand = brand_result.scalar_one_or_none()
-                    if brand:
-                        result = await self.run(
-                            AgentContext(brand_id),
-                            brand_id=uuid.UUID(brand_id),
-                            brand_name=brand.name,
-                            domain=brand.domain,
-                            db=db,
-                            mode="refresh",
-                        )
-                        if result.success:
-                            await db.commit()
-                            logger.info("Query refresh complete for brand %s", brand_id)
-                    return
-            except InterfaceError as e:
-                if attempt == 0:
-                    logger.warning("Connection closed, retrying Query Gen: %s", e)
-                    continue
-                logger.exception("Query Gen refresh failed after retry: %s", e)
-            except Exception as e:
-                logger.exception("Query Gen refresh failed: %s", e)
-                return
+                    if result.success:
+                        await db.commit()
+                        logger.info("Query refresh complete for brand %s", brand_id)
+        except Exception as e:
+            logger.exception("Query Gen refresh failed: %s", e)
 
     async def run(self, context: AgentContext, **kwargs) -> AgentResult:
         """Run query lifecycle management."""

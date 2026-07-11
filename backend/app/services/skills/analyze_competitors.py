@@ -25,7 +25,7 @@ async def analyze_competitors(brand_id: str, scan_id: str,
     1. Get all query results from the scan
     2. Aggregate competitor mentions, positions, LLM coverage
     3. Store analysis in agent memory
-    4. Emit competitors.updated event
+    4. Emit competitors.updated event (AFTER session closes)
 
     Returns: {competitors: [...], total_results: int}
     """
@@ -78,24 +78,25 @@ async def analyze_competitors(brand_id: str, scan_id: str,
 
         await store_memory(agent_name, brand_id, notes, db=session)
 
-        # 4. Emit event
-        await emit_event("competitors", "competitors.updated", {
-            "brand_id": brand_id,
-            "scan_id": scan_id,
-            "competitor_count": len(competitors),
-            "top_competitor": competitors[0]["name"] if competitors else None,
-        }, agent_name=agent_name)
-
         return {
             "competitors": competitors,
             "total_results": len(all_results),
         }
 
+    # Run DB operations and commit
     if db:
-        # Caller owns the transaction — don't commit here
-        return await _execute(db)
+        result = await _execute(db)
+    else:
+        async with AsyncSessionLocal() as session:
+            result = await _execute(session)
+            await session.commit()
 
-    async with AsyncSessionLocal() as session:
-        result = await _execute(session)
-        await session.commit()
-        return result
+    # 4. Emit event AFTER session closes — no connection held during event chain
+    await emit_event("competitors", "competitors.updated", {
+        "brand_id": brand_id,
+        "scan_id": scan_id,
+        "competitor_count": len(result["competitors"]),
+        "top_competitor": result["competitors"][0]["name"] if result["competitors"] else None,
+    }, agent_name=agent_name)
+
+    return result
