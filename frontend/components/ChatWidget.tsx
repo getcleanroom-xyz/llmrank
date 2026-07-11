@@ -156,12 +156,16 @@ export function ChatWidget({ brandId }: { brandId: string }) {
       if (fullResponse) {
         setLocalMessages((prev) => [...prev, { role: "assistant", content: fullResponse }]);
       }
-      // Refresh conversation list (title may have been updated by auto-title)
+      // Refresh conversation list immediately (new conversation may appear)
       qc.invalidateQueries({ queryKey: ["conversations", brandId] });
       // Refresh messages for loaded conversations
       if (convId) {
         qc.invalidateQueries({ queryKey: ["conversationMessages", brandId, convId] });
       }
+      // Re-refetch after delay to pick up auto-generated title from event bus
+      setTimeout(() => {
+        qc.invalidateQueries({ queryKey: ["conversations", brandId] });
+      }, 4000);
     }
   };
 
