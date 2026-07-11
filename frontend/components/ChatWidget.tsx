@@ -4,13 +4,13 @@ import { useState, useRef, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { streamRecommendation, type ChatMessage } from "@/lib/api/recommendations";
 
-function LaiIcon({ size = 24 }: { size?: number }) {
+function LaiIcon({ size = 24, color = "currentColor" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
       {/* Speech bubble shape */}
-      <path d="M6 8C6 6.34315 7.34315 5 9 5H31C32.6569 5 34 6.34315 34 8V24C34 25.6569 32.6569 27 31 27H20L12 34V27H9C7.34315 27 6 25.6569 6 24V8Z" fill="currentColor" opacity="0.15" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M6 8C6 6.34315 7.34315 5 9 5H31C32.6569 5 34 6.34315 34 8V24C34 25.6569 32.6569 27 31 27H20L12 34V27H9C7.34315 27 6 25.6569 6 24V8Z" fill={color} fillOpacity="0.15" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
       {/* "lai" text — lowercase, handwritten style */}
-      <text x="11" y="21" fontFamily="Georgia, serif" fontSize="13" fontWeight="800" fontStyle="italic" fill="currentColor" letterSpacing="-0.5">
+      <text x="11" y="21" fontFamily="Georgia, serif" fontSize="13" fontWeight="800" fontStyle="italic" fill={color} letterSpacing="-0.5">
         lai
       </text>
     </svg>
@@ -78,14 +78,14 @@ export function ChatWidget({ brandId }: { brandId: string }) {
           style={{
             position: "fixed", bottom: 24, right: 24, zIndex: 100,
             width: 56, height: 56, borderRadius: "50%",
-            background: "var(--primary)", color: "#fff",
+            background: "var(--primary)", color: "#1A1A1A",
             border: "3px solid var(--border)",
             boxShadow: "3px 3px 0 #1A1A1A",
             cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >
-          <LaiIcon size={30} />
+          <LaiIcon size={30} color="#1A1A1A" />
         </button>
       )}
 
@@ -109,8 +109,7 @@ export function ChatWidget({ brandId }: { brandId: string }) {
                 width: 32, height: 32, borderRadius: "var(--radius)",
                 background: "var(--primary)", border: "2px solid var(--border)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                color: "#fff",
-              }}><LaiIcon size={22} /></div>
+              }}><LaiIcon size={22} color="#1A1A1A" /></div>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 700 }}>lai</div>
                 <div style={{ fontSize: 10, color: "var(--text-muted)" }}>Your visibility copilot</div>
@@ -125,9 +124,9 @@ export function ChatWidget({ brandId }: { brandId: string }) {
               <div style={{ textAlign: "center", padding: "40px 20px" }}>
                 <div style={{
                   width: 56, height: 56, borderRadius: "50%", background: "var(--primary)", margin: "0 auto 16px",
-                  display: "flex", alignItems: "center", justifyContent: "center", color: "#fff",
+                  display: "flex", alignItems: "center", justifyContent: "center",
                   border: "3px solid var(--border)", boxShadow: "3px 3px 0 #1A1A1A",
-                }}><LaiIcon size={34} /></div>
+                }}><LaiIcon size={34} color="#1A1A1A" /></div>
                 <div style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 22, fontWeight: 700, marginBottom: 8 }}>
                   Ask me anything
                 </div>
