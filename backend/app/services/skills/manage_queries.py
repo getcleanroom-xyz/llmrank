@@ -42,6 +42,10 @@ async def generate_queries(brand_id: str, brand_name: str, domain: str,
         # Fallback: use brand name + domain as context
         product_desc = f"{brand_name} at {domain}"
 
+    logger.info("Query gen for %s: product_desc=%s", brand_name, product_desc[:200])
+    logger.info("Query gen for %s: classification=%s", brand_name, classification)
+    logger.info("Query gen for %s: competitors=%s", brand_name, comp_str)
+
     prompt = (
         f"Generate 20 conversational questions that people would ask an AI assistant "
         f"when researching a product like {brand_name}.\n\n"
@@ -74,7 +78,11 @@ async def generate_queries(brand_id: str, brand_name: str, domain: str,
                     q["score"] = max(1, min(5, int(q.get("score", 3))))
                     q["query_type"] = q.get("query_type", "brand_category")
                 result.sort(key=lambda q: q.get("score", 0), reverse=True)
+                logger.info("Generated %d queries for %s: %s", len(result), brand_name,
+                            [q["query_text"][:50] for q in result[:5]])
                 return result[:20]
+            else:
+                logger.warning("Query gen returned %d results (need >= 5): %s", len(result) if isinstance(result, list) else 0, result)
         except Exception as e:
             logger.warning("Query generation failed with %s: %s", model, e)
 
