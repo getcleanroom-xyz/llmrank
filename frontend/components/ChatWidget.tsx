@@ -195,7 +195,7 @@ export function ChatWidget({ brandId }: { brandId: string }) {
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ position: "absolute", top: -1, [msg.role === "user" ? "right" : "left"]: -1, opacity: 0.15, pointerEvents: "none" }}>
                     <path d={msg.role === "user" ? "M20 0 Q15 5 20 20" : "M0 0 Q5 5 0 20"} stroke="var(--text)" strokeWidth="1" fill="none" />
                   </svg>
-                  <div style={{ whiteSpace: "pre-wrap" }}>
+                  <div style={{ whiteSpace: "pre-line" }}>
                     {msg.role === "assistant" ? (
                       <Markdown
                         components={{
