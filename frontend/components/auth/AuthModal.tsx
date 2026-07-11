@@ -18,6 +18,7 @@ export function AuthModal() {
   const [deviceName, setDeviceName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [step, setStep] = useState<"form" | "confirm">("form");
 
   useEffect(() => {
     setMode(authModalMode);
@@ -25,12 +26,17 @@ export function AuthModal() {
     setDisplayName("");
     setDeviceName("");
     setError("");
+    setStep("form");
   }, [authModalMode]);
 
   if (!authModalOpen) return null;
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (mode === "register" && step === "form") {
+      setStep("confirm");
+      return;
+    }
     setError("");
     setLoading(true);
 
@@ -42,7 +48,13 @@ export function AuthModal() {
       setUser(result.user);
       closeAuthModal();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed");
+      const msg = err instanceof Error ? err.message : "Registration failed";
+      if (msg.includes("cancelled")) {
+        setError("Setup cancelled. No worries — you can try again whenever you're ready.");
+      } else {
+        setError(msg);
+      }
+      setStep("form");
     } finally {
       setLoading(false);
     }
@@ -60,7 +72,12 @@ export function AuthModal() {
       setUser(result.user);
       closeAuthModal();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      const msg = err instanceof Error ? err.message : "Login failed";
+      if (msg.includes("cancelled")) {
+        setError("Sign-in cancelled. Try again when you're ready.");
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -110,62 +127,101 @@ export function AuthModal() {
             </div>
 
             <form onSubmit={mode === "login" ? handleLogin : handleRegister}>
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Email</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="input"
-                  placeholder="you@example.com"
-                />
-              </div>
-
-              {mode === "register" && (
+              {mode === "register" && step === "confirm" ? (
                 <>
-                  <div style={{ marginBottom: 12 }}>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Display name</label>
-                    <input
-                      type="text"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                      required
-                      className="input"
-                      placeholder="John"
-                    />
+                  <div style={{ background: "#DBEAFF", border: "2px solid #3B82F6", borderRadius: "var(--radius)", padding: 14, marginBottom: 14 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#1E40AF", marginBottom: 6 }}>What happens next</div>
+                    <div style={{ fontSize: 12, color: "#1E3A5F", lineHeight: 1.5 }}>
+                      Your browser will ask you to verify with your fingerprint, Face ID, or a security key.
+                      This creates a passkey — a secure, password-free way to sign in.
+                      You won&apos;t need to remember any password.
+                    </div>
                   </div>
-                  <div style={{ marginBottom: 12 }}>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Device name (optional)</label>
-                    <input
-                      type="text"
-                      value={deviceName}
-                      onChange={(e) => setDeviceName(e.target.value)}
-                      className="input"
-                      placeholder="My MacBook"
-                    />
+
+                  <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 14 }}>
+                    <strong>{email}</strong>
+                    {displayName && <> &middot; {displayName}</>}
+                  </div>
+
+                  {error && (
+                    <div style={{ fontSize: 12, color: "var(--red)", marginBottom: 12, fontWeight: 600 }}>{error}</div>
+                  )}
+
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button type="button" onClick={() => { setStep("form"); setError(""); }} className="btn btn-ghost" style={{ flex: 1 }}>
+                      Back
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="btn btn-primary"
+                      style={{ flex: 2 }}
+                    >
+                      {loading ? "Creating passkey..." : "Verify with device"}
+                    </button>
                   </div>
                 </>
-              )}
+              ) : (
+                <>
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Email</label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="input"
+                      placeholder="you@example.com"
+                    />
+                  </div>
 
-              {error && (
-                <div style={{ fontSize: 12, color: "var(--red)", marginBottom: 12, fontWeight: 600 }}>{error}</div>
-              )}
+                  {mode === "register" && (
+                    <>
+                      <div style={{ marginBottom: 12 }}>
+                        <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Your name</label>
+                        <input
+                          type="text"
+                          value={displayName}
+                          onChange={(e) => setDisplayName(e.target.value)}
+                          required
+                          className="input"
+                          placeholder="John"
+                        />
+                      </div>
+                      <div style={{ marginBottom: 12 }}>
+                        <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Device label (optional)</label>
+                        <input
+                          type="text"
+                          value={deviceName}
+                          onChange={(e) => setDeviceName(e.target.value)}
+                          className="input"
+                          placeholder="e.g. Work MacBook"
+                        />
+                        <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 3 }}>Helps you identify this device later</div>
+                      </div>
+                    </>
+                  )}
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn btn-primary"
-                style={{ width: "100%" }}
-              >
-                {loading ? "Loading..." : mode === "login" ? "Sign in with passkey" : "Create account"}
-              </button>
+                  {error && (
+                    <div style={{ fontSize: 12, color: "var(--red)", marginBottom: 12, fontWeight: 600 }}>{error}</div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="btn btn-primary"
+                    style={{ width: "100%" }}
+                  >
+                    {loading ? "Loading..." : mode === "login" ? "Sign in with passkey" : "Continue"}
+                  </button>
+                </>
+              )}
             </form>
 
             <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 12, textAlign: "center" }}>
               {mode === "login"
-                ? "Use your device's biometric or security key to sign in"
-                : "We'll create a passkey on your device for secure, passwordless login"}
+                ? "Use your fingerprint, Face ID, or security key to sign in"
+                : "No password needed — your device keeps your account secure"}
             </p>
           </>
         )}
