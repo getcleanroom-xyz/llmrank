@@ -131,6 +131,7 @@ export function BuyCreditsModal({ open, onClose }: BuyCreditsModalProps) {
                 <button key={p.key} onClick={() => handleSelectPackage(p.key)}
                   className="card" style={{ padding: 16, cursor: "pointer", borderColor: p.key === "popular" ? "var(--primary)" : undefined }}>
                   {p.key === "popular" && <div style={{ fontSize: 10, fontWeight: 700, color: "var(--primary)", marginBottom: 4 }}>POPULAR</div>}
+                  <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>{p.label}</div>
                   <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 4 }}>{p.credits.toLocaleString()}</div>
                   <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>${p.amount_usd.toFixed(2)}</div>
                 </button>
