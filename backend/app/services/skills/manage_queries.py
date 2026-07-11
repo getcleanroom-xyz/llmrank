@@ -51,10 +51,9 @@ async def generate_queries(brand_id: str, brand_name: str, domain: str,
         f"Competitors: {comp_str or 'none known'}\n\n"
         f"RULES:\n"
         f"- Questions must be directly about the TYPE of product {brand_name} is\n"
-        f"- Be specific to the actual use case (e.g., email delivery, not generic AI)\n"
-        f"- Scenario-based: 'How do I...', 'What should I use for...', 'I need to...'\n"
-        f"- Do NOT include the brand name {brand_name} in questions\n"
-        f"- Do NOT generate generic AI/SaaS questions unrelated to this product type\n\n"
+        f"- Use the WHAT THIS PRODUCT DOES section above as the ONLY source of truth\n"
+        f"- Do NOT generate questions about topics unrelated to this specific product\n"
+        f"- Do NOT include the brand name {brand_name} in questions\n\n"
         f'Return ONLY a valid JSON array: [{{"query_text":"...","query_type":"workflow","score":1-5}}]'
     )
 
