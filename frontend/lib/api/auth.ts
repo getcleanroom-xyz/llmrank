@@ -48,3 +48,17 @@ export const authListPasskeys = () => apiFetch<PasskeyInfo[]>("/auth/passkeys");
 
 export const authDeletePasskey = (passkeyId: string) =>
   apiFetch<{ status: string }>(`/auth/passkeys/${passkeyId}`, { method: "DELETE" });
+
+// ─── Email + Password Auth ────────────────────────────────────────────────────
+
+export const authEmailRegister = (email: string, display_name: string, password: string) =>
+  apiFetch<{ status: string; user: AuthUser }>("/auth/register/email", {
+    method: "POST",
+    body: JSON.stringify({ email, display_name, password }),
+  });
+
+export const authEmailLogin = (email: string, password: string) =>
+  apiFetch<{ status: string; user: AuthUser }>("/auth/login/email", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });

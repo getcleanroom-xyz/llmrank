@@ -13,6 +13,7 @@ from app.api.auth import _utcnow, _create_session_token, _sign_data, _verify_sig
 from app.api.webauthn_types import (
     RegisterStartRequest, RegisterStartResponse, RegisterFinishRequest,
     LoginStartRequest, LoginStartResponse, LoginFinishRequest,
+    EmailRegisterRequest, EmailLoginRequest,
     UserResponse, PasskeyResponse, b64url_encode, b64url_decode,
 )
 
@@ -268,6 +269,83 @@ async def login_finish(body: LoginFinishRequest, request: Request, response: Res
     except Exception as e:
         logger.exception("Login finish failed")
         raise HTTPException(400, f"Login failed: {str(e)}")
+
+
+# ─── Email + Password Auth (fallback) ──────────────────────────────────────────
+
+@router.post("/register/email")
+async def register_email(body: EmailRegisterRequest, response: Response, db: AsyncSession = Depends(get_db)):
+    from app.services.password import hash_password
+
+    existing = await db.execute(select(User).where(User.email == body.email))
+    if existing.scalar_one_or_none():
+        raise HTTPException(409, "Email already registered")
+
+    user = User(
+        id=uuid.uuid4(),
+        email=body.email,
+        display_name=body.display_name,
+        hashed_password=hash_password(body.password),
+    )
+    db.add(user)
+    await db.flush()
+
+    wallet = CreditWallet(id=uuid.uuid4(), user_id=user.id, balance=settings.NEW_USER_CREDITS, total_purchased=0, total_used=0)
+    db.add(wallet)
+    db.add(CreditTransaction(id=uuid.uuid4(), user_id=user.id, amount=settings.NEW_USER_CREDITS,
+                             type="signup_bonus",
+                             description=f"Welcome — {settings.NEW_USER_CREDITS} free credits",
+                             balance_after=settings.NEW_USER_CREDITS))
+    await db.commit()
+
+    token = _create_session_token(str(user.id))
+    response.set_cookie(
+        key="session",
+        value=token,
+        httponly=True,
+        secure=settings.RP_ORIGIN.startswith("https"),
+        samesite="none" if settings.RP_ORIGIN.startswith("https") else "lax",
+        max_age=settings.SESSION_EXPIRE_HOURS * 3600,
+    )
+
+    return {"status": "ok", "user": UserResponse(
+        id=str(user.id),
+        email=user.email,
+        display_name=user.display_name,
+        created_at=user.created_at.isoformat(),
+        is_admin=user.email in settings.admin_emails_list,
+    )}
+
+
+@router.post("/login/email")
+async def login_email(body: EmailLoginRequest, response: Response, db: AsyncSession = Depends(get_db)):
+    from app.services.password import verify_password
+
+    result = await db.execute(select(User).where(User.email == body.email))
+    user = result.scalar_one_or_none()
+    if not user or not user.hashed_password:
+        raise HTTPException(401, "Invalid email or password")
+
+    if not verify_password(body.password, user.hashed_password):
+        raise HTTPException(401, "Invalid email or password")
+
+    token = _create_session_token(str(user.id))
+    response.set_cookie(
+        key="session",
+        value=token,
+        httponly=True,
+        secure=settings.RP_ORIGIN.startswith("https"),
+        samesite="none" if settings.RP_ORIGIN.startswith("https") else "lax",
+        max_age=settings.SESSION_EXPIRE_HOURS * 3600,
+    )
+
+    return {"status": "ok", "user": UserResponse(
+        id=str(user.id),
+        email=user.email,
+        display_name=user.display_name,
+        created_at=user.created_at.isoformat(),
+        is_admin=user.email in settings.admin_emails_list,
+    )}
 
 
 # ─── Session ──────────────────────────────────────────────────────────────────

@@ -13,3 +13,4 @@ webauthn==2.8.0
 pydantic[email]==2.11.3
 resend>=2.30.1
 apscheduler>=3.11.0
+bcrypt>=4.0.0

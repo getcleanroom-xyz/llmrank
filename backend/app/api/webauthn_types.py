@@ -1,7 +1,7 @@
 """WebAuthn schemas and base64url helpers."""
 import base64
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
 class RegisterStartRequest(BaseModel):
@@ -40,6 +40,18 @@ class PasskeyResponse(BaseModel):
     device_name: str
     created_at: str
     last_used_at: str
+
+
+# ─── Email + Password Auth ────────────────────────────────────────────────────
+
+class EmailRegisterRequest(BaseModel):
+    email: EmailStr
+    display_name: str = Field(..., min_length=1, max_length=200)
+    password: str = Field(..., min_length=8, max_length=128)
+
+class EmailLoginRequest(BaseModel):
+    email: EmailStr
+    password: str
 
 
 def b64url_encode(data: bytes) -> str:
