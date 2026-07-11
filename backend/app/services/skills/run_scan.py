@@ -123,6 +123,21 @@ async def run_scan(brand_id: str, scan_id: str, llm_names: list[str],
 
         db.add_all(all_results)
 
+        # Log per-LLM breakdown
+        llm_stats: dict[str, dict] = {}
+        for r in all_results:
+            if r.llm_name not in llm_stats:
+                llm_stats[r.llm_name] = {"total": 0, "mentioned": 0, "errors": 0}
+            llm_stats[r.llm_name]["total"] += 1
+            if r.mentioned:
+                llm_stats[r.llm_name]["mentioned"] += 1
+            if r.raw_response.startswith("[Error") or r.raw_response.startswith("[Empty"):
+                llm_stats[r.llm_name]["errors"] += 1
+
+        for llm, stats in sorted(llm_stats.items()):
+            logger.info("Scan %s LLM %s: %d/%d mentioned, %d errors",
+                         scan.id, llm, stats["mentioned"], stats["total"], stats["errors"])
+
         visibility_score = round(sum(total_scores) / len(total_scores), 1) if total_scores else 0.0
         mention_rate = round((total_mentioned / total_successful) * 100, 1) if total_successful > 0 else 0.0
 

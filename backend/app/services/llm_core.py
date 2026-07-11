@@ -114,12 +114,20 @@ async def scan_query(query_text: str, llm_name: str, client) -> tuple[Optional[d
         try:
             resp = await _call_openrouter(messages, llm_name, client)
             try:
-                return _parse_json(resp), None
+                parsed = _parse_json(resp)
+                logger.info("Scan %s/%s: brand_mentioned=%s position=%s competitors=%d",
+                            llm_name, query_text[:40],
+                            parsed.get("brand_mentioned"),
+                            parsed.get("brand_position"),
+                            len(parsed.get("competitors", [])))
+                return parsed, None
             except ValueError:
+                logger.warning("Scan %s/%s: JSON parse failed, using fallback. Response: %s",
+                               llm_name, query_text[:40], resp[:200])
                 return {
                     "items": [{"name": line.strip(), "position": i + 1, "description": ""}
                                for i, line in enumerate(resp.strip().split("\n")) if line.strip()],
-                    "brand_mentioned": None, "brand_position": None,
+                    "brand_mentioned": False, "brand_position": None,
                     "brand_sentiment": "not_mentioned", "competitors": [],
                     "summary": resp[:500],
                 }, None
