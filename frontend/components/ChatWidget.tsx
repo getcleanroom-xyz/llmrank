@@ -112,8 +112,8 @@ export function ChatWidget({ brandId }: { brandId: string }) {
                 color: "#fff",
               }}><LaiIcon size={22} /></div>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700 }}>AI Visibility Assistant</div>
-                <div style={{ fontSize: 10, color: "var(--text-muted)" }}>Powered by Claude Sonnet</div>
+                <div style={{ fontSize: 13, fontWeight: 700 }}>lai</div>
+                <div style={{ fontSize: 10, color: "var(--text-muted)" }}>Your visibility copilot</div>
               </div>
             </div>
             <button onClick={() => setOpen(false)} className="btn btn-ghost btn-sm" style={{ fontSize: 16 }}>✕</button>

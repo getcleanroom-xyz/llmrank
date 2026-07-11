@@ -130,7 +130,8 @@ async def periodic_query_refresh():
     from app.core.database import AsyncSessionLocal
     from app.models.models import Brand
     from app.services.agents.registry import agent_registry
-    from app.services.agents.context_store import AgentContext, get_brand_context
+    from app.services.agents.base import AgentContext
+    from app.services.agents.context_store import get_brand_context
 
     logger.info("Starting periodic query refresh")
     async with AsyncSessionLocal() as db:

@@ -61,7 +61,7 @@ async def trigger_scan(
     if not active_queries:
         logger.info("No queries for brand %s, auto-generating via Query Gen agent", brand_id)
         from app.services.agents.registry import agent_registry
-        from app.services.agents.context_store import AgentContext
+        from app.services.agents.base import AgentContext
         ctx = AgentContext(str(brand_id))
         gen_result = await agent_registry.query_gen.run(ctx, brand_id=brand_id, db=db, mode="generate")
 
@@ -106,7 +106,7 @@ async def trigger_scan(
 async def _run_scan_background(brand_id: uuid.UUID, scan_id: uuid.UUID, llm_names: list[str]):
     """Background task — runs scan via the Scan Orchestrator Agent."""
     from app.core.database import AsyncSessionLocal
-    from app.services.agents.context_store import AgentContext
+    from app.services.agents.base import AgentContext
     from app.services.agents.registry import agent_registry
     logger.info("Background scan started: scan_id=%s brand_id=%s llms=%s", scan_id, brand_id, llm_names)
     async with AsyncSessionLocal() as db:

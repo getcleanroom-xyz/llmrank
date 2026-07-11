@@ -97,7 +97,7 @@ async def recommend(
     await _increment_rate_limit(db, user.id)
 
     from app.services.agents.registry import agent_registry
-    from app.services.agents.context_store import AgentContext
+    from app.services.agents.base import AgentContext
     ctx = AgentContext(str(brand_id))
     result = await agent_registry.recommendations.run(
         ctx, brand_id=brand_id, db=db, message=body.message,
