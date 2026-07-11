@@ -103,8 +103,12 @@ export function ChatWidget({ brandId }: { brandId: string }) {
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
             padding: "12px 16px", borderBottom: "2px solid var(--border)",
-            background: "var(--bg-dark)",
+            background: "#FFF9DB", position: "relative",
           }}>
+            {/* Hand-drawn underline */}
+            <svg width="100%" height="4" viewBox="0 0 400 4" preserveAspectRatio="none" style={{ position: "absolute", bottom: -2, left: 0, right: 0 }}>
+              <path d="M0 2 Q20 0 40 3 Q60 4 80 1 Q100 0 120 3 Q140 4 160 1 Q180 0 200 3 Q220 4 240 1 Q260 0 280 3 Q300 4 320 1 Q340 0 360 3 Q380 4 400 2" stroke="var(--primary)" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+            </svg>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{
                 width: 32, height: 32, borderRadius: "var(--radius)",
@@ -122,31 +126,48 @@ export function ChatWidget({ brandId }: { brandId: string }) {
           {/* Messages */}
           <div style={{ flex: 1, overflow: "auto", padding: "16px", display: "flex", flexDirection: "column", gap: 12 }}>
             {messages.length === 0 && (
-              <div style={{ textAlign: "center", padding: "40px 20px" }}>
+              <div style={{ textAlign: "center", padding: "40px 20px", position: "relative" }}>
+                {/* Background doodles */}
+                <svg width="120" height="120" viewBox="0 0 120 120" fill="none" style={{ position: "absolute", top: 10, right: 10, opacity: 0.08, pointerEvents: "none" }}>
+                  <circle cx="60" cy="60" r="50" stroke="var(--primary)" strokeWidth="1.5" strokeDasharray="4 6" />
+                  <path d="M30 60 Q60 20 90 60 Q60 100 30 60Z" stroke="var(--primary)" strokeWidth="1" fill="none" />
+                </svg>
+                <svg width="80" height="80" viewBox="0 0 80 80" fill="none" style={{ position: "absolute", bottom: 20, left: 10, opacity: 0.06, pointerEvents: "none" }}>
+                  <path d="M10 40 Q25 10 40 40 Q55 70 70 40" stroke="var(--primary)" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+                  <circle cx="40" cy="40" r="3" fill="var(--primary)" />
+                </svg>
+
                 <div style={{
                   width: 56, height: 56, borderRadius: "50%", background: "var(--primary)", margin: "0 auto 16px",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   border: "3px solid var(--border)", boxShadow: "3px 3px 0 #1A1A1A",
                 }}><LaiIcon size={34} color="#1A1A1A" /></div>
-                <div style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 22, fontWeight: 700, marginBottom: 8 }}>
-                  Ask me anything
+                <div style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 22, fontWeight: 700, marginBottom: 4 }}>
+                  Hey, what's on your mind?
+                </div>
+                <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 20, fontFamily: "var(--font-serif), Georgia, serif", fontStyle: "italic" }}>
+                  I can see your real scan data. Ask me anything.
                 </div>
                 <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 20 }}>
                   I can analyze your AI visibility, suggest content strategies, and help you beat competitors.
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {QUICK_ACTIONS.map((action) => (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {QUICK_ACTIONS.map((action, i) => (
                     <button
                       key={action.label}
                       onClick={() => send(action.prompt)}
-                      className="card"
                       style={{
-                        padding: "10px 14px", textAlign: "left", cursor: "pointer",
-                        fontSize: 12, fontWeight: 600, color: "var(--text)",
-                        transition: "box-shadow 0.15s",
+                        padding: "8px 12px", textAlign: "left", cursor: "pointer",
+                        fontSize: 14, fontWeight: 600, color: "var(--text)",
+                        background: ["#FFF9DB", "#DBEAFF", "#E6F9ED"][i] ?? "#FFF",
+                        border: "2px solid var(--border)", borderRadius: "8px 8px 8px 2px",
+                        boxShadow: "2px 2px 0 #1A1A1A",
+                        fontFamily: "var(--font-hand), Caveat, cursive",
+                        transform: `rotate(${i % 2 === 0 ? "-0.5deg" : "0.5deg"})`,
+                        transition: "transform 0.15s, box-shadow 0.15s",
                       }}
-                      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "3px 3px 0 #1A1A1A"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "none"; }}
+                      onMouseEnter={(e) => { e.currentTarget.style.transform = "rotate(0deg) translate(-1px, -1px)"; e.currentTarget.style.boxShadow = "3px 3px 0 #1A1A1A"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = `rotate(${i % 2 === 0 ? "-0.5deg" : "0.5deg"})`; e.currentTarget.style.boxShadow = "2px 2px 0 #1A1A1A"; }}
                     >
                       {action.label}
                     </button>
@@ -163,13 +184,17 @@ export function ChatWidget({ brandId }: { brandId: string }) {
                 <div style={{
                   maxWidth: "85%",
                   padding: "10px 14px",
-                  borderRadius: "var(--radius)",
                   fontSize: 13,
                   lineHeight: 1.5,
+                  position: "relative",
                   ...(msg.role === "user"
-                    ? { background: "var(--primary)", color: "#1A1A1A", border: "2px solid var(--border)" }
-                    : { background: "var(--bg-dark)", color: "var(--text)", border: "2px solid var(--border)" }),
+                    ? { background: "var(--primary)", color: "#1A1A1A", border: "2px solid var(--border)", borderRadius: "12px 12px 4px 12px", boxShadow: "2px 2px 0 rgba(0,0,0,0.08)" }
+                    : { background: "#FFF", color: "var(--text)", border: "2px solid var(--border)", borderRadius: "12px 12px 12px 4px", boxShadow: "2px 2px 0 rgba(0,0,0,0.08)" }),
                 }}>
+                  {/* Subtle sketchy corner accent */}
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ position: "absolute", top: -1, [msg.role === "user" ? "right" : "left"]: -1, opacity: 0.15, pointerEvents: "none" }}>
+                    <path d={msg.role === "user" ? "M20 0 Q15 5 20 20" : "M0 0 Q5 5 0 20"} stroke="var(--text)" strokeWidth="1" fill="none" />
+                  </svg>
                   <div style={{ whiteSpace: "pre-wrap" }}>
                     {msg.role === "assistant" ? (
                       <Markdown
@@ -233,9 +258,16 @@ export function ChatWidget({ brandId }: { brandId: string }) {
           {/* Input */}
           <div style={{
             padding: "12px 16px", borderTop: "2px solid var(--border)",
-            background: "var(--bg-dark)",
+            background: "#FFF9DB", position: "relative",
             display: "flex", gap: 8, alignItems: "flex-end",
           }}>
+            {/* Notebook lines */}
+            <svg width="100%" height="100%" viewBox="0 0 400 60" preserveAspectRatio="none" style={{ position: "absolute", inset: 0, pointerEvents: "none", opacity: 0.15 }}>
+              {[12, 24, 36, 48].map((y) => (
+                <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="#3B82F6" strokeWidth="0.5" />
+              ))}
+              <line x1="40" y1="0" x2="40" y2="60" stroke="#EF4444" strokeWidth="0.5" />
+            </svg>
             <textarea
               ref={inputRef}
               value={input}
@@ -246,13 +278,13 @@ export function ChatWidget({ brandId }: { brandId: string }) {
                   send(input);
                 }
               }}
-              placeholder="Ask about your AI visibility..."
+              placeholder="jot something down..."
               rows={1}
               style={{
-                flex: 1, resize: "none", border: "2px solid var(--border)",
-                borderRadius: "var(--radius)", padding: "8px 12px",
-                fontSize: 13, fontFamily: "inherit", lineHeight: 1.4,
-                background: "var(--surface)", color: "var(--text)",
+                flex: 1, resize: "none", border: "none", outline: "none",
+                borderRadius: 0, padding: "8px 12px",
+                fontSize: 13, fontFamily: "var(--font-hand), Caveat, cursive", lineHeight: 1.4,
+                background: "transparent", color: "var(--text)",
                 minHeight: 40, maxHeight: 120,
               }}
               disabled={streaming}
@@ -260,10 +292,15 @@ export function ChatWidget({ brandId }: { brandId: string }) {
             <button
               onClick={() => send(input)}
               disabled={!input.trim() || streaming}
-              className="btn btn-primary btn-sm"
-              style={{ height: 40, padding: "0 16px", flexShrink: 0 }}
+              style={{
+                height: 36, padding: "0 14px", flexShrink: 0,
+                background: "var(--primary)", color: "#1A1A1A",
+                border: "2px solid var(--border)", borderRadius: "var(--radius)",
+                boxShadow: "2px 2px 0 #1A1A1A", cursor: "pointer",
+                fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 14, fontWeight: 700,
+              }}
             >
-              {streaming ? "..." : "Send"}
+              {streaming ? "..." : "send"}
             </button>
           </div>
         </div>
