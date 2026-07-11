@@ -283,8 +283,12 @@ class QueryGenAgent(BaseAgent):
                     parser = TextExtractor()
                     parser.feed(resp.text[:10000])
                     crawl_content = " ".join(parser.text)[:3000]
+                    logger.info("Suggest crawl %s: %d chars", brand.domain, len(crawl_content))
             except Exception as e:
                 logger.warning("Failed to crawl %s: %s", brand.domain, e)
+
+            if not crawl_content:
+                logger.warning("No content crawled for %s — queries may be inaccurate", brand.domain)
 
             classification = await classify_brand(crawl_content, brand.name, brand.domain, client)
             from_crawl = await discover_competitors_from_crawl(crawl_content, client)
@@ -304,7 +308,7 @@ class QueryGenAgent(BaseAgent):
                 competitors = await crawl_competitor_sites(competitors)
 
             queries = await generate_queries(
-                str(brand.id), brand.name, brand.domain, classification, competitors, self.name
+                str(brand.id), brand.name, brand.domain, classification, competitors, crawl_content, self.name
             )
 
         return {"classification": classification, "competitors": competitors, "queries": queries}
@@ -356,7 +360,7 @@ class QueryGenAgent(BaseAgent):
             competitors = sorted(seen.values(), key=lambda c: c.get("relevance_score", 0), reverse=True)[:10]
 
             queries = await generate_queries(
-                str(brand.id), brand.name, brand.domain, classification, competitors, self.name
+                str(brand.id), brand.name, brand.domain, classification, competitors, crawl_content, self.name
             )
 
             # Run probe scan on top 3 queries

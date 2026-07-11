@@ -22,6 +22,7 @@ def _utcnow() -> datetime:
 async def generate_queries(brand_id: str, brand_name: str, domain: str,
                            classification: dict | None = None,
                            competitors: list[dict] | None = None,
+                           crawl_content: str = "",
                            agent_name: str = "query_gen") -> list[dict]:
     """Generate new search queries for a brand using LLM.
 
@@ -31,25 +32,36 @@ async def generate_queries(brand_id: str, brand_name: str, domain: str,
     competitors = competitors or []
     comp_str = ", ".join(c.get("name", "") for c in competitors[:8])
 
+    # Build a clear description of what the product does from crawled content
+    product_desc = ""
+    if crawl_content:
+        # Extract first meaningful sentences
+        sentences = [s.strip() for s in crawl_content.split(".") if len(s.strip()) > 20][:5]
+        product_desc = ". ".join(sentences)
+    if not product_desc:
+        product_desc = f"{brand_name} ({domain})"
+
     prompt = (
-        f"A person who doesn't know about {brand_name} is looking for solutions in the "
-        f"{classification.get('sub_category', classification.get('industry', ''))} space.\n"
-        f"They haven't discovered any brand yet. They're exploring their options.\n"
-        f"What questions would they ask an AI assistant like ChatGPT?\n\n"
-        f"Company context: {brand_name} ({domain})\n"
-        f"Industry: {classification.get('industry', '')}\n"
-        f"Known alternatives: {comp_str}\n\n"
-        f"Generate 20 natural, conversational questions people type into ChatGPT.\n"
-        f"Avoid 'best X tool' or 'X alternatives'. Be specific and scenario-based.\n"
-        f"Do NOT include the brand name {brand_name}.\n"
-        f'Return ONLY a valid JSON array: [{{"query_text":"...","query_type":"workflow","score":1-5}}]\n'
-        f"No text, no markdown."
+        f"Generate 20 conversational questions that people would ask an AI assistant "
+        f"when researching a product like {brand_name}.\n\n"
+        f"WHAT THIS PRODUCT DOES:\n{product_desc}\n\n"
+        f"Industry: {classification.get('industry', 'unknown')}\n"
+        f"Category: {classification.get('sub_category', 'unknown')}\n"
+        f"Competitors: {comp_str or 'none known'}\n\n"
+        f"RULES:\n"
+        f"- Questions must be directly about the TYPE of product {brand_name} is\n"
+        f"- Be specific to the actual use case (e.g., email delivery, not generic AI)\n"
+        f"- Scenario-based: 'How do I...', 'What should I use for...', 'I need to...'\n"
+        f"- Do NOT include the brand name {brand_name} in questions\n"
+        f"- Do NOT generate generic AI/SaaS questions unrelated to this product type\n\n"
+        f'Return ONLY a valid JSON array: [{{"query_text":"...","query_type":"workflow","score":1-5}}]'
     )
 
     messages = [
         {"role": "developer", "content": (
-            "You are a UX researcher simulating real users. Generate conversational questions "
-            "people ask AI when researching products. Return ONLY a valid JSON array."
+            "You are a UX researcher. Generate questions people ask when researching "
+            "a SPECIFIC type of product. The questions must be directly relevant to what "
+            "this product does. Return ONLY a valid JSON array."
         )},
         {"role": "user", "content": prompt},
     ]
