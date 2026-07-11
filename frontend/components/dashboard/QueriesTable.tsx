@@ -423,11 +423,10 @@ export function QueriesTable({
                   <input
                     type="checkbox"
                     checked={isSelected}
-                    onChange={(e) => {
+                    onClick={(e) => {
                       e.stopPropagation();
                       toggleSelect(q.id, e.shiftKey);
                     }}
-                    onClick={(e) => e.stopPropagation()}
                     style={{ cursor: "pointer" }}
                   />
                 </div>
