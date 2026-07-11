@@ -30,7 +30,7 @@ async def _generate_title(user_message: str) -> str:
                     "X-Title": "LLMRank",
                 },
                 json={
-                    "model": "anthropic/claude-haiku-3",
+                    "model": "openai/gpt-4o-mini",
                     "messages": [
                         {"role": "user", "content": f"Generate a short title (max 6 words, no quotes, no punctuation at end) for this conversation starter:\n\n{user_message[:200]}"}
                     ],

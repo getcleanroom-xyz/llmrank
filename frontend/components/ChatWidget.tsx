@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import Markdown from "react-markdown";
 import { streamRecommendation, type ChatMessage } from "@/lib/api/recommendations";
 import {
@@ -36,9 +37,11 @@ export function ChatWidget({ brandId }: { brandId: string }) {
   const [streamingMsg, setStreamingMsg] = useState<string>("");
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
+  const [thinking, setThinking] = useState(false);
   const [error, setError] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const qc = useQueryClient();
 
   const { data: convsData } = useConversations(brandId);
   const { data: serverMessages } = useConversationMessages(brandId, activeConvId);
@@ -103,6 +106,7 @@ export function ChatWidget({ brandId }: { brandId: string }) {
     const userMsg: ChatMessage = { role: "user", content: text.trim() };
     setInput("");
     setStreaming(true);
+    setThinking(true);
     setError("");
     setStreamingMsg("");
     setLocalMessages((prev) => [...prev, userMsg]);
@@ -114,9 +118,12 @@ export function ChatWidget({ brandId }: { brandId: string }) {
         const conv = await createConv.mutateAsync({ brandId });
         convId = conv.id;
         setActiveConvId(conv.id);
+        // Invalidate conversation list so sidebar shows new conversation
+        qc.invalidateQueries({ queryKey: ["conversations", brandId] });
       } catch {
         setError("Failed to create conversation");
         setStreaming(false);
+        setThinking(false);
         return;
       }
     }
@@ -126,6 +133,7 @@ export function ChatWidget({ brandId }: { brandId: string }) {
       let fullResponse = "";
 
       for await (const token of streamRecommendation(brandId, text, history, convId ?? undefined)) {
+        setThinking(false);
         fullResponse += token;
         setStreamingMsg(fullResponse);
       }
@@ -133,7 +141,14 @@ export function ChatWidget({ brandId }: { brandId: string }) {
       setError(err instanceof Error ? err.message : "Failed to get response");
     } finally {
       setStreaming(false);
+      setThinking(false);
       setStreamingMsg("");
+      // Refresh conversation list (title may have been updated by auto-title)
+      qc.invalidateQueries({ queryKey: ["conversations", brandId] });
+      // Refresh messages for loaded conversations
+      if (convId) {
+        qc.invalidateQueries({ queryKey: ["conversationMessages", brandId, convId] });
+      }
     }
   };
 
@@ -396,6 +411,23 @@ export function ChatWidget({ brandId }: { brandId: string }) {
                   </div>
                 </div>
               ))}
+              {thinking && (
+                <div style={{ display: "flex", justifyContent: "flex-start" }}>
+                  <div style={{
+                    padding: "10px 14px", fontSize: 13,
+                    background: "#FFF", color: "var(--text)",
+                    border: "2px solid var(--border)", borderRadius: "12px 12px 12px 4px",
+                    boxShadow: "2px 2px 0 rgba(0,0,0,0.08)",
+                    display: "flex", alignItems: "center", gap: 6,
+                  }}>
+                    <div style={{ display: "flex", gap: 3 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--text)", opacity: 0.3, animation: "blink 1.2s infinite 0s" }} />
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--text)", opacity: 0.3, animation: "blink 1.2s infinite 0.2s" }} />
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--text)", opacity: 0.3, animation: "blink 1.2s infinite 0.4s" }} />
+                    </div>
+                  </div>
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </div>
           </div>
