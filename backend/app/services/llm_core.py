@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 MODEL_REGISTRY: dict[str, dict] = {
     "chatgpt":     {"id": "openai/gpt-4o-mini",              "label": "GPT-4o Mini"},
     "gpt4o":       {"id": "openai/gpt-4o",                   "label": "GPT-4o"},
-    "gemini":      {"id": "google/gemini-2.5-flash",          "label": "Gemini 2.5 Flash"},
+    "gemini":      {"id": "google/gemini-3-flash-preview",    "label": "Gemini 3 Flash"},
     "llama":       {"id": "meta-llama/llama-3.3-70b-instruct","label": "Llama 3.3 70B"},
     "llama-small": {"id": "meta-llama/llama-3.1-8b-instruct", "label": "Llama 3.1 8B"},
     "claude":      {"id": "anthropic/claude-sonnet-4.5",       "label": "Claude Sonnet 4.5"},

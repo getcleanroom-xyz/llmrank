@@ -27,17 +27,17 @@ FREE_CREDITS = settings.NEW_USER_CREDITS
 
 # Credits cost per query — derived from actual OpenRouter pricing
 # 1 credit = $0.001. Costs based on ~500 input + ~200 output tokens per scan query.
-# Free models cost 0 credits. Paid models priced to cover actual API costs.
+# Prices verified against OpenRouter /api/v1/models as of 2026-07-11.
 CREDIT_COSTS: dict[str, int] = {
     "chatgpt": 1,        # GPT-4o Mini:         $0.15/$0.60  per 1M  → ~$0.0002/request
-    "gpt4o": 7,          # GPT-4o:              $2.50/$10.00 per 1M  → ~$0.003/request
-    "gemini": 1,         # Gemini 2.5 Flash:    $0.30/$2.50  per 1M  → ~$0.0007/request
+    "gpt4o": 3,          # GPT-4o:              $2.50/$10.00 per 1M  → ~$0.003/request
+    "gemini": 1,         # Gemini 3 Flash:      $0.50/$3.00  per 1M  → ~$0.001/request
     "llama": 1,          # Llama 3.3 70B:       $0.10/$0.32  per 1M  → ~$0.0001/request
     "llama-small": 1,    # Llama 3.1 8B:        $0.02/$0.03  per 1M  → ~$0.00002/request
-    "claude": 9,         # Claude Sonnet 3.5:   $3.00/$15.00 per 1M  → ~$0.005/request
+    "claude": 5,         # Claude Sonnet 4.5:   $3.00/$15.00 per 1M  → ~$0.005/request
     "deepseek": 1,       # DeepSeek Chat V3:    $0.20/$0.80  per 1M  → ~$0.0003/request
     "deepseek-r1": 1,    # DeepSeek R1:         $0.70/$2.50  per 1M  → ~$0.001/request
-    "mistral": 4,        # Mistral Large:       $2.00/$6.00  per 1M  → ~$0.002/request
+    "mistral": 2,        # Mistral Large:       $2.00/$6.00  per 1M  → ~$0.002/request
     "qwen": 1,           # Qwen 2.5 72B:        $0.36/$0.40  per 1M  → ~$0.0003/request
 }
 

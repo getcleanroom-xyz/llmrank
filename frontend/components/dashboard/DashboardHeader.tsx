@@ -7,11 +7,14 @@ import type { Brand, Scan } from "@/types";
 import type { CreditBalance } from "@/lib/api";
 
 export const LLM_OPTIONS = [
-  { id: "llama", label: "Llama 3.3 70B", provider: "Meta" },
   { id: "chatgpt", label: "GPT-4o Mini", provider: "OpenAI" },
-  { id: "deepseek", label: "DeepSeek Chat", provider: "DeepSeek" },
-  { id: "gemini", label: "Gemini 2.5 Flash", provider: "Google" },
+  { id: "gpt4o", label: "GPT-4o", provider: "OpenAI" },
+  { id: "gemini", label: "Gemini 3 Flash", provider: "Google" },
+  { id: "llama", label: "Llama 3.3 70B", provider: "Meta" },
+  { id: "llama-small", label: "Llama 3.1 8B", provider: "Meta" },
   { id: "claude", label: "Claude Sonnet 4.5", provider: "Anthropic" },
+  { id: "deepseek", label: "DeepSeek Chat", provider: "DeepSeek" },
+  { id: "deepseek-r1", label: "DeepSeek R1", provider: "DeepSeek" },
   { id: "mistral", label: "Mistral Large", provider: "Mistral" },
   { id: "qwen", label: "Qwen 2.5 72B", provider: "Alibaba" },
 ];
