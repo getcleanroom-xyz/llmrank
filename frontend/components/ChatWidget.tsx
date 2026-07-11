@@ -174,13 +174,13 @@ export function ChatWidget({ brandId }: { brandId: string }) {
                     {msg.role === "assistant" ? (
                       <Markdown
                         components={{
-                          h1: ({children}) => <h1 style={{ fontSize: 15, fontWeight: 800, margin: "4px 0 1px" }}>{children}</h1>,
-                          h2: ({children}) => <h2 style={{ fontSize: 14, fontWeight: 700, margin: "4px 0 1px" }}>{children}</h2>,
-                          h3: ({children}) => <h3 style={{ fontSize: 13, fontWeight: 700, margin: "3px 0 1px" }}>{children}</h3>,
-                          p: ({children}) => <p style={{ margin: "1px 0" }}>{children}</p>,
-                          ul: ({children}) => <ul style={{ margin: "1px 0", paddingLeft: 14 }}>{children}</ul>,
-                          ol: ({children}) => <ol style={{ margin: "1px 0", paddingLeft: 14 }}>{children}</ol>,
-                          li: ({children}) => <li style={{ margin: "0" }}>{children}</li>,
+                          h1: ({children}) => <h1 style={{ fontSize: 15, fontWeight: 800 }}>{children}</h1>,
+                          h2: ({children}) => <h2 style={{ fontSize: 14, fontWeight: 700 }}>{children}</h2>,
+                          h3: ({children}) => <h3 style={{ fontSize: 13, fontWeight: 700 }}>{children}</h3>,
+                          p: ({children}) => <p>{children}</p>,
+                          ul: ({children}) => <ul style={{ paddingLeft: 14 }}>{children}</ul>,
+                          ol: ({children}) => <ol style={{ paddingLeft: 14 }}>{children}</ol>,
+                          li: ({children}) => <li>{children}</li>,
                           strong: ({children}) => <strong style={{ fontWeight: 700 }}>{children}</strong>,
                           code: ({children, className}) => {
                             const isInline = !className;
