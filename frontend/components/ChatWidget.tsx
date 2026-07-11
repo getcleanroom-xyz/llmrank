@@ -135,9 +135,11 @@ export function ChatWidget({ brandId }: { brandId: string }) {
       }
     }
 
+    let fullResponse = "";
+
     try {
       const history = messages.slice(-6);
-      let fullResponse = "";
+      fullResponse = "";
 
       for await (const token of streamRecommendation(brandId, text, history, convId ?? undefined)) {
         setThinking(false);
@@ -149,7 +151,11 @@ export function ChatWidget({ brandId }: { brandId: string }) {
     } finally {
       setStreaming(false);
       setThinking(false);
+      // Move streaming response into localMessages so it persists until server catches up
       setStreamingMsg("");
+      if (fullResponse) {
+        setLocalMessages((prev) => [...prev, { role: "assistant", content: fullResponse }]);
+      }
       // Refresh conversation list (title may have been updated by auto-title)
       qc.invalidateQueries({ queryKey: ["conversations", brandId] });
       // Refresh messages for loaded conversations
