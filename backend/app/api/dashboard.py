@@ -137,6 +137,13 @@ async def get_dashboard(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db))
 
     threat_order = {"high": 0, "medium": 1, "low": 2, "none": 3}
 
+    # Build logo lookup from brand's competitors list
+    comp_logo_map = {}
+    for c in (brand.competitors or []):
+        name = c.get("name", "").lower().strip()
+        if name and c.get("logo_url"):
+            comp_logo_map[name] = c["logo_url"]
+
     competitor_share = sorted(
         [
             CompetitorShareItem(
@@ -144,6 +151,7 @@ async def get_dashboard(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db))
                 mention_pct=round(entry["count"] / total_results_count * 100, 1),
                 beats_you=comp_beats.get(norm, 0),
                 threat_level=_threat_level(comp_beats.get(norm, 0), round(entry["count"] / total_results_count * 100, 1)),
+                logo_url=comp_logo_map.get(entry["name"].lower().strip(), ""),
             )
             for norm, entry in comp_counts.items()
         ],

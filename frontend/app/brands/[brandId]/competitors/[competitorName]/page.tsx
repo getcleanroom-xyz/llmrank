@@ -70,25 +70,35 @@ export default function CompetitorDrilldownPage() {
           </svg>
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
-            <div>
-              <h1 style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: "clamp(32px, 5vw, 44px)", fontWeight: 700, margin: "0 0 4px", lineHeight: 1 }}>{decodedName}</h1>
-              <svg width="70%" height="6" viewBox="0 0 120 6" preserveAspectRatio="none" style={{ display: "block", marginBottom: 10 }}>
-                <path d="M0 3 Q8 0 16 4 Q24 6 32 2 Q40 0 48 5 Q56 6 64 2 Q72 0 80 4 Q88 6 96 2 Q104 0 112 4 Q120 3 120 2" fill="none" stroke={threatColor} strokeWidth="2" strokeLinecap="round" />
-              </svg>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
+              {data.logo_url && (
+                <img
+                  src={data.logo_url}
+                  alt={`${decodedName} logo`}
+                  style={{ width: 56, height: 56, borderRadius: "var(--radius)", border: "2px solid var(--border)", objectFit: "contain", background: "#fff", flexShrink: 0 }}
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                />
+              )}
+              <div>
+                <h1 style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: "clamp(32px, 5vw, 44px)", fontWeight: 700, margin: "0 0 4px", lineHeight: 1 }}>{decodedName}</h1>
+                <svg width="70%" height="6" viewBox="0 0 120 6" preserveAspectRatio="none" style={{ display: "block", marginBottom: 10 }}>
+                  <path d="M0 3 Q8 0 16 4 Q24 6 32 2 Q40 0 48 5 Q56 6 64 2 Q72 0 80 4 Q88 6 96 2 Q104 0 112 4 Q120 3 120 2" fill="none" stroke={threatColor} strokeWidth="2" strokeLinecap="round" />
+                </svg>
 
-              {/* Quick details row */}
-              <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
-                <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.6, margin: 0, fontFamily: "var(--font-serif), Georgia, serif" }}>
-                  Appears in <strong>{data.mention_pct}%</strong> of results across <strong>{data.total_queries}</strong> queries.
-                  Beats you in <strong style={{ color: "#991B1B" }}>{data.beats_brand_count}</strong> of <strong>{data.total_appearances}</strong> appearances.
-                </p>
-                {data.domain && (
-                  <a href={`https://${data.domain}`} target="_blank" rel="noopener noreferrer"
-                    className="btn btn-sm"
-                    style={{ textDecoration: "none", fontSize: 11, padding: "5px 12px" }}>
-                    Visit {data.domain} ↗
-                  </a>
-                )}
+                {/* Quick details row */}
+                <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
+                  <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.6, margin: 0, fontFamily: "var(--font-serif), Georgia, serif" }}>
+                    Appears in <strong>{data.mention_pct}%</strong> of results across <strong>{data.total_queries}</strong> queries.
+                    Beats you in <strong style={{ color: "#991B1B" }}>{data.beats_brand_count}</strong> of <strong>{data.total_appearances}</strong> appearances.
+                  </p>
+                  {data.domain && (
+                    <a href={`https://${data.domain}`} target="_blank" rel="noopener noreferrer"
+                      className="btn btn-sm"
+                      style={{ textDecoration: "none", fontSize: 11, padding: "5px 12px" }}>
+                      Visit {data.domain} ↗
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
             <span className="pill" style={{ fontSize: 14, fontWeight: 800, color: threatColor, borderColor: threatColor, background: "var(--surface)", padding: "8px 18px", flexShrink: 0 }}>{threatLabel}</span>

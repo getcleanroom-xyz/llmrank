@@ -113,6 +113,7 @@ async def discover_competitors_by_category(classification: dict, client) -> list
 
 
 async def crawl_competitor_sites(competitors: list[dict], max_sites: int = 5) -> list[dict]:
+    from urllib.parse import urljoin
     results = []
     async with httpx.AsyncClient(timeout=10, follow_redirects=True, headers={"User-Agent": "LLMRank/1.0"}) as client:
         for comp in competitors[:max_sites]:
@@ -123,14 +124,32 @@ async def crawl_competitor_sites(competitors: list[dict], max_sites: int = 5) ->
             try:
                 resp = await client.get(url)
                 if resp.status_code == 200:
-                    text = re.sub(r"<(script|style|noscript)\b[^>]*>.*?</\1>", "", resp.text, flags=re.DOTALL | re.IGNORECASE)
+                    html = resp.text
+                    text = re.sub(r"<(script|style|noscript)\b[^>]*>.*?</\1>", "", html, flags=re.DOTALL | re.IGNORECASE)
                     text = re.sub(r"<[^>]+>", " ", text)
                     text = re.sub(r"\s+", " ", text).strip()[:3000]
                     comp["crawled_content"] = text
                     comp["crawled_at"] = datetime.now(timezone.utc).isoformat()
+
+                    # Extract favicon/logo
+                    favicon = ""
+                    for pattern in [
+                        r'<link[^>]*rel=["\'](?:shortcut )?icon["\'][^>]*href=["\']([^"\']+)["\']',
+                        r'<link[^>]*href=["\']([^"\']+)["\'][^>]*rel=["\'](?:shortcut )?icon["\']',
+                        r'<link[^>]*rel=["\']apple-touch-icon["\'][^>]*href=["\']([^"\']+)["\']',
+                        r'<link[^>]*href=["\']([^"\']+)["\'][^>]*rel=["\']apple-touch-icon["\']',
+                    ]:
+                        m = re.search(pattern, html, re.IGNORECASE)
+                        if m:
+                            favicon = urljoin(url, m.group(1))
+                            break
+                    if not favicon:
+                        favicon = urljoin(url, "/favicon.ico")
+                    comp["logo_url"] = favicon
             except Exception:
                 comp["crawled_content"] = ""
                 comp["crawled_at"] = datetime.now(timezone.utc).isoformat()
+                comp["logo_url"] = ""
             results.append(comp)
     return results
 

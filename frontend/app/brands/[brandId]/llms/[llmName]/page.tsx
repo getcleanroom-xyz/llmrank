@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useLLMDrilldown } from "@/lib/hooks";
 import { AppHeader, PageHeader } from "@/components/AppHeader";
 import { PositionPill, SentimentPill, getLLMColor, LLMTag } from "@/components/ui";
+import { LLMLogo } from "@/components/LLMLogo";
 
 const LLM_DISPLAY_NAMES: Record<string, string> = {
   chatgpt: "ChatGPT",
@@ -70,8 +71,8 @@ export default function LLMDrilldownPage() {
             <rect x="9" y="10" width="4" height="10" rx="1" fill="#DC2626" stroke="#1A1A1A" strokeWidth="1.5" />
           </svg>
 
-          {/* Colored dot for the LLM */}
-          <div style={{ width: 48, height: 48, borderRadius: "50%", background: llmColor, border: "3px solid var(--border)", flexShrink: 0, boxShadow: "var(--shadow-sm)" }} />
+          {/* LLM logo */}
+          <LLMLogo name={decodedName} size={48} />
 
           <div style={{ flex: 1, minWidth: 180 }}>
             <h1 style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: "clamp(28px, 4vw, 38px)", fontWeight: 700, margin: "0 0 2px", lineHeight: 1 }}>

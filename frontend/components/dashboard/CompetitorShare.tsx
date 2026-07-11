@@ -23,7 +23,17 @@ export function CompetitorShare({ items, brandName, brandScore }: { items: Compe
             onMouseEnter={(e) => e.currentTarget.style.background = "#FEE2E2"}
             onMouseLeave={(e) => e.currentTarget.style.background = "var(--bg-dark)"}
           >
-            <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{c.name}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+              {c.logo_url && (
+                <img
+                  src={c.logo_url}
+                  alt=""
+                  style={{ width: 18, height: 18, borderRadius: 4, objectFit: "contain", background: "#fff", border: "1px solid var(--border)", flexShrink: 0 }}
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                />
+              )}
+              <div style={{ fontSize: 12, fontWeight: 700 }}>{c.name}</div>
+            </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}><Bar pct={c.mention_pct} color="var(--text-muted)" /><span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600, minWidth: 30, textAlign: "right" }}>{c.mention_pct}%</span></div>
           </div>
         ))}

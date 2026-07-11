@@ -278,6 +278,14 @@ async def get_competitor_drilldown(
     brand_row = (await db.execute(select(Brand).where(Brand.id == brand_id))).scalar_one_or_none()
     brand_name = brand_row.name if brand_row else ""
 
+    # Look up logo from brand's competitors list
+    comp_logo = ""
+    if brand_row:
+        for c in (brand_row.competitors or []):
+            if _normalize_competitor(c.get("name", "")) == _normalize_competitor(competitor_name):
+                comp_logo = c.get("logo_url", "") or ""
+                break
+
     comp_insight = ""
     try:
         top_queries = [q.query_text for q in [query_map.get(r.query_id) for r, _ in comp_results] if q]
@@ -306,6 +314,7 @@ async def get_competitor_drilldown(
     return CompetitorDrilldownOut(
         competitor_name=competitor_name,
         domain=comp_domain,
+        logo_url=comp_logo,
         insight=comp_insight,
         scanned_at=latest_scan.completed_at or latest_scan.started_at,
         mention_pct=round(len(comp_results) / len(all_results) * 100, 1) if all_results else 0,

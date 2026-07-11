@@ -172,6 +172,7 @@ class CompetitorShareItem(BaseModel):
     mention_pct: float
     beats_you: int = 0
     threat_level: str = "none"  # "high", "medium", "low", "none"
+    logo_url: str = ""
 
 
 class QuerySummary(BaseModel):
@@ -252,6 +253,7 @@ class CompetitorQueryResult(BaseModel):
 class CompetitorDrilldownOut(BaseModel):
     competitor_name: str
     domain: str = ""
+    logo_url: str = ""
     insight: str = ""
     scanned_at: datetime
     mention_pct: float
