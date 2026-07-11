@@ -129,7 +129,7 @@ class RecommendationsAgent(BaseAgent):
             select(Scan).where(Scan.brand_id == brand_id, Scan.status == ScanStatus.completed)
             .order_by(Scan.completed_at.desc()).limit(1)
         )
-        latest_scan = scan_result.scalar_one_none()
+        latest_scan = scan_result.scalar_one_or_none()
 
         scan_results = []
         if latest_scan:
