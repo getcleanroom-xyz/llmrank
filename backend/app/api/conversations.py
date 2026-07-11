@@ -27,7 +27,7 @@ def _utcnow() -> datetime:
 async def _verify_brand_owner(db: AsyncSession, brand_id: uuid.UUID, user_id: uuid.UUID) -> Brand:
     """Verify brand exists and user owns it."""
     result = await db.execute(
-        select(Brand).where(Brand.id == brand_id, Brand.owner_id == user_id, Brand.deleted_at.is_(None))
+        Brand.active().where(Brand.id == brand_id, Brand.owner_id == user_id)
     )
     brand = result.scalar_one_or_none()
     if not brand:

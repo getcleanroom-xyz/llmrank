@@ -51,7 +51,7 @@ async def run_scan(
     if llm_names is None:
         llm_names = ["chatgpt", "llama"]
 
-    brand_result = await db.execute(select(Brand).where(Brand.id == brand_id))
+    brand_result = await db.execute(Brand.active().where(Brand.id == brand_id))
     brand = brand_result.scalar_one_or_none()
     if not brand:
         raise ValueError(f"Brand {brand_id} not found")

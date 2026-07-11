@@ -50,7 +50,7 @@ async def list_brands(
     search: str = "",
 ):
     per_page = min(per_page, 100)
-    stmt = select(Brand).where(Brand.owner_id == user.id, Brand.deleted_at.is_(None))
+    stmt = Brand.active().where(Brand.owner_id == user.id)
     if search:
         stmt = stmt.where(
             (Brand.name.ilike(f"%{search}%")) | (Brand.domain.ilike(f"%{search}%"))
