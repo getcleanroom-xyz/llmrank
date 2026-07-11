@@ -4,8 +4,8 @@ Pricing:
   1 credit = $0.001 (1/10th of a cent)
   1000 credits = $1.00
 
-Free models (GPT-4o-mini, Llama 3.3, DeepSeek) cost 0 credits.
-Paid models cost credits based on OpenRouter pricing.
+All models cost credits based on actual OpenRouter per-token pricing.
+See CREDIT_COSTS below for per-model rates.
 """
 import uuid
 import logging
@@ -40,8 +40,6 @@ CREDIT_COSTS: dict[str, int] = {
     "mistral": 2,        # Mistral Large:       $2.00/$6.00  per 1M  → ~$0.001/request
     "qwen": 1,           # Qwen 2.5 72B:        $0.36/$0.40  per 1M  → ~$0.0001/request
 }
-
-FREE_MODELS = {k for k, v in MODEL_REGISTRY.items() if v.get("free")}
 
 def calculate_scan_cost(llm_names: list[str], num_queries: int) -> int:
     """Calculate total credits needed for a scan."""
