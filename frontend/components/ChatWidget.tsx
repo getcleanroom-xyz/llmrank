@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useParams } from "next/navigation";
+import Markdown from "react-markdown";
 import { streamRecommendation, type ChatMessage } from "@/lib/api/recommendations";
 
 function LaiIcon({ size = 24, color = "currentColor" }: { size?: number; color?: string }) {
@@ -169,7 +170,33 @@ export function ChatWidget({ brandId }: { brandId: string }) {
                     ? { background: "var(--primary)", color: "#fff", border: "2px solid var(--border)" }
                     : { background: "var(--bg-dark)", border: "2px solid var(--border)" }),
                 }}>
-                  <div style={{ whiteSpace: "pre-wrap" }}>{msg.content}</div>
+                  <div style={{ whiteSpace: "pre-wrap" }}>
+                    {msg.role === "assistant" ? (
+                      <Markdown
+                        components={{
+                          h1: ({children}) => <h1 style={{ fontSize: 16, fontWeight: 800, margin: "8px 0 4px" }}>{children}</h1>,
+                          h2: ({children}) => <h2 style={{ fontSize: 14, fontWeight: 700, margin: "8px 0 4px" }}>{children}</h2>,
+                          h3: ({children}) => <h3 style={{ fontSize: 13, fontWeight: 700, margin: "6px 0 4px" }}>{children}</h3>,
+                          p: ({children}) => <p style={{ margin: "4px 0" }}>{children}</p>,
+                          ul: ({children}) => <ul style={{ margin: "4px 0", paddingLeft: 16 }}>{children}</ul>,
+                          ol: ({children}) => <ol style={{ margin: "4px 0", paddingLeft: 16 }}>{children}</ol>,
+                          li: ({children}) => <li style={{ margin: "2px 0" }}>{children}</li>,
+                          strong: ({children}) => <strong style={{ fontWeight: 700 }}>{children}</strong>,
+                          code: ({children, className}) => {
+                            const isInline = !className;
+                            return isInline
+                              ? <code style={{ background: "rgba(0,0,0,0.06)", padding: "1px 4px", borderRadius: 3, fontSize: 12 }}>{children}</code>
+                              : <code style={{ display: "block", background: "rgba(0,0,0,0.06)", padding: 8, borderRadius: 4, fontSize: 12, overflow: "auto" }}>{children}</code>;
+                          },
+                          a: ({href, children}) => <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: "var(--primary)", fontWeight: 600, textDecoration: "underline" }}>{children}</a>,
+                        }}
+                      >
+                        {msg.content}
+                      </Markdown>
+                    ) : (
+                      msg.content
+                    )}
+                  </div>
                   {msg.role === "assistant" && i === messages.length - 1 && streaming && (
                     <span style={{ display: "inline-block", width: 6, height: 14, background: "var(--text)", opacity: 0.4, marginLeft: 2, animation: "blink 1s infinite" }} />
                   )}
