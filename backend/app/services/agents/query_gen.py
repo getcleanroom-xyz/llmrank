@@ -258,38 +258,46 @@ class QueryGenAgent(BaseAgent):
         from app.services.skills.manage_queries import generate_queries
         import httpx
 
-        async with httpx.AsyncClient(timeout=15) as client:
+        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
             # Crawl the brand's homepage to understand what it does
             crawl_content = ""
-            try:
-                resp = await client.get(f"https://{brand.domain}", follow_redirects=True)
-                if resp.status_code == 200:
-                    from html.parser import HTMLParser
-                    class TextExtractor(HTMLParser):
-                        def __init__(self):
-                            super().__init__()
-                            self.text = []
-                            self.skip = False
-                        def handle_starttag(self, tag, attrs):
-                            if tag in ("script", "style", "nav", "footer"):
-                                self.skip = True
-                        def handle_endtag(self, tag):
-                            if tag in ("script", "style", "nav", "footer"):
+            urls_to_try = [
+                f"https://{brand.domain}",
+                f"https://www.{brand.domain}",
+                f"https://{brand.name.lower().replace(' ', '')}.{brand.domain}",
+            ]
+            for url in urls_to_try:
+                try:
+                    resp = await client.get(url)
+                    if resp.status_code == 200 and len(resp.text) > 500:
+                        from html.parser import HTMLParser
+                        class TextExtractor(HTMLParser):
+                            def __init__(self):
+                                super().__init__()
+                                self.text = []
                                 self.skip = False
-                        def handle_data(self, data):
-                            if not self.skip:
-                                t = data.strip()
-                                if t:
-                                    self.text.append(t)
-                    parser = TextExtractor()
-                    parser.feed(resp.text[:10000])
-                    crawl_content = " ".join(parser.text)[:3000]
-                    logger.info("Suggest crawl %s: %d chars", brand.domain, len(crawl_content))
-            except Exception as e:
-                logger.warning("Failed to crawl %s: %s", brand.domain, e)
+                            def handle_starttag(self, tag, attrs):
+                                if tag in ("script", "style", "nav", "footer"):
+                                    self.skip = True
+                            def handle_endtag(self, tag):
+                                if tag in ("script", "style", "nav", "footer"):
+                                    self.skip = False
+                            def handle_data(self, data):
+                                if not self.skip:
+                                    t = data.strip()
+                                    if t:
+                                        self.text.append(t)
+                        parser = TextExtractor()
+                        parser.feed(resp.text[:15000])
+                        crawl_content = " ".join(parser.text)[:4000]
+                        logger.info("Crawled %s: %d chars", url, len(crawl_content))
+                        break
+                except Exception as e:
+                    logger.debug("Failed to crawl %s: %s", url, e)
+                    continue
 
             if not crawl_content:
-                logger.warning("No content crawled for %s — queries may be inaccurate", brand.domain)
+                logger.warning("No content crawled for %s — using brand name as context", brand.domain)
 
             classification = await classify_brand(crawl_content, brand.name, brand.domain, client)
             from_crawl = await discover_competitors_from_crawl(crawl_content, client)
@@ -321,34 +329,43 @@ class QueryGenAgent(BaseAgent):
         from app.services.skills.manage_queries import generate_queries
         import httpx
 
-        async with httpx.AsyncClient(timeout=60) as client:
+        async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
             # Crawl the brand's homepage
             crawl_content = ""
-            try:
-                resp = await client.get(f"https://{brand.domain}", follow_redirects=True)
-                if resp.status_code == 200:
-                    from html.parser import HTMLParser
-                    class TextExtractor(HTMLParser):
-                        def __init__(self):
-                            super().__init__()
-                            self.text = []
-                            self.skip = False
-                        def handle_starttag(self, tag, attrs):
-                            if tag in ("script", "style", "nav", "footer"):
-                                self.skip = True
-                        def handle_endtag(self, tag):
-                            if tag in ("script", "style", "nav", "footer"):
+            urls_to_try = [
+                f"https://{brand.domain}",
+                f"https://www.{brand.domain}",
+                f"https://{brand.name.lower().replace(' ', '')}.{brand.domain}",
+            ]
+            for url in urls_to_try:
+                try:
+                    resp = await client.get(url)
+                    if resp.status_code == 200 and len(resp.text) > 500:
+                        from html.parser import HTMLParser
+                        class TextExtractor(HTMLParser):
+                            def __init__(self):
+                                super().__init__()
+                                self.text = []
                                 self.skip = False
-                        def handle_data(self, data):
-                            if not self.skip:
-                                t = data.strip()
-                                if t:
-                                    self.text.append(t)
-                    parser = TextExtractor()
-                    parser.feed(resp.text[:10000])
-                    crawl_content = " ".join(parser.text)[:3000]
-            except Exception as e:
-                logger.warning("Failed to crawl %s: %s", brand.domain, e)
+                            def handle_starttag(self, tag, attrs):
+                                if tag in ("script", "style", "nav", "footer"):
+                                    self.skip = True
+                            def handle_endtag(self, tag):
+                                if tag in ("script", "style", "nav", "footer"):
+                                    self.skip = False
+                            def handle_data(self, data):
+                                if not self.skip:
+                                    t = data.strip()
+                                    if t:
+                                        self.text.append(t)
+                        parser = TextExtractor()
+                        parser.feed(resp.text[:15000])
+                        crawl_content = " ".join(parser.text)[:4000]
+                        logger.info("Probe crawl %s: %d chars", url, len(crawl_content))
+                        break
+                except Exception as e:
+                    logger.debug("Failed to crawl %s: %s", url, e)
+                    continue
 
             classification = await classify_brand(crawl_content, brand.name, brand.domain, client)
             from_crawl = await discover_competitors_from_crawl(crawl_content, client)

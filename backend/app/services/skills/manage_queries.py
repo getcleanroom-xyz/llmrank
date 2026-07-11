@@ -39,7 +39,8 @@ async def generate_queries(brand_id: str, brand_name: str, domain: str,
         sentences = [s.strip() for s in crawl_content.split(".") if len(s.strip()) > 20][:5]
         product_desc = ". ".join(sentences)
     if not product_desc:
-        product_desc = f"{brand_name} ({domain})"
+        # Fallback: use brand name + domain as context
+        product_desc = f"{brand_name} at {domain}"
 
     prompt = (
         f"Generate 20 conversational questions that people would ask an AI assistant "
