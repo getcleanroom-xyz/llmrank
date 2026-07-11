@@ -1,4 +1,5 @@
 """Recommendations Agent — user-facing chat + quick actions for AI visibility strategy."""
+import re
 import uuid
 import json
 import logging
@@ -102,6 +103,8 @@ class RecommendationsAgent(BaseAgent):
         "- Give specific next steps, not vague advice like 'improve your content'\n"
         "- No emojis. No em dashes. No corporate jargon. Write like a human.\n"
         "- Use markdown when it helps (headers, bullet points, bold for emphasis)\n"
+        "- Use newlines SPARINGLY. One blank line between sections, never more. "
+        "Dense responses feel more natural than spaced-out ones.\n"
         "- If you don't have data for something, say so. Don't make it up."
     )
     model_key = "claude"
@@ -192,6 +195,7 @@ class RecommendationsAgent(BaseAgent):
 
         try:
             async with httpx.AsyncClient(timeout=60) as client:
+                newline_buffer = ""
                 async with client.stream(
                     "POST", "https://openrouter.ai/api/v1/chat/completions",
                     headers={"Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
@@ -212,9 +216,23 @@ class RecommendationsAgent(BaseAgent):
                                 delta = chunk.get("choices", [{}])[0].get("delta", {})
                                 content = delta.get("content", "")
                                 if content:
-                                    yield f"data: {json.dumps({'token': content})}\n\n"
+                                    # Strip excessive newlines: max 2 consecutive
+                                    newline_buffer += content
+                                    if "\n\n\n" in newline_buffer:
+                                        newline_buffer = re.sub(r"\n{3,}", "\n\n", newline_buffer)
+                                    # Flush if we have non-newline content or enough newlines
+                                    if newline_buffer and (not content.isspace() or newline_buffer.count("\n") <= 2):
+                                        clean = re.sub(r"\n{3,}", "\n\n", newline_buffer)
+                                        if clean:
+                                            yield f"data: {json.dumps({'token': clean})}\n\n"
+                                        newline_buffer = ""
                             except json.JSONDecodeError:
                                 continue
+                    # Flush remaining buffer
+                    if newline_buffer.strip():
+                        clean = re.sub(r"\n{3,}", "\n\n", newline_buffer)
+                        if clean:
+                            yield f"data: {json.dumps({'token': clean})}\n\n"
         except Exception as e:
             logger.exception("Recommendations streaming failed: %s", e)
             yield f'data: {json.dumps({"error": str(e)})}\n\n'
