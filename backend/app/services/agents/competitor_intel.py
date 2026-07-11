@@ -65,22 +65,33 @@ class CompetitorIntelAgent(BaseAgent):
         brand_id = event.payload.get("brand_id")
         logger.info("Competitor Intel agent triggered for scan %s (brand %s)", scan_id, brand_id)
 
-        try:
-            from app.core.database import AsyncSessionLocal
-            async with AsyncSessionLocal() as db:
-                result = await self.run(
-                    AgentContext(brand_id),
-                    brand_id=uuid.UUID(brand_id),
-                    scan_id=uuid.UUID(scan_id),
-                    db=db,
-                )
-                if result.success:
-                    await db.commit()
-                    logger.info("Competitor Intel analysis complete for brand %s", brand_id)
-                else:
-                    logger.warning("Competitor Intel analysis failed: %s", result.error)
-        except Exception as e:
-            logger.exception("Competitor Intel agent error: %s", e)
+        from app.core.database import AsyncSessionLocal
+        from sqlalchemy.exc import InterfaceError
+
+        # Try up to 2 times (connection may close during long operations)
+        for attempt in range(2):
+            try:
+                async with AsyncSessionLocal() as db:
+                    result = await self.run(
+                        AgentContext(brand_id),
+                        brand_id=uuid.UUID(brand_id),
+                        scan_id=uuid.UUID(scan_id),
+                        db=db,
+                    )
+                    if result.success:
+                        await db.commit()
+                        logger.info("Competitor Intel analysis complete for brand %s", brand_id)
+                    else:
+                        logger.warning("Competitor Intel analysis failed: %s", result.error)
+                    return
+            except InterfaceError as e:
+                if attempt == 0:
+                    logger.warning("Connection closed, retrying Competitor Intel: %s", e)
+                    continue
+                logger.exception("Competitor Intel agent error after retry: %s", e)
+            except Exception as e:
+                logger.exception("Competitor Intel agent error: %s", e)
+                return
 
     async def run(self, context: AgentContext, **kwargs) -> AgentResult:
         """Analyze competitor data from a completed scan.
