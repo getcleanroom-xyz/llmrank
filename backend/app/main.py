@@ -15,6 +15,7 @@ from app.api.admin import router as admin_router
 from app.api.campaigns import router as campaigns_router
 from app.api.campaign_audience import router as audience_router
 from app.api.tracking import router as tracking_router
+from app.api.recommendations import router as recommendations_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -125,6 +126,7 @@ app.include_router(admin_router, prefix="/api/v1")
 app.include_router(campaigns_router, prefix="/api/v1")
 app.include_router(audience_router, prefix="/api/v1")
 app.include_router(tracking_router, prefix="/api/v1")
+app.include_router(recommendations_router, prefix="/api/v1")
 
 
 @app.get("/health")

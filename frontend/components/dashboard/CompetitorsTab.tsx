@@ -4,6 +4,12 @@ import { useRouter, useParams } from "next/navigation";
 import { useDashboard } from "@/lib/hooks";
 
 const COMP_COLORS = ["#22C55E", "#3B82F6", "#F97316", "#EF4444", "#A855F7", "#F59E0B"];
+const THREAT_LABELS: Record<string, { label: string; color: string; bg: string }> = {
+  high: { label: "High threat", color: "#991B1B", bg: "#FEE2E2" },
+  medium: { label: "Medium threat", color: "#92400E", bg: "#FEF3C7" },
+  low: { label: "Low threat", color: "#166534", bg: "#E6F9ED" },
+  none: { label: "Mentioned", color: "var(--text-muted)", bg: "var(--bg-dark)" },
+};
 
 export function CompetitorsTab({ brandId }: { brandId: string }) {
   const { data: dashResult } = useDashboard(brandId);
@@ -19,6 +25,19 @@ export function CompetitorsTab({ brandId }: { brandId: string }) {
 
   const maxPct = Math.max(...competitorShare.map((c) => c.mention_pct), mentionRate);
 
+  // Sort by threat level first, then mention %
+  const threatOrder = { high: 0, medium: 1, low: 2, none: 3 };
+  const sorted = [...competitorShare].sort((a, b) => {
+    const ta = threatOrder[a.threat_level ?? "none"] ?? 9;
+    const tb = threatOrder[b.threat_level ?? "none"] ?? 9;
+    if (ta !== tb) return ta - tb;
+    return b.mention_pct - a.mention_pct;
+  });
+
+  // Only show meaningful competitors (medium+ threat, or mention > 10%)
+  const meaningful = sorted.filter((c) => c.threat_level === "high" || c.threat_level === "medium" || c.mention_pct >= 10);
+  const shown = meaningful.length > 0 ? meaningful : sorted.slice(0, 3);
+
   return (
     <div>
       {/* Heading */}
@@ -29,11 +48,11 @@ export function CompetitorsTab({ brandId }: { brandId: string }) {
         </svg>
       </div>
 
-      {/* Share chart */}
+      {/* Share chart — show meaningful competitors */}
       <div className="card" style={{ padding: "16px 18px", marginBottom: "var(--gap)", transform: "rotate(-0.15deg)" }}>
-        <div className="section-label" style={{ marginBottom: 12 }}>Mention share</div>
+        <div className="section-label" style={{ marginBottom: 12 }}>Threat overview</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {[{ name: brandName, pct: mentionRate, mine: true }, ...competitorShare.map((c) => ({ name: c.name, pct: c.mention_pct, mine: false }))].sort((a, b) => b.pct - a.pct).map((item, i) => (
+          {[{ name: brandName, pct: mentionRate, mine: true }, ...shown.map((c) => ({ name: c.name, pct: c.mention_pct, mine: false }))].sort((a, b) => b.pct - a.pct).map((item, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 11, fontWeight: 700, minWidth: 100, textAlign: "right", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flexShrink: 0 }}>{item.name}</span>
               <div className="bar-track" style={{ flex: 1, height: 10, background: item.mine ? undefined : "var(--bg-dark)" }}>
@@ -46,26 +65,36 @@ export function CompetitorsTab({ brandId }: { brandId: string }) {
         {competitorShare.length === 0 && <div style={{ color: "var(--text-muted)", fontSize: 12, fontWeight: 600 }}>No competitors detected yet</div>}
       </div>
 
-      {/* Recommendations */}
-      {competitorShare.length > 0 && (
+      {/* Recommendations — only for threats */}
+      {meaningful.length > 0 && (
         <div className="card" style={{ padding: "14px 18px", marginBottom: "var(--gap)", borderColor: "var(--primary)", transform: "rotate(0.15deg)", background: "#FFF9DB" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-            <div className="section-label" style={{ marginBottom: 0 }}>Recommendations</div>
+            <div className="section-label" style={{ marginBottom: 0 }}>Competitive threats</div>
             <svg width="30" height="8" viewBox="0 0 30 8" fill="none"><path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg>
           </div>
-          {competitorShare.slice(0, 3).map((c, i) => (
-            <div key={c.name} style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: i < 2 ? 6 : 0, paddingLeft: 12, borderLeft: `2px solid ${COMP_COLORS[i % COMP_COLORS.length]}` }}>
-              <strong>{c.name}</strong> appears in {c.mention_pct}% of responses{c.beats_you !== undefined ? `, beating you in ${c.beats_you} queries` : ""}. <a href={`/brands/${bid}/competitors/${encodeURIComponent(c.name)}`} style={{ color: "var(--primary)", fontWeight: 600, textDecoration: "underline" }}>See detailed analysis &rarr;</a>
-            </div>
-          ))}
+          {meaningful.slice(0, 3).map((c, i) => {
+            const t = THREAT_LABELS[c.threat_level ?? "none"];
+            return (
+              <div key={c.name} style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: i < 2 ? 8 : 0, paddingLeft: 12, borderLeft: `2px solid ${COMP_COLORS[i % COMP_COLORS.length]}` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                  <strong>{c.name}</strong>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: t.color, background: t.bg, padding: "1px 6px", borderRadius: 4 }}>{t.label}</span>
+                </div>
+                {c.beats_you ? `${c.name} beats you in ${c.beats_you} queries. ` : ""}
+                Appears in {c.mention_pct}% of responses.{" "}
+                <a href={`/brands/${bid}/competitors/${encodeURIComponent(c.name)}`} style={{ color: "var(--primary)", fontWeight: 600, textDecoration: "underline" }}>Analyze &rarr;</a>
+              </div>
+            );
+          })}
         </div>
       )}
 
       {/* Competitor detail cards */}
-      <div className="section-label" style={{ marginBottom: 10 }}>Competitor detail</div>
+      <div className="section-label" style={{ marginBottom: 10 }}>All competitors ({competitorShare.length})</div>
       <div className="grid-2">
-        {competitorShare.map((c, i) => {
+        {sorted.map((c, i) => {
           const col = COMP_COLORS[i % COMP_COLORS.length];
+          const t = THREAT_LABELS[c.threat_level ?? "none"];
           return (
             <div
               key={c.name}
@@ -84,15 +113,18 @@ export function CompetitorsTab({ brandId }: { brandId: string }) {
               onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "3px 3px 0 #1A1A1A, 5px 5px 0 #1A1A1A"; e.currentTarget.style.transform = "rotate(0deg) translate(-1px, -1px)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "2px 2px 0 #1A1A1A, 3px 3px 0 #1A1A1A"; e.currentTarget.style.transform = `rotate(${i % 2 === 0 ? "-0.2deg" : "0.2deg"})`; }}
             >
-              {/* Top color accent */}
               <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: col, borderRadius: "2px 2px 0 0" }} />
-              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4, marginTop: 4 }}>{c.name}</div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4, marginBottom: 4 }}>
+                <div style={{ fontSize: 14, fontWeight: 700 }}>{c.name}</div>
+                <span style={{ fontSize: 9, fontWeight: 700, color: t.color, background: t.bg, padding: "2px 6px", borderRadius: 4 }}>{t.label}</span>
+              </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div className="bar-track" style={{ flex: 1, height: 8 }}>
                   <div className="bar-fill" style={{ width: `${(c.mention_pct / (maxPct || 1)) * 100}%`, background: col, borderRadius: 0 }} />
                 </div>
                 <span style={{ fontSize: 13, fontWeight: 800 }}>{c.mention_pct}%</span>
               </div>
+              {c.beats_you ? <div style={{ fontSize: 11, color: "#991B1B", fontWeight: 600, marginTop: 3 }}>Beats you in {c.beats_you} queries</div> : null}
               <div style={{ color: "var(--text-muted)", marginTop: 4, fontWeight: 600, fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 13 }}>click for detail &rarr;</div>
             </div>
           );

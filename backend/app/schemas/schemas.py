@@ -171,6 +171,7 @@ class CompetitorShareItem(BaseModel):
     name: str
     mention_pct: float
     beats_you: int = 0
+    threat_level: str = "none"  # "high", "medium", "low", "none"
 
 
 class QuerySummary(BaseModel):
@@ -282,3 +283,9 @@ class CreditTransactionOut(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# Recommendation schemas
+class RecommendationRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=2000)
+    history: list[dict] | None = Field(default=None, description="Chat history [{role, content}]")

@@ -126,17 +126,28 @@ async def get_dashboard(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db))
                 if comp_pos < r.position:
                     comp_beats[norm] = comp_beats.get(norm, 0) + 1
 
+    def _threat_level(beats: int, mention_pct: float) -> str:
+        if beats >= 3:
+            return "high"
+        if beats >= 1 or mention_pct >= 30:
+            return "medium"
+        if mention_pct >= 15:
+            return "low"
+        return "none"
+
+    threat_order = {"high": 0, "medium": 1, "low": 2, "none": 3}
+
     competitor_share = sorted(
         [
             CompetitorShareItem(
                 name=entry["name"],
                 mention_pct=round(entry["count"] / total_results_count * 100, 1),
                 beats_you=comp_beats.get(norm, 0),
+                threat_level=_threat_level(comp_beats.get(norm, 0), round(entry["count"] / total_results_count * 100, 1)),
             )
             for norm, entry in comp_counts.items()
         ],
-        key=lambda x: x.mention_pct,
-        reverse=True,
+        key=lambda x: (threat_order.get(x.threat_level, 9), -x.mention_pct),
     )[:8]
 
     top_competitor = competitor_share[0].name if competitor_share else None

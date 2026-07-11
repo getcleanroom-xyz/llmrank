@@ -67,6 +67,7 @@ export interface CompetitorShareItem {
   name: string;
   mention_pct: number;
   beats_you?: number;
+  threat_level?: "high" | "medium" | "low" | "none";
 }
 
 export interface QuerySummary {

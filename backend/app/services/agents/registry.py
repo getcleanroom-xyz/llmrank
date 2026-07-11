@@ -4,6 +4,7 @@ from app.services.event_bus.broker import EventBus, event_bus
 from app.services.agents.scan_orchestrator import ScanOrchestratorAgent
 from app.services.agents.competitor_intel import CompetitorIntelAgent
 from app.services.agents.query_gen import QueryGenAgent
+from app.services.agents.recommendations import RecommendationsAgent
 
 logger = logging.getLogger(__name__)
 
@@ -16,8 +17,9 @@ class AgentRegistry:
         self.scan_orchestrator = ScanOrchestratorAgent(self.bus)
         self.competitor_intel = CompetitorIntelAgent(self.bus)
         self.query_gen = QueryGenAgent(self.bus)
+        self.recommendations = RecommendationsAgent(self.bus)
         logger.info("Agent registry initialized: %d agents, subscriptions: %s",
-                     3, self.bus.list_subscriptions())
+                     4, self.bus.list_subscriptions())
 
 
 # Singleton

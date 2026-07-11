@@ -18,6 +18,7 @@ import { QueriesTable } from "@/components/dashboard/QueriesTable";
 import { CompetitorsTab } from "@/components/dashboard/CompetitorsTab";
 import { ScoreHistoryChart } from "@/components/dashboard/ScoreHistoryChart";
 import { ScanHistory } from "@/components/dashboard/ScanHistory";
+import { ChatWidget } from "@/components/ChatWidget";
 
 type Tab = "overview" | "queries" | "scans" | "competitors";
 
@@ -312,6 +313,8 @@ function BrandDashboardPageInner() {
 
         {tab === "competitors" && <CompetitorsTab brandId={brandId} />}
       </div>
+
+      <ChatWidget brandId={brandId} />
     </div>
   );
 }
