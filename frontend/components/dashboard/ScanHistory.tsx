@@ -9,6 +9,14 @@ function ScoreChart({ scans }: { scans: { id: string; visibility_score: number |
   const completed = scans.filter((s) => s.visibility_score != null && s.completed_at);
   if (completed.length < 2) return null;
 
+  // Check if multiple scans share the same day
+  const dayCounts: Record<string, number> = {};
+  completed.forEach((s) => {
+    const day = new Date(s.completed_at!).toLocaleDateString();
+    dayCounts[day] = (dayCounts[day] || 0) + 1;
+  });
+  const hasMultipleSameDay = Object.values(dayCounts).some((c) => c > 1);
+
   const width = 600;
   const height = 120;
   const padding = { top: 10, right: 20, bottom: 24, left: 36 };
@@ -20,13 +28,24 @@ function ScoreChart({ scans }: { scans: { id: string; visibility_score: number |
   const max = Math.min(100, Math.max(...scores) + 10);
   const range = max - min || 1;
 
-  const points = completed.map((s, i) => ({
-    x: padding.left + (i / (completed.length - 1)) * chartW,
-    y: padding.top + (1 - (s.visibility_score! - min) / range) * chartH,
-    id: s.id,
-    score: s.visibility_score!,
-    date: s.completed_at!,
-  }));
+  const points = completed.map((s, i) => {
+    const dt = new Date(s.completed_at!);
+    let label: string;
+    if (hasMultipleSameDay) {
+      label = dt.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+        + " " + dt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+    } else {
+      label = dt.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    }
+    return {
+      x: padding.left + (i / (completed.length - 1)) * chartW,
+      y: padding.top + (1 - (s.visibility_score! - min) / range) * chartH,
+      id: s.id,
+      score: s.visibility_score!,
+      date: s.completed_at!,
+      label,
+    };
+  });
 
   const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
 
@@ -82,7 +101,7 @@ function ScoreChart({ scans }: { scans: { id: string; visibility_score: number |
         {/* X-axis labels (every few points) */}
         {points.filter((_, i) => i === 0 || i === points.length - 1 || i % Math.max(1, Math.floor(points.length / 5)) === 0).map((p) => (
           <text key={p.id} x={p.x} y={height - 4} textAnchor="middle" fontSize="9" fill="var(--text-muted)">
-            {new Date(p.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+            {p.label}
           </text>
         ))}
       </svg>

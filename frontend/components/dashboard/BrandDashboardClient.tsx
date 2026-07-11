@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { useDashboard, useCredits } from "@/lib/hooks";
@@ -40,10 +40,8 @@ function DoodleCircle({ color = "var(--primary)", style }: { color?: string; sty
 
 function BrandDashboardPageInner() {
   const { brandId } = useParams<{ brandId: string }>();
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const tab = (searchParams.get("tab") as Tab) ?? "overview";
   const { user, loading: authLoading } = useAuth();
+  const [tab, setTab] = useState<Tab>("overview");
 
   const { data: dashResult, isLoading, error: loadError, refetch } = useDashboard(brandId);
   const { data: credits } = useCredits();
@@ -74,15 +72,9 @@ function BrandDashboardPageInner() {
     return () => clearInterval(interval);
   }, [isScanRunning, brandId, refetch, qc]);
 
-  const setTab = useCallback((t: Tab) => {
-    const p = new URLSearchParams(searchParams.toString());
-    p.set("tab", t);
-    router.replace(`/brands/${brandId}?${p.toString()}`);
-  }, [brandId, searchParams, router]);
-
   useEffect(() => {
-    if (!authLoading && !user) router.replace("/brands");
-  }, [user, authLoading, router]);
+    if (!authLoading && !user) window.location.href = "/brands";
+  }, [user, authLoading]);
 
   if (authLoading) return <div className="page" style={{ display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "var(--text-muted)", minHeight: "100vh" }}>Loading...</div>;
   if (!user) return null;
