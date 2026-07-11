@@ -114,7 +114,7 @@ class CompetitorIntelAgent(BaseAgent):
             if competitors:
                 top = competitors[0]
                 notes += f"Top competitor: {top['name']} ({top['mention_count']} mentions, avg pos {top['avg_position']})."
-            await set_agent_memory(db, uuid.UUID(brand_id), self.name, notes)
+            await set_agent_memory(db, brand_id, self.name, notes)
             await db.commit()
 
             # Emit event for downstream agents
