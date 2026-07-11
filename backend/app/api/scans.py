@@ -60,29 +60,13 @@ async def trigger_scan(
 
     # Auto-generate queries if none exist — seamless first-run experience
     if not active_queries:
-        logger.info("No queries for brand %s, auto-generating via AI", brand_id)
-        suggestions = await generate_query_suggestions(brand.name, brand.domain, [])
+        logger.info("No queries for brand %s, auto-generating via Query Gen agent", brand_id)
+        from app.services.agents.registry import agent_registry
+        from app.services.agents.context_store import AgentContext
+        ctx = AgentContext(str(brand_id))
+        gen_result = await agent_registry.query_gen.run(ctx, brand_id=brand_id, db=db, mode="generate")
 
-        # If AI generation failed, create basic fallback queries from domain/brand name
-        if not suggestions:
-            logger.info("AI generation failed, using fallback queries for %s", brand.name)
-            domain_root = brand.domain.split(".")[0].replace("-", " ").replace("_", " ")
-            suggestions = [
-                f"best {domain_root} alternatives",
-                f"{domain_root} vs competitors",
-                f"how to use {domain_root}",
-                f"{domain_root} pricing and plans",
-                f"{domain_root} review {brand.name}",
-            ]
-
-        for text in suggestions[:8]:
-            db.add(MonitoredQuery(
-                id=uuid.uuid4(),
-                brand_id=brand_id,
-                query_text=text,
-            ))
-        await db.flush()
-        # Re-fetch after flush so the orchestrator sees them
+        # Re-fetch after agent runs
         queries_result = await db.execute(
             select(MonitoredQuery)
             .where(MonitoredQuery.brand_id == brand_id, MonitoredQuery.is_active == True)

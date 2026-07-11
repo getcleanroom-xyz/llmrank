@@ -60,6 +60,16 @@ async def init_scheduler():
     scheduler.start()
     logger.info("APScheduler started")
 
+    # Register periodic query refresh job (daily at 3 AM)
+    scheduler.add_job(
+        periodic_query_refresh,
+        trigger=CronTrigger(hour=3, minute=0),
+        id="query_refresh_daily",
+        replace_existing=True,
+        misfire_grace_time=3600,
+    )
+    logger.info("Registered daily query refresh job (3:00 AM)")
+
     try:
         from app.core.database import AsyncSessionLocal
         from app.models.models import Campaign, CampaignStatus, ScheduleType
@@ -113,3 +123,32 @@ async def shutdown_scheduler():
     if scheduler.running:
         scheduler.shutdown(wait=False)
         logger.info("APScheduler shut down")
+
+
+async def periodic_query_refresh():
+    """Daily job: refresh queries for all active brands."""
+    from app.core.database import AsyncSessionLocal
+    from app.models.models import Brand
+    from app.services.agents.registry import agent_registry
+    from app.services.agents.context_store import AgentContext, get_brand_context
+
+    logger.info("Starting periodic query refresh")
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(Brand))
+        brands = result.scalars().all()
+
+        for brand in brands:
+            try:
+                ctx_data = await get_brand_context(db, brand.id)
+                ctx = AgentContext(str(brand.id), ctx_data)
+                agent_result = await agent_registry.query_gen.run(
+                    ctx, brand_id=brand.id, db=db, mode="refresh",
+                )
+                if agent_result.success:
+                    logger.info("Query refresh OK for %s", brand.name)
+                else:
+                    logger.warning("Query refresh failed for %s: %s", brand.name, agent_result.error)
+            except Exception as e:
+                logger.exception("Query refresh error for %s: %s", brand.name, e)
+
+    logger.info("Periodic query refresh complete")

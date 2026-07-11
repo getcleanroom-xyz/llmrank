@@ -3,6 +3,7 @@ import logging
 from app.services.event_bus.broker import EventBus, event_bus
 from app.services.agents.scan_orchestrator import ScanOrchestratorAgent
 from app.services.agents.competitor_intel import CompetitorIntelAgent
+from app.services.agents.query_gen import QueryGenAgent
 
 logger = logging.getLogger(__name__)
 
@@ -14,9 +15,9 @@ class AgentRegistry:
         self.bus = bus or event_bus
         self.scan_orchestrator = ScanOrchestratorAgent(self.bus)
         self.competitor_intel = CompetitorIntelAgent(self.bus)
-        self._initialized = True
+        self.query_gen = QueryGenAgent(self.bus)
         logger.info("Agent registry initialized: %d agents, subscriptions: %s",
-                     2, self.bus.list_subscriptions())
+                     3, self.bus.list_subscriptions())
 
 
 # Singleton
