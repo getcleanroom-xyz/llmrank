@@ -13,15 +13,23 @@ INSIGHT_DEVELOPER = (
 
 DIAGNOSIS_PROMPT_ADDENDUM = (
     "\n\nDIAGNOSTIC DATA:\n"
-    "For each topic where the brand was NOT mentioned, I checked whether the brand already has content "
-    "about that topic on their website. The results are included below.\n\n"
-    "Use this to differentiate your recommendations:\n"
-    "- If content EXISTS but brand is still not mentioned → the issue is DISCOVERABILITY or TRUST. "
-    "Recommend structural fixes: clearer headings, schema markup, better page structure, "
-    "stronger associations with the topic, or authority-building.\n"
-    "- If content is MISSING → recommend creating targeted content about the topic.\n"
-    "- NEVER recommend 'create more content' if the content already exists. That would be redundant.\n"
-    "- Be specific about which fix applies. 'Improve your content' is too vague."
+    "For each query where the brand was absent, I ran a multi-signal diagnosis:\n"
+    "- Does the brand have content about this topic on their own website?\n"
+    "- Are there brand mentions across the web (Reddit, YouTube, Wikipedia, industry sites)?\n"
+    "- Is the brand present on key citation sources that AI models trust?\n\n"
+    "Each gap is labeled with a fix_type. Use this to give PRECISE recommendations:\n\n"
+    "fix_type=content_gap: Content doesn't exist. Recommend creating targeted content.\n"
+    "fix_type=discoverability: Content exists but AI can't find or trust it. "
+    "Recommend: clearer headings, schema markup, structured data, FAQ sections, "
+    "better internal linking, server-side rendering.\n"
+    "fix_type=mentions: Content exists but brand lacks web mentions. "
+    "Recommend: PR outreach, guest posts, industry rankings, review sites, "
+    "unlinked mentions on authoritative pages.\n"
+    "fix_type=authority: Brand missing from trusted citation sources. "
+    "Recommend: Reddit presence, YouTube content, Wikipedia (if notable), "
+    "industry publications, expert endorsements.\n\n"
+    "CRITICAL: Never recommend 'create more content' when content already exists. "
+    "The fix must match the actual root cause. Be specific — name the exact action."
 )
 
 
@@ -35,46 +43,104 @@ async def _call_llm(messages: list[dict]) -> str:
 
 
 async def diagnose_visibility_gap(brand_name: str, brand_domain: str, query_text: str) -> dict:
-    """Check whether a brand already has content about a query topic.
+    """Diagnose why a brand is absent from AI responses for a given query.
 
-    Returns {"exists": bool, "evidence": str} indicating whether content exists
-    and what evidence was found.
+    Checks multiple signals based on AEO/GEO research:
+    1. Content on brand's own domain
+    2. Brand mentions across the web (the #1 factor for AI visibility)
+    3. Presence on key citation sources (Reddit, YouTube, Wikipedia)
+
+    Returns {"exists": bool, "diagnosis": str, "evidence": str, "fix_type": str}.
+    fix_type is one of: "content_gap", "discoverability", "authority", "mentions", "unknown"
     """
     try:
         from duckduckgo_search import DDGS
 
-        # Search for the brand's content about this topic
-        search_query = f'"{brand_name}" {query_text}'
-        with DDGS() as ddgs:
-            results = list(ddgs.text(search_query, max_results=5))
+        evidence_parts = []
+        scores = {"own_domain": 0, "web_mentions": 0, "citation_sources": 0}
 
-        # Check if the brand's domain appears in results
-        brand_domain_lower = brand_domain.lower().replace("www.", "")
-        for r in results:
-            href = r.get("href", "").lower()
-            if brand_domain_lower in href:
-                return {
-                    "exists": True,
-                    "evidence": f"Found on {href}: {r.get('body', '')[:150]}",
-                }
+        # 1. Check brand's own domain for this topic
+        own_query = f'site:{brand_domain} {query_text}'
+        try:
+            with DDGS() as ddgs:
+                own_results = list(ddgs.text(own_query, max_results=3))
+            if own_results:
+                scores["own_domain"] = 2
+                evidence_parts.append(f"Content exists on {brand_domain} about this topic")
+        except Exception:
+            pass
 
-        # Also check if brand name appears in any result snippet
-        for r in results:
-            body = r.get("body", "")
-            if brand_name.lower() in body.lower():
-                return {
-                    "exists": True,
-                    "evidence": f"Mentioned in: {body[:150]}",
-                }
+        # 2. Check brand mentions across the web
+        mention_query = f'"{brand_name}" {query_text}'
+        try:
+            with DDGS() as ddgs:
+                mention_results = list(ddgs.text(mention_query, max_results=5))
+            brand_domain_lower = brand_domain.lower().replace("www.", "")
+            third_party_mentions = 0
+            for r in mention_results:
+                href = r.get("href", "").lower()
+                body = r.get("body", "").lower()
+                if brand_name.lower() in body or brand_domain_lower in href:
+                    third_party_mentions += 1
+            if third_party_mentions >= 2:
+                scores["web_mentions"] = 2
+                evidence_parts.append(f"Brand mentioned in {third_party_mentions} search results")
+            elif third_party_mentions == 1:
+                scores["web_mentions"] = 1
+                evidence_parts.append("Limited web mentions found")
+        except Exception:
+            pass
 
-        return {"exists": False, "evidence": "No content found for this topic"}
+        # 3. Check key citation sources (Reddit, YouTube, Wikipedia)
+        citation_query = f'"{brand_name}" {query_text}'
+        try:
+            with DDGS() as ddgs:
+                citation_results = list(ddgs.text(citation_query, max_results=10))
+            citation_domains = {"reddit.com", "youtube.com", "wikipedia.org", "medium.com",
+                                "github.com", "stackoverflow.com", "quora.com"}
+            found_on = set()
+            for r in citation_results:
+                href = r.get("href", "").lower()
+                for d in citation_domains:
+                    if d in href:
+                        found_on.add(d)
+            if found_on:
+                scores["citation_sources"] = 2
+                evidence_parts.append(f"Found on: {', '.join(found_on)}")
+            else:
+                scores["citation_sources"] = 0
+                evidence_parts.append("Not found on key citation sources (Reddit, YouTube, Wikipedia)")
+        except Exception:
+            pass
+
+        # Determine diagnosis based on scores
+        total = sum(scores.values())
+        evidence = "; ".join(evidence_parts) if evidence_parts else "Diagnosis incomplete"
+
+        if scores["own_domain"] >= 2 and scores["web_mentions"] < 2:
+            return {"exists": True, "diagnosis": "Content exists but lacks web presence",
+                    "evidence": evidence, "fix_type": "mentions"}
+        elif scores["own_domain"] >= 2 and scores["web_mentions"] >= 2:
+            return {"exists": True, "diagnosis": "Content exists with web presence — likely trust/structure issue",
+                    "evidence": evidence, "fix_type": "discoverability"}
+        elif scores["own_domain"] < 2 and scores["web_mentions"] >= 1:
+            return {"exists": False, "diagnosis": "Limited content, some web mentions",
+                    "evidence": evidence, "fix_type": "content_gap"}
+        elif scores["citation_sources"] < 2:
+            return {"exists": False, "diagnosis": "Missing from key citation sources",
+                    "evidence": evidence, "fix_type": "authority"}
+        else:
+            return {"exists": False, "diagnosis": "Content genuinely missing",
+                    "evidence": evidence, "fix_type": "content_gap"}
 
     except ImportError:
         logger.debug("ddgs not installed — skipping content diagnosis")
-        return {"exists": False, "evidence": "Diagnosis unavailable"}
+        return {"exists": False, "diagnosis": "Diagnosis unavailable",
+                "evidence": "ddgs package not installed", "fix_type": "unknown"}
     except Exception as e:
         logger.debug("Content diagnosis failed for '%s': %s", query_text, e)
-        return {"exists": False, "evidence": "Diagnosis failed"}
+        return {"exists": False, "diagnosis": "Diagnosis failed",
+                "evidence": str(e), "fix_type": "unknown"}
 
 
 async def generate_insights_for_query(
@@ -174,11 +240,10 @@ async def generate_dashboard_insights(
 
         for query_text, results in query_results.items():
             if not any(r.mentioned for r in results):
-                # Brand was completely absent — check if content exists
+                # Brand was completely absent — run multi-signal diagnosis
                 diag = await diagnose_visibility_gap(brand_name, brand_domain, query_text)
-                status = "EXISTS" if diag["exists"] else "MISSING"
                 diagnosis_lines.append(
-                    f"  [{status}] \"{query_text}\" — {diag['evidence']}"
+                    f"  [{diag['fix_type'].upper()}] \"{query_text}\" — {diag['diagnosis']}. Evidence: {diag['evidence']}"
                 )
 
     industry = classification.get("sub_category", classification.get("industry", "unknown")) if classification else "unknown"
