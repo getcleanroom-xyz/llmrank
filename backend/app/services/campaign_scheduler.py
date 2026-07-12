@@ -2,7 +2,6 @@ import uuid
 import logging
 import re
 from datetime import datetime, timezone
-from urllib.parse import urlparse
 
 from sqlalchemy import select, func, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession

@@ -73,16 +73,6 @@ export function useAdminBuildAudience() {
   });
 }
 
-export function useAdminUploadCsv() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, file }: { id: string; file: File }) =>
-      api.adminUploadCsv(id, file),
-    onSuccess: (_data, variables) =>
-      qc.invalidateQueries({ queryKey: queryKeys.campaign(variables.id) }),
-  });
-}
-
 export function useAdminUsers(search?: string) {
   return useQuery({
     queryKey: queryKeys.adminUsers(search),

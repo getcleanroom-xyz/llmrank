@@ -1,8 +1,6 @@
 import uuid
 import logging
-import re
 import asyncio
-import json
 from datetime import datetime, timezone
 from typing import AsyncGenerator
 
@@ -15,7 +13,7 @@ from app.core.database import get_db
 from app.core.config import settings
 from app.core.rate_limit import limiter
 from app.models.models import User, Brand, MonitoredQuery, Scan, QueryResult, ScanStatus
-from app.schemas.schemas import BrandOut, ScanCreate, ScanOut, QuerySummary
+from app.schemas.schemas import ScanCreate, ScanOut, QuerySummary
 from app.services.credit_service import check_credits, deduct_credits
 from app.api.auth import get_current_user
 
@@ -26,11 +24,6 @@ logger = logging.getLogger(__name__)
 def _utcnow() -> datetime:
     """Return naive UTC datetime compatible with TIMESTAMP WITHOUT TIME ZONE columns."""
     return datetime.now(timezone.utc).replace(tzinfo=None)
-
-
-def _normalize_competitor(name: str) -> str:
-    """Normalize competitor name for fuzzy matching (ignore spaces, hyphens, underscores, case)."""
-    return re.sub(r'[\s\-_\.]+', '', name).lower()
 
 
 # ─── Scans ─────────────────────────────────────────────────────────────────────

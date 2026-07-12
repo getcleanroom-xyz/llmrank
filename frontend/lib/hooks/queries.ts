@@ -2,13 +2,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "../query-keys";
 import * as api from "../api";
 
-export function useQueries(brandId: string) {
-  return useQuery({
-    queryKey: queryKeys.queries(brandId),
-    queryFn: () => api.getQueries(brandId),
-  });
-}
-
 export function useAddQuery() {
   const qc = useQueryClient();
   return useMutation({
@@ -49,19 +42,6 @@ export function useSuggestQueries() {
       domain: string;
       keywords: string[];
     }) => api.suggestQueries(brandId, brand_name, domain, keywords),
-  });
-}
-
-export function useSuggestQueriesFull() {
-  return useMutation({
-    mutationFn: ({ brandId, brand_name, domain, keywords }: { brandId: string; brand_name: string; domain: string; keywords?: string[] }) =>
-      api.suggestQueriesFull(brandId, brand_name, domain, keywords ?? []),
-  });
-}
-
-export function useProbeQueries() {
-  return useMutation({
-    mutationFn: (brandId: string) => api.probeQueries(brandId),
   });
 }
 

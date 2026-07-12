@@ -43,6 +43,7 @@ export function ChatWidget({ brandId }: { brandId: string }) {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const streamAbortRef = useRef<AbortController | null>(null);
   const qc = useQueryClient();
 
   const { data: convsData } = useConversations(brandId);
@@ -71,6 +72,11 @@ export function ChatWidget({ brandId }: { brandId: string }) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Abort streaming on unmount
+  useEffect(() => {
+    return () => { streamAbortRef.current?.abort(); };
+  }, []);
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
@@ -108,6 +114,9 @@ export function ChatWidget({ brandId }: { brandId: string }) {
     setDeleteTarget(null);
   }, [brandId, activeConvId, deleteConv, deleteTarget]);
 
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+
   const send = async (text: string) => {
     if (!text.trim() || streaming) return;
     const userMsg: ChatMessage = { role: "user", content: text.trim() };
@@ -117,6 +126,11 @@ export function ChatWidget({ brandId }: { brandId: string }) {
     setError("");
     setStreamingMsg("");
     setLocalMessages((prev) => [...prev, userMsg]);
+
+    // Abort any previous stream
+    streamAbortRef.current?.abort();
+    const controller = new AbortController();
+    streamAbortRef.current = controller;
 
     // Create conversation if needed
     let convId = activeConvId;
@@ -138,10 +152,10 @@ export function ChatWidget({ brandId }: { brandId: string }) {
     let fullResponse = "";
 
     try {
-      const history = messages.slice(-6);
+      const history = messagesRef.current.slice(-6);
       fullResponse = "";
 
-      for await (const token of streamRecommendation(brandId, text, history, convId ?? undefined)) {
+      for await (const token of streamRecommendation(brandId, text, history, convId ?? undefined, controller.signal)) {
         setThinking(false);
         fullResponse += token;
         setStreamingMsg(fullResponse);

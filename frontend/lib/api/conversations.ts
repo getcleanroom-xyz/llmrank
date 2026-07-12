@@ -33,9 +33,6 @@ export const createConversation = (brandId: string, title?: string) =>
     body: JSON.stringify({ title }),
   });
 
-export const getConversation = (brandId: string, conversationId: string) =>
-  apiFetch<Conversation>(`/brands/${brandId}/conversations/${conversationId}`);
-
 export const updateConversation = (brandId: string, conversationId: string, title: string) =>
   apiFetch<Conversation>(`/brands/${brandId}/conversations/${conversationId}`, {
     method: "PATCH",
@@ -49,12 +46,6 @@ export const deleteConversation = (brandId: string, conversationId: string) =>
 
 export const listMessages = (brandId: string, conversationId: string) =>
   apiFetch<ChatMessage[]>(`/brands/${brandId}/conversations/${conversationId}/messages`);
-
-export const addMessage = (brandId: string, conversationId: string, role: "user" | "assistant", content: string) =>
-  apiFetch<ChatMessage>(`/brands/${brandId}/conversations/${conversationId}/messages`, {
-    method: "POST",
-    body: JSON.stringify({ role, content }),
-  });
 
 export const addMessagesBatch = (brandId: string, conversationId: string, messages: { role: "user" | "assistant"; content: string }[]) =>
   apiFetch<{ ok: boolean; count: number }>(`/brands/${brandId}/conversations/${conversationId}/messages/batch`, {

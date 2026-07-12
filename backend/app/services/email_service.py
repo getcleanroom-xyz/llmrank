@@ -6,12 +6,6 @@ from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
-_EMAIL_RE = re.compile(r'[^@\s]+@[^@\s]+\.[^@\s]+')
-
-def _is_valid_email(email: str) -> bool:
-    return bool(_EMAIL_RE.fullmatch(email))
-
-
 def _generate_path() -> str:
     return ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
 

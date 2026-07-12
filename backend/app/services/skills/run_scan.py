@@ -8,7 +8,6 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.tools.db import read_model, query_db, write_model, count_records
 from app.services.tools.llm import call_llm
 from app.services.tools.event import emit_event
 from app.services.tools.domain import compute_visibility_score
@@ -170,18 +169,3 @@ async def run_scan(brand_id: str, scan_id: str, llm_names: list[str],
         }
 
 
-async def keepalive_ping(db: AsyncSession, scan_id: uuid.UUID, stop_event: asyncio.Event):
-    """Keepalive ping during long scan operations."""
-    from sqlalchemy import text
-    while not stop_event.is_set():
-        try:
-            await asyncio.wait_for(stop_event.wait(), timeout=30)
-        except asyncio.TimeoutError:
-            pass
-        if stop_event.is_set():
-            break
-        try:
-            await db.execute(text("SELECT 1"))
-        except Exception:
-            logger.warning("Keepalive ping failed for scan %s", scan_id)
-            break

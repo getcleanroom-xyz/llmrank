@@ -2,7 +2,6 @@
 import uuid
 import json
 import logging
-import asyncio
 from datetime import datetime, timezone
 
 from app.services.event_bus.broker import event_bus, EventHandler

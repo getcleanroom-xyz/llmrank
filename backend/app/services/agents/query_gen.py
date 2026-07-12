@@ -1,6 +1,5 @@
 """Query Gen Agent — manages query lifecycle using skills."""
 import uuid
-import json
 import logging
 from datetime import datetime, timezone
 

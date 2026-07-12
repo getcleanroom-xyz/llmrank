@@ -121,5 +121,3 @@ export function LLMLogo({ name, size = 32, className }: { name: string; size?: n
     />
   );
 }
-
-export { LLM_COLORS };

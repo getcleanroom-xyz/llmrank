@@ -6,9 +6,14 @@ function sanitizeHtml(html: string): string {
   return html
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
     .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, "")
-    .replace(/on\w+="[^"]*"/gi, "")
-    .replace(/on\w+='[^']*'/gi, "")
-    .replace(/javascript:/gi, "");
+    .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, "")
+    .replace(/<embed\b[^>]*>/gi, "")
+    .replace(/<base\b[^>]*>/gi, "")
+    .replace(/on\w+\s*=\s*"[^"]*"/gi, "")
+    .replace(/on\w+\s*=\s*'[^']*'/gi, "")
+    .replace(/on\w+\s*=\s*[^\s>"']*/gi, "")
+    .replace(/javascript\s*:/gi, "")
+    .replace(/data\s*:/gi, "");
 }
 
 export function ScoreRing({ score, size = 80, stroke = 6 }: { score: number; size?: number; stroke?: number }) {
@@ -91,32 +96,4 @@ export function InsightRow({ type, text }: { type: "tip" | "warning"; text: stri
       <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(text) }} />
     </div>
   );
-}
-
-import type { AnnotationSpan } from "@/types";
-
-export function AnnotatedResponse({ spans }: { spans: AnnotationSpan[] }) {
-  return (
-    <div className="md-content">
-      {spans.map((span, i) => {
-        const cls = span.type === "brand" ? "span-brand" : span.type === "competitor" ? "span-competitor" : span.type === "qualifier" ? "span-qualifier" : undefined;
-        return cls ? <span key={i} className={cls}>{span.text}</span> : <span key={i}>{span.text}</span>;
-      })}
-    </div>
-  );
-}
-
-export function Divider() {
-  return <div style={{ height: 2, background: "var(--border)", margin: "16px 0" }} />;
-}
-
-export function ScanStatusBadge({ status }: { status: string }) {
-  const map: Record<string, { label: string; cls: string }> = {
-    pending: { label: "Queued", cls: "pill pill-neu" },
-    running: { label: "Scanning...", cls: "pill pill-gold" },
-    completed: { label: "Complete", cls: "pill pill-pos" },
-    failed: { label: "Failed", cls: "pill pill-neg" },
-  };
-  const { label, cls } = map[status] ?? { label: status, cls: "pill pill-neu" };
-  return <span className={cls}>{label}</span>;
 }

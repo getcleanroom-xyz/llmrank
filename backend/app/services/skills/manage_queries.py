@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.tools.db import read_model, query_db, write_model, count_records
+from app.services.tools.db import write_model, count_records
 from app.services.tools.llm import call_llm_json
 from app.services.tools.event import emit_event
 from app.services.tools.memory import store_memory

@@ -39,9 +39,6 @@ export const rescanQuery = (brandId: string, queryId: string) =>
 export const getScans = (brandId: string, page: number = 1, perPage: number = 20) =>
   apiFetch<Scan[]>(`/brands/${brandId}/scans?page=${page}&per_page=${perPage}`);
 
-export const getScan = (brandId: string, scanId: string) =>
-  apiFetch<Scan>(`/brands/${brandId}/scans/${scanId}`);
-
 export const getScanResults = (brandId: string, scanId: string) =>
   apiFetch<ScanDetail>(`/brands/${brandId}/scans/${scanId}/results`);
 

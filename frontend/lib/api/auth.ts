@@ -8,13 +8,6 @@ export interface AuthUser {
   is_admin?: boolean;
 }
 
-export interface PasskeyInfo {
-  id: string;
-  device_name: string;
-  created_at: string;
-  last_used_at: string;
-}
-
 export const authRegisterStart = (email: string, display_name: string) =>
   apiFetch<{ challenge: string; rp_id: string; user_id: string }>("/auth/register/start", {
     method: "POST",
@@ -43,11 +36,6 @@ export const authGetMe = () => apiFetch<AuthUser>("/auth/me");
 
 export const authLogout = () =>
   apiFetch<{ status: string }>("/auth/logout", { method: "POST" });
-
-export const authListPasskeys = () => apiFetch<PasskeyInfo[]>("/auth/passkeys");
-
-export const authDeletePasskey = (passkeyId: string) =>
-  apiFetch<{ status: string }>(`/auth/passkeys/${passkeyId}`, { method: "DELETE" });
 
 // ─── Email + Password Auth ────────────────────────────────────────────────────
 

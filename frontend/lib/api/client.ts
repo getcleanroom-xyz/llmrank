@@ -27,10 +27,15 @@ export async function apiFetch<T>(path: string, init?: RequestInit, timeoutMs = 
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
+    const isFormData = init?.body instanceof FormData;
+    const headers: Record<string, string> = isFormData
+      ? {}
+      : { "Content-Type": "application/json" };
+
     const res = await fetch(`${BASE_URL}${path}`, {
       credentials: "include",
-      headers: { "Content-Type": "application/json" },
       ...init,
+      headers: { ...headers, ...init?.headers },
       signal: controller.signal,
     });
     if (!res.ok) {

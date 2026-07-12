@@ -1,26 +1,16 @@
 import { apiFetch } from "./client";
 
-export interface RecommendationResponse {
-  response: string;
-  success: boolean;
-}
-
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
 }
-
-export const sendRecommendation = (brandId: string, message: string, history?: ChatMessage[], conversationId?: string) =>
-  apiFetch<RecommendationResponse>(`/brands/${brandId}/recommend`, {
-    method: "POST",
-    body: JSON.stringify({ message, history, conversation_id: conversationId }),
-  });
 
 export const streamRecommendation = async function* (
   brandId: string,
   message: string,
   history?: ChatMessage[],
   conversationId?: string,
+  signal?: AbortSignal,
 ): AsyncGenerator<string, void, unknown> {
   const resp = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1"}/brands/${brandId}/recommend/stream`,
@@ -29,6 +19,7 @@ export const streamRecommendation = async function* (
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({ message, history, conversation_id: conversationId }),
+      signal,
     }
   );
 
@@ -57,10 +48,10 @@ export const streamRecommendation = async function* (
       if (data === "[DONE]") return;
       try {
         const parsed = JSON.parse(data);
-        if (parsed.token) yield parsed.token;
         if (parsed.error) throw new Error(parsed.error);
-      } catch {
-        // skip malformed chunks
+        if (parsed.token) yield parsed.token;
+      } catch (e) {
+        if (e instanceof Error && e.message !== "Unexpected token") throw e;
       }
     }
   }

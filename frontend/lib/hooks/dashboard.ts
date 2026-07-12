@@ -5,11 +5,16 @@ import * as api from "../api";
 export function useDashboard(brandId: string) {
   return useQuery({
     queryKey: queryKeys.dashboard(brandId),
-    queryFn: () => Promise.all([
-      api.getDashboard(brandId),
-      api.getQueries(brandId),
-    ]),
-    select: ([dashboard, queries]) => ({ dashboard, queries }),
+    queryFn: async () => {
+      const [dashResult, queriesResult] = await Promise.allSettled([
+        api.getDashboard(brandId),
+        api.getQueries(brandId),
+      ]);
+      return {
+        dashboard: dashResult.status === "fulfilled" ? dashResult.value : null,
+        queries: queriesResult.status === "fulfilled" ? queriesResult.value : [],
+      };
+    },
   });
 }
 

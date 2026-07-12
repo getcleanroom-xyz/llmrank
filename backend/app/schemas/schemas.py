@@ -52,45 +52,6 @@ class QuerySuggestResponse(BaseModel):
     suggested_queries: list[str]
 
 
-class BrandClassification(BaseModel):
-    industry: str
-    sub_category: str
-    price_tier: str
-    target_audience: str
-    key_features: list[str]
-
-
-class CompetitorInfo(BaseModel):
-    name: str
-    domain: str
-    relevance_score: int = 3
-
-
-class ScoredQuery(BaseModel):
-    query_text: str
-    query_type: str
-    score: int
-
-
-class ProbeInsight(BaseModel):
-    query_text: str
-    brand_overmentioned: bool
-    competitors_found: list[str]
-    recommendation: str
-
-
-class ProbeResult(BaseModel):
-    insights: list[ProbeInsight]
-    summary: str
-
-
-class QuerySuggestFullResponse(BaseModel):
-    classification: BrandClassification
-    competitors: list[CompetitorInfo]
-    queries: list[ScoredQuery]
-    probe_result: Optional[ProbeResult] = None
-
-
 class QueryTableItem(BaseModel):
     id: UUID
     query_text: str

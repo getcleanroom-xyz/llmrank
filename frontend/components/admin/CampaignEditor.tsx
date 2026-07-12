@@ -534,11 +534,12 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
     if (!editor || !linkUrl.trim()) return;
     const url = linkUrl.trim();
     const label = linkLabel.trim();
+    const safeUrl = /^(https?:\/\/|mailto:)/i.test(url) ? url : `https://${url}`;
     const { from, to } = editor.state.selection;
     if (from !== to && from >= 0 && to >= 0) {
-      editor.chain().focus().setLink({ href: url }).run();
+      editor.chain().focus().setLink({ href: safeUrl }).run();
     } else if (label) {
-      editor.chain().focus().insertContent(`<a href="${url}">${label}</a>`).run();
+      editor.chain().focus().insertContent(`<a href="${safeUrl}">${label}</a>`).run();
     }
     setShowLinkDialog(false);
     setLinkUrl("");

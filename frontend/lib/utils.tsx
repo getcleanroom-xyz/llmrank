@@ -22,11 +22,6 @@ export const LLM_NAMES: Record<string, string> = {
   mistral: "Mistral", qwen: "Qwen",
 };
 
-export const LLM_COLORS: Record<string, string> = {
-  chatgpt: "#22C55E", gemini: "#3B82F6", llama: "#A855F7", claude: "#F97316",
-  deepseek: "#22C55E", mistral: "#3B82F6", qwen: "#A855F7",
-};
-
 export function PositionBadge({ mentioned, position }: { mentioned: boolean; position: number | null }) {
   if (!mentioned) return <span className="pill pill-neg" style={{ fontSize: 9 }}>&ndash;</span>;
   if (position == null) return <span className="pill pill-neu" style={{ fontSize: 9 }}>?</span>;

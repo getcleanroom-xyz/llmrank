@@ -59,7 +59,6 @@ async def recover_pending_scans():
 
                 # Re-queue pending scans
                 # We need to determine which LLMs were selected — default to free models
-                from app.core.database import AsyncSessionLocal as SessionLocal
                 asyncio.create_task(
                     _run_scan_background(scan.brand_id, scan.id, ["chatgpt", "llama"])
                 )

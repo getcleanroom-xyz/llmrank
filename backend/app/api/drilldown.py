@@ -21,11 +21,6 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-def _utcnow() -> datetime:
-    """Return naive UTC datetime compatible with TIMESTAMP WITHOUT TIME ZONE columns."""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
-
-
 def _normalize_competitor(name: str) -> str:
     """Normalize competitor name for fuzzy matching (ignore spaces, hyphens, underscores, case)."""
     return re.sub(r'[\s\-_\.]+', '', name).lower()

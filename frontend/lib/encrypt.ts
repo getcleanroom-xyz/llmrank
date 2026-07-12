@@ -9,8 +9,9 @@ export async function encryptAES(plaintext: string, keyBase64: string, nonce: st
 }
 
 export function generateNonce(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let nonce = "";
-  for (let i = 0; i < 12; i++) nonce += chars[Math.floor(Math.random() * chars.length)];
-  return nonce;
+  const bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  return btoa(String.fromCharCode(...bytes)).replace(/[+/=]/g, (c) =>
+    c === "+" ? "-" : c === "/" ? "_" : ""
+  );
 }
