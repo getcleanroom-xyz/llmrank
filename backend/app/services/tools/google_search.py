@@ -13,7 +13,7 @@ async def search_google(brand_name: str, domain: str) -> str:
     query = f"{brand_name} {domain} what does it do"
 
     try:
-        from duckduckgo_search import DDGS
+        from ddgs import DDGS
 
         with DDGS() as ddgs:
             results = list(ddgs.text(query, max_results=8))

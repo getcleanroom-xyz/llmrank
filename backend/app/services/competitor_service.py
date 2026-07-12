@@ -173,7 +173,7 @@ def competitors_need_refresh(competitors: list[dict], ttl_days: int = 7) -> bool
 async def fill_missing_domains(competitors: list[dict]) -> list[dict]:
     """Look up domains for competitors that don't have one via web search."""
     try:
-        from duckduckgo_search import DDGS
+        from ddgs import DDGS
     except ImportError:
         return competitors
 

@@ -54,7 +54,7 @@ async def diagnose_visibility_gap(brand_name: str, brand_domain: str, query_text
     fix_type is one of: "content_gap", "discoverability", "authority", "mentions", "unknown"
     """
     try:
-        from duckduckgo_search import DDGS
+        from ddgs import DDGS
 
         evidence_parts = []
         scores = {"own_domain": 0, "web_mentions": 0, "citation_sources": 0}
