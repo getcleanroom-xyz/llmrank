@@ -21,59 +21,31 @@ def _utcnow() -> datetime:
 
 
 async def generate_queries(brand_id: str, brand_name: str, domain: str,
-                           classification: dict | None = None,
-                           competitors: list[dict] | None = None,
-                           crawl_content: str = "",
-                           summary: dict | None = None,
+                           summary: dict,
                            agent_name: str = "query_gen") -> list[dict]:
     """Generate new search queries for a brand using LLM.
 
     Args:
-        summary: Optional pre-computed summary from summarize_company()
-        classification: Fallback if summary not provided
-        competitors: List of competitor dicts
-        crawl_content: Raw crawled content
+        summary: Pre-computed summary from summarize_company()
 
     Returns list of {query_text, query_type, score}.
     """
-    # Build prompt from summary if available, otherwise fallback to classification
-    if summary:
-        product_desc = summary.get("description", "")
-        industry = summary.get("industry", "unknown")
-        category = summary.get("category", "unknown")
-        features = summary.get("key_features", [])
-        use_cases = summary.get("use_cases", [])
-        audience = summary.get("target_audience", "")
-        value_prop = summary.get("value_proposition", "")
-        mentioned_competitors = summary.get("competitors_mentioned", [])
-        comp_str = ", ".join(mentioned_competitors[:5])
-    else:
-        classification = classification or {"industry": "unknown", "sub_category": ""}
-        product_desc = crawl_content[:500] if crawl_content else f"{brand_name} at {domain}"
-        industry = classification.get("industry", "unknown")
-        category = classification.get("sub_category", "unknown")
-        features = []
-        use_cases = []
-        audience = ""
-        value_prop = ""
-        competitors = competitors or []
-        comp_str = ", ".join(c.get("name", "") for c in competitors[:5])
+    summary_json = json.dumps(summary, indent=2)
 
-    logger.info("Query gen for %s: industry=%s, category=%s, features=%s",
-                brand_name, industry, category, features[:3])
+    logger.info("Query gen for %s: industry=%s, category=%s",
+                brand_name, summary.get("industry"), summary.get("category"))
 
     prompt = (
         f"Generate 20 conversational questions that people would ask an AI assistant "
         f"when researching a product like {brand_name}.\n\n"
-        f"PRODUCT: {brand_name}\n"
-        f"DESCRIPTION: {product_desc}\n"
-        f"INDUSTRY: {industry}\n"
-        f"CATEGORY: {category}\n"
-        f"KEY FEATURES: {', '.join(features[:5]) if features else 'unknown'}\n"
-        f"TARGET AUDIENCE: {audience or 'unknown'}\n"
-        f"USE CASES: {', '.join(use_cases[:3]) if use_cases else 'unknown'}\n"
-        f"COMPETITORS: {comp_str or 'none known'}\n"
-        f"VALUE PROP: {value_prop or 'unknown'}\n\n"
+        f"Here is structured information about {brand_name}:\n{summary_json}\n\n"
+        f"RULES:\n"
+        f"- Questions must be directly about THIS specific product type\n"
+        f"- Use the product description, features, and use cases above as the source of truth\n"
+        f"- Do NOT generate generic questions unrelated to this product\n"
+        f"- Do NOT include the brand name {brand_name} in questions\n\n"
+        f'Return ONLY a valid JSON array: [{{"query_text":"...","query_type":"workflow","score":1-5}}]'
+    )
         f"RULES:\n"
         f"- Questions must be directly about THIS specific product type\n"
         f"- Use the DESCRIPTION and USE CASES above as the source of truth\n"

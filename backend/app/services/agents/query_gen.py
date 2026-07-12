@@ -108,10 +108,9 @@ class QueryGenAgent(BaseAgent):
                            event_types=["competitors.updated"])
 
     async def _generate_skill(self, brand_id: str, brand_name: str, domain: str,
-                               classification: dict | None = None,
-                               competitors: list[dict] | None = None) -> list[dict]:
+                               summary: dict) -> list[dict]:
         from app.services.skills.manage_queries import generate_queries
-        return await generate_queries(brand_id, brand_name, domain, classification, competitors, self.name)
+        return await generate_queries(brand_id, brand_name, domain, summary, self.name)
 
     async def _score_skill(self, brand_id: str) -> list[dict]:
         from app.services.skills.manage_queries import score_queries
@@ -197,11 +196,14 @@ class QueryGenAgent(BaseAgent):
         if existing.scalar() > 0:
             return AgentResult(True, output={"message": "Queries already exist", "count": existing.scalar()})
 
-        classification = ctx.get("classification", {"industry": "unknown"})
-        competitors = ctx.get("competitors", [])
+        # Summarize the brand
+        from app.services.tools.summarize import summarize_company
+        from app.services.crawler import crawl_website
+        crawl_content = await crawl_website(brand.domain)
+        summary = await summarize_company(crawl_content, brand.name, brand.domain)
 
         queries = await generate_queries(
-            str(brand_id), brand.name, brand.domain, classification, competitors, self.name
+            str(brand_id), brand.name, brand.domain, summary, self.name
         )
 
         if not queries:
@@ -294,9 +296,7 @@ class QueryGenAgent(BaseAgent):
 
         # 4. Generate queries using summary
         queries = await generate_queries(
-            str(brand.id), brand.name, brand.domain,
-            summary=summary, competitors=competitors,
-            crawl_content=crawl_content, agent_name=self.name,
+            str(brand.id), brand.name, brand.domain, summary, self.name,
         )
 
         return {"summary": summary, "competitors": competitors, "queries": queries}
@@ -331,9 +331,7 @@ class QueryGenAgent(BaseAgent):
 
         # 3. Generate queries using summary
         queries = await generate_queries(
-            str(brand.id), brand.name, brand.domain,
-            summary=summary, competitors=competitors,
-            crawl_content=crawl_content, agent_name=self.name,
+            str(brand.id), brand.name, brand.domain, summary, self.name,
         )
 
         # 4. Run probe scan on top 3 queries

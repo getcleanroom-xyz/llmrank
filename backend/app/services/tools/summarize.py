@@ -1,21 +1,45 @@
-"""Summarize tool — extract structured company info from crawled content."""
-import json
+"""Summarize tool — extract structured company info from crawled content + Google search."""
 import logging
 
 logger = logging.getLogger(__name__)
 
 
 async def summarize_company(crawl_content: str, brand_name: str, domain: str) -> dict:
-    """Summarize what a company does based on crawled content.
+    """Summarize what a company does based on crawled content and Google search.
 
+    Combines website content with Google search results for comprehensive info.
     Returns structured data: description, industry, category, features, competitors, use_cases.
     """
     from app.services.tools.llm import call_llm_json
+    from app.services.tools.google_search import search_google
 
-    prompt = f"""Analyze this website content for {brand_name} ({domain}) and extract structured information.
+    # Get Google search results for additional context
+    search_results = await search_google(brand_name, domain)
 
-WEBSITE CONTENT:
-{crawl_content[:4000]}
+    # Combine crawl content and search results
+    context_parts = []
+    if crawl_content:
+        context_parts.append(f"WEBSITE CONTENT:\n{crawl_content}")
+    if search_results:
+        context_parts.append(f"GOOGLE SEARCH RESULTS:\n{search_results}")
+
+    if not context_parts:
+        return {
+            "description": f"{brand_name} at {domain}",
+            "industry": None,
+            "category": None,
+            "key_features": [],
+            "target_audience": None,
+            "use_cases": [],
+            "competitors_mentioned": [],
+            "value_proposition": None,
+        }
+
+    full_context = "\n\n".join(context_parts)
+
+    prompt = f"""Analyze this information about {brand_name} ({domain}) and extract structured company data.
+
+{full_context}
 
 Return a JSON object with exactly these fields:
 {{
@@ -30,8 +54,8 @@ Return a JSON object with exactly these fields:
 }}
 
 RULES:
-- Base everything ONLY on the content above
-- If information is not available, use null
+- Combine information from both website content and search results
+- If information is not available in either source, use null
 - Be specific, not generic
 - Return ONLY the JSON object, no text before or after"""
 
@@ -43,14 +67,14 @@ RULES:
     try:
         result = await call_llm_json(messages, model_key="chatgpt", temperature=0.2, max_tokens=1024)
         if isinstance(result, dict):
-            logger.info("Summarized %s: industry=%s, category=%s, features=%d",
+            logger.info("Summarized %s: industry=%s, category=%s, features=%d, competitors=%d",
                         brand_name, result.get("industry"), result.get("category"),
-                        len(result.get("key_features", [])))
+                        len(result.get("key_features", [])),
+                        len(result.get("competitors_mentioned", [])))
             return result
     except Exception as e:
         logger.warning("Summarize failed for %s: %s", brand_name, e)
 
-    # Fallback
     return {
         "description": f"{brand_name} at {domain}",
         "industry": None,
