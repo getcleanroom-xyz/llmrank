@@ -75,10 +75,12 @@ class EventBus:
         self._event_log.append(event)
 
         subs = self._subscriptions.get(topic, [])
-        for sub in subs:
-            if not sub.matches(event):
-                continue
-            await self._deliver_with_retry(sub, event)
+        matching = [sub for sub in subs if sub.matches(event)]
+        if matching:
+            await asyncio.gather(
+                *(self._deliver_with_retry(sub, event) for sub in matching),
+                return_exceptions=True,
+            )
 
         return event
 

@@ -69,14 +69,21 @@ _pending_registrations: dict[str, dict] = {}
 _pending_reg_timestamps: dict[str, float] = {}
 
 REGISTRATION_TTL = 300  # 5 minutes
+MAX_PENDING_REGISTRATIONS = 1000
 
 def _cleanup_pending_registrations():
-    """Remove expired pending registrations to prevent memory leak."""
+    """Remove expired pending registrations and enforce max size."""
     now = time.time()
     expired = [k for k, ts in _pending_reg_timestamps.items() if now - ts > REGISTRATION_TTL]
     for k in expired:
         _pending_registrations.pop(k, None)
         _pending_reg_timestamps.pop(k, None)
+    # Enforce max size even if TTL hasn't expired
+    if len(_pending_registrations) > MAX_PENDING_REGISTRATIONS:
+        oldest = sorted(_pending_reg_timestamps, key=_pending_reg_timestamps.get)[:len(_pending_registrations) - MAX_PENDING_REGISTRATIONS]
+        for k in oldest:
+            _pending_registrations.pop(k, None)
+            _pending_reg_timestamps.pop(k, None)
 
 
 async def get_current_user(request: Request, db: AsyncSession = Depends(get_db)) -> User:

@@ -269,15 +269,17 @@ async def stream_scan_progress(
 ):
     async def event_generator() -> AsyncGenerator[str, None]:
         from app.core.database import AsyncSessionLocal
+
+        # Verify brand ownership once upfront
         async with AsyncSessionLocal() as db:
-            # Verify brand ownership
             brand_result = await db.execute(Brand.active().where(Brand.id == brand_id, Brand.owner_id == user.id))
             if not brand_result.scalar_one_or_none():
                 yield f"data: {json.dumps({'error': 'brand not found'})}\n\n"
                 return
 
-            for _ in range(60):  # Poll up to 60s
-                try:
+        for _ in range(60):  # Poll up to 60s
+            try:
+                async with AsyncSessionLocal() as db:
                     result = await db.execute(select(Scan).where(Scan.id == scan_id, Scan.brand_id == brand_id))
                     scan = result.scalar_one_or_none()
                     if not scan:
@@ -294,11 +296,11 @@ async def stream_scan_progress(
                     if scan.status in (ScanStatus.completed, ScanStatus.failed):
                         break
 
-                    await asyncio.sleep(2)
-                except asyncio.CancelledError:
-                    break
-                except Exception as e:
-                    logger.warning("SSE poll error for scan %s: %s", scan_id, e)
-                    break
+                await asyncio.sleep(2)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.warning("SSE poll error for scan %s: %s", scan_id, e)
+                break
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")

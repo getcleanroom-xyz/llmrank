@@ -76,7 +76,7 @@ async def register_start(body: RegisterStartRequest, request: Request, response:
     except Exception as e:
         _pending_registrations.pop(temp_id, None)
         logger.exception("Registration start failed")
-        raise HTTPException(500, f"Registration failed: {str(e)}")
+        raise HTTPException(500, "Registration failed")
 
 
 @router.post("/register/finish")
@@ -158,7 +158,7 @@ async def register_finish(body: RegisterFinishRequest, request: Request, respons
         raise HTTPException(500, "WebAuthn library not installed")
     except Exception as e:
         logger.exception("Registration finish failed")
-        raise HTTPException(400, f"Registration failed: {str(e)}")
+        raise HTTPException(400, "Registration failed")
 
 
 # ─── Login ────────────────────────────────────────────────────────────────────
@@ -205,7 +205,7 @@ async def login_start(body: LoginStartRequest, request: Request, response: Respo
         raise HTTPException(500, "WebAuthn library not installed")
     except Exception as e:
         logger.exception("Login start failed")
-        raise HTTPException(500, f"Login failed: {str(e)}")
+        raise HTTPException(500, "Login failed")
 
 
 @router.post("/login/finish")
@@ -268,7 +268,7 @@ async def login_finish(body: LoginFinishRequest, request: Request, response: Res
         raise HTTPException(500, "WebAuthn library not installed")
     except Exception as e:
         logger.exception("Login finish failed")
-        raise HTTPException(400, f"Login failed: {str(e)}")
+        raise HTTPException(400, "Login failed")
 
 
 # ─── Email + Password Auth (fallback) ──────────────────────────────────────────

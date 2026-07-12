@@ -122,8 +122,21 @@ async def deduct_credits(db: AsyncSession, amount: int, description: str, user_i
 
 
 async def grant_credits(db: AsyncSession, amount: int, description: str, tx_type: str, user_id: uuid.UUID) -> CreditWallet:
-    """Add credits to wallet. Returns updated wallet."""
-    wallet = await get_or_create_wallet(db, user_id)
+    """Add credits to wallet with row-level locking. Returns updated wallet."""
+    result = await db.execute(
+        select(CreditWallet).where(CreditWallet.user_id == user_id).with_for_update()
+    )
+    wallet = result.scalar_one_or_none()
+    if not wallet:
+        wallet = CreditWallet(
+            id=uuid.uuid4(),
+            user_id=user_id,
+            balance=FREE_CREDITS,
+            total_purchased=0,
+            total_used=0,
+        )
+        db.add(wallet)
+        await db.flush()
     wallet.balance += amount
     wallet.total_purchased += amount
 

@@ -78,6 +78,7 @@ async def dispatch_campaign(db: AsyncSession, campaign_id: uuid.UUID, base_url: 
     template_vars = campaign.template_vars
 
     sent = 0
+    failed = 0
     for recipient in recipients:
         user = users_map.get(recipient.user_id) if recipient.user_id else None
         ctx = _build_recipient_vars(user, recipient.email, template_vars)
@@ -91,8 +92,10 @@ async def dispatch_campaign(db: AsyncSession, campaign_id: uuid.UUID, base_url: 
         else:
             recipient.status = RecipientStatus.failed
             recipient.error = err
+            failed += 1
             logger.error("Failed to send campaign %s to %s: %s", campaign.id, recipient.email, err)
-        await db.flush()
+
+    await db.flush()
 
     campaign.sent_count += sent
     campaign.last_sent_at = _utcnow()
