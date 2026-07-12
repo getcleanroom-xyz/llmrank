@@ -1,6 +1,7 @@
 """Website crawler — fetches multiple pages from a domain for content analysis."""
 import re
 import logging
+from html.parser import HTMLParser
 from urllib.parse import urljoin, urlparse
 
 import httpx
@@ -13,32 +14,53 @@ MAX_TOTAL_CONTENT = 8000
 PRIORITY_PATHS = ["/about", "/product", "/products", "/pricing", "/features",
                   "/solutions", "/docs", "/use-cases", "/customers"]
 
+# Tags to skip entirely (no text extracted)
+SKIP_TAGS = {"script", "style", "nav", "footer", "header", "noscript", "svg", "iframe"}
+
+
+class HTMLTextExtractor(HTMLParser):
+    """Extract visible text from HTML, preserving structure."""
+
+    def __init__(self):
+        super().__init__()
+        self.text_parts: list[str] = []
+        self.skip_depth = 0
+
+    def handle_starttag(self, tag, attrs):
+        if tag in SKIP_TAGS:
+            self.skip_depth += 1
+        elif tag in ("p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "li", "br", "tr"):
+            if self.skip_depth == 0:
+                self.text_parts.append("\n")
+
+    def handle_endtag(self, tag):
+        if tag in SKIP_TAGS:
+            self.skip_depth = max(0, self.skip_depth - 1)
+        elif tag in ("p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "li", "tr"):
+            if self.skip_depth == 0:
+                self.text_parts.append("\n")
+
+    def handle_data(self, data):
+        if self.skip_depth == 0:
+            self.text_parts.append(data)
+
+    def get_text(self) -> str:
+        text = "".join(self.text_parts)
+        # Decode common HTML entities
+        text = text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+        text = text.replace("&quot;", '"').replace("&#x27;", "'").replace("&nbsp;", " ")
+        text = text.replace("&#39;", "'").replace("&rsquo;", "'").replace("&lsquo;", "'")
+        # Collapse whitespace but preserve newlines
+        text = re.sub(r"[^\S\n]+", " ", text)
+        text = re.sub(r"\n{3,}", "\n\n", text)
+        return text.strip()[:MAX_CONTENT_PER_PAGE]
+
 
 def extract_text(html: str) -> str:
-    """Extract visible text from HTML, preserving paragraph structure."""
-    # Remove script, style, nav, footer
-    text = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL | re.IGNORECASE)
-    text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL | re.IGNORECASE)
-    text = re.sub(r"<nav[^>]*>.*?</nav>", "", text, flags=re.DOTALL | re.IGNORECASE)
-    text = re.sub(r"<footer[^>]*>.*?</footer>", "", text, flags=re.DOTALL | re.IGNORECASE)
-
-    # Convert block elements to newlines
-    text = re.sub(r"<(p|div|h[1-6]|li|br)[^>]*>", "\n", text, flags=re.IGNORECASE)
-    text = re.sub(r"</(p|div|h[1-6]|li)>", "\n", text, flags=re.IGNORECASE)
-
-    # Remove remaining tags
-    text = re.sub(r"<[^>]+>", " ", text)
-
-    # Decode HTML entities
-    text = text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
-    text = text.replace("&quot;", '"').replace("&#x27;", "'").replace("&nbsp;", " ")
-
-    # Collapse whitespace but preserve newlines
-    text = re.sub(r"[^\S\n]+", " ", text)
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    text = text.strip()
-
-    return text[:MAX_CONTENT_PER_PAGE]
+    """Extract visible text from HTML using proper parsing."""
+    parser = HTMLTextExtractor()
+    parser.feed(html)
+    return parser.get_text()
 
 
 def extract_links(html: str, base_url: str, visited: set) -> list[str]:
