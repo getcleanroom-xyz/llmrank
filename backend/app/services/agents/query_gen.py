@@ -290,6 +290,10 @@ class QueryGenAgent(BaseAgent):
                 seen[name.lower()] = {"name": name, "domain": "", "relevance_score": 5}
         competitors = sorted(seen.values(), key=lambda c: c.get("relevance_score", 0), reverse=True)[:10]
 
+        # Fill in missing domains via web search
+        from app.services.competitor_service import fill_missing_domains
+        competitors = await fill_missing_domains(competitors)
+
         if competitors_need_refresh(competitors):
             async with httpx.AsyncClient(timeout=30) as client:
                 competitors = await crawl_competitor_sites(competitors)
@@ -328,6 +332,10 @@ class QueryGenAgent(BaseAgent):
             if n.lower() not in seen:
                 seen[n.lower()] = {"name": n, "domain": "", "relevance_score": 5}
         competitors = sorted(seen.values(), key=lambda c: c.get("relevance_score", 0), reverse=True)[:10]
+
+        # Fill in missing domains via web search
+        from app.services.competitor_service import fill_missing_domains
+        competitors = await fill_missing_domains(competitors)
 
         # 3. Generate queries using summary
         queries = await generate_queries(

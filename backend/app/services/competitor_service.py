@@ -168,3 +168,33 @@ def competitors_need_refresh(competitors: list[dict], ttl_days: int = 7) -> bool
         except Exception:
             return True
     return False
+
+
+async def fill_missing_domains(competitors: list[dict]) -> list[dict]:
+    """Look up domains for competitors that don't have one via web search."""
+    try:
+        from duckduckgo_search import DDGS
+    except ImportError:
+        return competitors
+
+    for comp in competitors:
+        if comp.get("domain"):
+            continue
+        name = comp.get("name", "")
+        if not name:
+            continue
+        try:
+            with DDGS() as ddgs:
+                results = list(ddgs.text(f"{name} official website", max_results=3))
+            for r in results:
+                href = r.get("href", "")
+                # Extract domain from URL
+                from urllib.parse import urlparse
+                parsed = urlparse(href)
+                domain = parsed.netloc.lower().replace("www.", "")
+                if domain and "." in domain and _is_valid_domain(domain):
+                    comp["domain"] = domain
+                    break
+        except Exception:
+            continue
+    return competitors
