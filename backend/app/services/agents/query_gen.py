@@ -252,26 +252,37 @@ class QueryGenAgent(BaseAgent):
     async def suggest(self, brand, user_competitors: list[str]) -> dict:
         """Full query suggestion pipeline (for the suggest_queries endpoint)."""
         from app.services.competitor_service import (
-            classify_brand, discover_competitors_from_crawl,
-            discover_competitors_by_category, crawl_competitor_sites, competitors_need_refresh,
+            discover_competitors_from_crawl, discover_competitors_by_category,
+            crawl_competitor_sites, competitors_need_refresh,
         )
         from app.services.skills.manage_queries import generate_queries
+        from app.services.tools.summarize import summarize_company
         from app.services.crawler import crawl_website
         import httpx
 
-        # Crawl the brand's website (up to 6 pages)
+        # 1. Crawl the brand's website (up to 6 pages)
         crawl_content = await crawl_website(brand.domain)
 
+        # 2. Summarize what the company does
+        summary = await summarize_company(crawl_content, brand.name, brand.domain)
+        logger.info("Summary for %s: industry=%s, category=%s, features=%s",
+                     brand.name, summary.get("industry"), summary.get("category"),
+                     summary.get("key_features", [])[:3])
+
+        # 3. Discover competitors from crawled content and category
         async with httpx.AsyncClient(timeout=30) as client:
-            classification = await classify_brand(crawl_content, brand.name, brand.domain, client)
             from_crawl = await discover_competitors_from_crawl(crawl_content, client)
-            from_category = await discover_competitors_by_category(classification, client)
+            from_category = await discover_competitors_by_category(summary, client)
 
         seen = {}
         for c in from_crawl + from_category:
             name_lower = c.get("name", "").lower()
             if name_lower and name_lower != brand.name.lower():
                 seen[name_lower] = c
+        # Add competitors from summary
+        for name in summary.get("competitors_mentioned", []):
+            if name.lower() not in seen:
+                seen[name.lower()] = {"name": name, "domain": "", "relevance_score": 4}
         for name in user_competitors:
             if name.lower() not in seen:
                 seen[name.lower()] = {"name": name, "domain": "", "relevance_score": 5}
@@ -281,39 +292,52 @@ class QueryGenAgent(BaseAgent):
             async with httpx.AsyncClient(timeout=30) as client:
                 competitors = await crawl_competitor_sites(competitors)
 
+        # 4. Generate queries using summary
         queries = await generate_queries(
-            str(brand.id), brand.name, brand.domain, classification, competitors, crawl_content, self.name
+            str(brand.id), brand.name, brand.domain,
+            summary=summary, competitors=competitors,
+            crawl_content=crawl_content, agent_name=self.name,
         )
 
-        return {"classification": classification, "competitors": competitors, "queries": queries}
+        return {"summary": summary, "competitors": competitors, "queries": queries}
 
     async def probe(self, brand) -> dict:
         """Run probe scan on generated queries."""
         from app.services.llm_core import scan_all_llms, _call_openrouter, _parse_json
-        from app.services.competitor_service import classify_brand, discover_competitors_from_crawl, discover_competitors_by_category
+        from app.services.competitor_service import discover_competitors_from_crawl, discover_competitors_by_category
         from app.services.skills.manage_queries import generate_queries
+        from app.services.tools.summarize import summarize_company
         from app.services.crawler import crawl_website
         import httpx
 
-        async with httpx.AsyncClient(timeout=60) as client:
-            # Crawl the brand's website (up to 6 pages)
-            crawl_content = await crawl_website(brand.domain)
+        # 1. Crawl and summarize
+        crawl_content = await crawl_website(brand.domain)
+        summary = await summarize_company(crawl_content, brand.name, brand.domain)
 
-            classification = await classify_brand(crawl_content, brand.name, brand.domain, client)
+        # 2. Discover competitors
+        async with httpx.AsyncClient(timeout=30) as client:
             from_crawl = await discover_competitors_from_crawl(crawl_content, client)
-            from_category = await discover_competitors_by_category(classification, client)
-            user_comps = [c.get("name", "") for c in (brand.competitors or [])]
-            seen = {c.get("name", "").lower(): c for c in from_crawl + from_category if c.get("name", "").lower() != brand.name.lower()}
-            for n in user_comps:
-                if n.lower() not in seen:
-                    seen[n.lower()] = {"name": n, "domain": "", "relevance_score": 5}
-            competitors = sorted(seen.values(), key=lambda c: c.get("relevance_score", 0), reverse=True)[:10]
+            from_category = await discover_competitors_by_category(summary, client)
 
-            queries = await generate_queries(
-                str(brand.id), brand.name, brand.domain, classification, competitors, crawl_content, self.name
-            )
+        user_comps = [c.get("name", "") for c in (brand.competitors or [])]
+        seen = {c.get("name", "").lower(): c for c in from_crawl + from_category if c.get("name", "").lower() != brand.name.lower()}
+        for name in summary.get("competitors_mentioned", []):
+            if name.lower() not in seen:
+                seen[name.lower()] = {"name": name, "domain": "", "relevance_score": 4}
+        for n in user_comps:
+            if n.lower() not in seen:
+                seen[n.lower()] = {"name": n, "domain": "", "relevance_score": 5}
+        competitors = sorted(seen.values(), key=lambda c: c.get("relevance_score", 0), reverse=True)[:10]
 
-            # Run probe scan on top 3 queries
+        # 3. Generate queries using summary
+        queries = await generate_queries(
+            str(brand.id), brand.name, brand.domain,
+            summary=summary, competitors=competitors,
+            crawl_content=crawl_content, agent_name=self.name,
+        )
+
+        # 4. Run probe scan on top 3 queries
+        async with httpx.AsyncClient(timeout=60) as client:
             probe_queries = sorted(queries, key=lambda q: q.get("score", 0), reverse=True)[:3]
             raw = await scan_all_llms(
                 [(q["query_text"], q["query_text"]) for q in probe_queries],
@@ -334,4 +358,4 @@ class QueryGenAgent(BaseAgent):
             except Exception:
                 probe = {"insights": [], "summary": "Probe analysis unavailable"}
 
-        return {"queries": queries, "probe_result": probe}
+        return {"summary": summary, "queries": queries, "probe_result": probe}

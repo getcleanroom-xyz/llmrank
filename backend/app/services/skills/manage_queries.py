@@ -24,40 +24,60 @@ async def generate_queries(brand_id: str, brand_name: str, domain: str,
                            classification: dict | None = None,
                            competitors: list[dict] | None = None,
                            crawl_content: str = "",
+                           summary: dict | None = None,
                            agent_name: str = "query_gen") -> list[dict]:
     """Generate new search queries for a brand using LLM.
 
+    Args:
+        summary: Optional pre-computed summary from summarize_company()
+        classification: Fallback if summary not provided
+        competitors: List of competitor dicts
+        crawl_content: Raw crawled content
+
     Returns list of {query_text, query_type, score}.
     """
-    classification = classification or {"industry": "unknown", "sub_category": ""}
-    competitors = competitors or []
-    comp_str = ", ".join(c.get("name", "") for c in competitors[:8])
+    # Build prompt from summary if available, otherwise fallback to classification
+    if summary:
+        product_desc = summary.get("description", "")
+        industry = summary.get("industry", "unknown")
+        category = summary.get("category", "unknown")
+        features = summary.get("key_features", [])
+        use_cases = summary.get("use_cases", [])
+        audience = summary.get("target_audience", "")
+        value_prop = summary.get("value_proposition", "")
+        mentioned_competitors = summary.get("competitors_mentioned", [])
+        comp_str = ", ".join(mentioned_competitors[:5])
+    else:
+        classification = classification or {"industry": "unknown", "sub_category": ""}
+        product_desc = crawl_content[:500] if crawl_content else f"{brand_name} at {domain}"
+        industry = classification.get("industry", "unknown")
+        category = classification.get("sub_category", "unknown")
+        features = []
+        use_cases = []
+        audience = ""
+        value_prop = ""
+        competitors = competitors or []
+        comp_str = ", ".join(c.get("name", "") for c in competitors[:5])
 
-    # Build a clear description of what the product does from crawled content
-    product_desc = ""
-    if crawl_content:
-        # Clean: remove page markers like [/], normalize whitespace
-        cleaned = re.sub(r"\[[^\]]*\]\s*", "", crawl_content)
-        cleaned = re.sub(r"\s+", " ", cleaned).strip()
-        product_desc = cleaned[:800]
-    if not product_desc:
-        product_desc = f"{brand_name} at {domain}"
-
-    logger.info("Query gen for %s: product_desc=%s", brand_name, product_desc[:200])
-    logger.info("Query gen for %s: classification=%s", brand_name, classification)
-    logger.info("Query gen for %s: competitors=%s", brand_name, comp_str)
+    logger.info("Query gen for %s: industry=%s, category=%s, features=%s",
+                brand_name, industry, category, features[:3])
 
     prompt = (
         f"Generate 20 conversational questions that people would ask an AI assistant "
         f"when researching a product like {brand_name}.\n\n"
-        f"IMPORTANT: {brand_name} is described below. Base your questions ONLY on this description.\n\n"
-        f"PRODUCT DESCRIPTION:\n{product_desc}\n\n"
-        f"Industry: {classification.get('industry', 'unknown')}\n"
-        f"Category: {classification.get('sub_category', 'unknown')}\n"
-        f"Competitors: {comp_str or 'none known'}\n\n"
+        f"PRODUCT: {brand_name}\n"
+        f"DESCRIPTION: {product_desc}\n"
+        f"INDUSTRY: {industry}\n"
+        f"CATEGORY: {category}\n"
+        f"KEY FEATURES: {', '.join(features[:5]) if features else 'unknown'}\n"
+        f"TARGET AUDIENCE: {audience or 'unknown'}\n"
+        f"USE CASES: {', '.join(use_cases[:3]) if use_cases else 'unknown'}\n"
+        f"COMPETITORS: {comp_str or 'none known'}\n"
+        f"VALUE PROP: {value_prop or 'unknown'}\n\n"
         f"RULES:\n"
-        f"- Questions must be about the specific type of product described above\n"
-        f"- Do NOT generate questions about unrelated topics\n"
+        f"- Questions must be directly about THIS specific product type\n"
+        f"- Use the DESCRIPTION and USE CASES above as the source of truth\n"
+        f"- Do NOT generate generic questions unrelated to this product\n"
         f"- Do NOT include the brand name {brand_name} in questions\n\n"
         f'Return ONLY a valid JSON array: [{{"query_text":"...","query_type":"workflow","score":1-5}}]'
     )
@@ -66,7 +86,7 @@ async def generate_queries(brand_id: str, brand_name: str, domain: str,
         {"role": "developer", "content": (
             "You are a UX researcher. Generate questions people ask when researching "
             "a SPECIFIC type of product. The questions must be directly relevant to what "
-            "this product does. Return ONLY a valid JSON array."
+            "this product does, based on the description provided. Return ONLY a valid JSON array."
         )},
         {"role": "user", "content": prompt},
     ]
