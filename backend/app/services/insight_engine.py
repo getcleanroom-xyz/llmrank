@@ -11,6 +11,19 @@ INSIGHT_DEVELOPER = (
     "No text outside the array. Insights must be concrete — not generic advice."
 )
 
+DIAGNOSIS_PROMPT_ADDENDUM = (
+    "\n\nDIAGNOSTIC DATA:\n"
+    "For each topic where the brand was NOT mentioned, I checked whether the brand already has content "
+    "about that topic on their website. The results are included below.\n\n"
+    "Use this to differentiate your recommendations:\n"
+    "- If content EXISTS but brand is still not mentioned → the issue is DISCOVERABILITY or TRUST. "
+    "Recommend structural fixes: clearer headings, schema markup, better page structure, "
+    "stronger associations with the topic, or authority-building.\n"
+    "- If content is MISSING → recommend creating targeted content about the topic.\n"
+    "- NEVER recommend 'create more content' if the content already exists. That would be redundant.\n"
+    "- Be specific about which fix applies. 'Improve your content' is too vague."
+)
+
 
 async def _call_llm(messages: list[dict]) -> str:
     """Called via llm_adapters._call_openrouter — but we need a client."""
@@ -19,6 +32,49 @@ async def _call_llm(messages: list[dict]) -> str:
     import httpx
     async with httpx.AsyncClient(timeout=15) as client:
         return await _call_openrouter(messages, "chatgpt", client, temperature=0.3, max_tokens=512)
+
+
+async def diagnose_visibility_gap(brand_name: str, brand_domain: str, query_text: str) -> dict:
+    """Check whether a brand already has content about a query topic.
+
+    Returns {"exists": bool, "evidence": str} indicating whether content exists
+    and what evidence was found.
+    """
+    try:
+        from duckduckgo_search import DDGS
+
+        # Search for the brand's content about this topic
+        search_query = f'"{brand_name}" {query_text}'
+        with DDGS() as ddgs:
+            results = list(ddgs.text(search_query, max_results=5))
+
+        # Check if the brand's domain appears in results
+        brand_domain_lower = brand_domain.lower().replace("www.", "")
+        for r in results:
+            href = r.get("href", "").lower()
+            if brand_domain_lower in href:
+                return {
+                    "exists": True,
+                    "evidence": f"Found on {href}: {r.get('body', '')[:150]}",
+                }
+
+        # Also check if brand name appears in any result snippet
+        for r in results:
+            body = r.get("body", "")
+            if brand_name.lower() in body.lower():
+                return {
+                    "exists": True,
+                    "evidence": f"Mentioned in: {body[:150]}",
+                }
+
+        return {"exists": False, "evidence": "No content found for this topic"}
+
+    except ImportError:
+        logger.debug("ddgs not installed — skipping content diagnosis")
+        return {"exists": False, "evidence": "Diagnosis unavailable"}
+    except Exception as e:
+        logger.debug("Content diagnosis failed for '%s': %s", query_text, e)
+        return {"exists": False, "evidence": "Diagnosis failed"}
 
 
 async def generate_insights_for_query(
@@ -108,6 +164,23 @@ async def generate_dashboard_insights(
         llm_name = llm.title() if hasattr(llm, "title") else llm
         lines.append(f"  {llm_name}: avg score {avg_score:.0f}/100, mentioned {mentioned}/{total}{comp_str}")
 
+    # Diagnose visibility gaps for queries where brand was NOT mentioned
+    diagnosis_lines = []
+    if brand_domain:
+        # Group results by query to find fully-missed queries
+        query_results = defaultdict(list)
+        for r in all_results:
+            query_results[r.query_text].append(r)
+
+        for query_text, results in query_results.items():
+            if not any(r.mentioned for r in results):
+                # Brand was completely absent — check if content exists
+                diag = await diagnose_visibility_gap(brand_name, brand_domain, query_text)
+                status = "EXISTS" if diag["exists"] else "MISSING"
+                diagnosis_lines.append(
+                    f"  [{status}] \"{query_text}\" — {diag['evidence']}"
+                )
+
     industry = classification.get("sub_category", classification.get("industry", "unknown")) if classification else "unknown"
 
     user_msg = (
@@ -117,8 +190,18 @@ async def generate_dashboard_insights(
         f"Scan results across all queries:\n" + "\n".join(lines)
     )
 
+    if diagnosis_lines:
+        user_msg += (
+            f"\n\nContent diagnosis for queries where brand was absent:\n"
+            + "\n".join(diagnosis_lines)
+        )
+
+    prompt = INSIGHT_DEVELOPER
+    if diagnosis_lines:
+        prompt += DIAGNOSIS_PROMPT_ADDENDUM
+
     messages = [
-        {"role": "developer", "content": INSIGHT_DEVELOPER},
+        {"role": "developer", "content": prompt},
         {"role": "user", "content": user_msg},
     ]
 
