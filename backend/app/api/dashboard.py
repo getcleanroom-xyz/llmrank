@@ -1,5 +1,6 @@
 import uuid
 import logging
+import re
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
