@@ -8,18 +8,36 @@ import httpx
 logger = logging.getLogger(__name__)
 
 MAX_PAGES = 6
-MAX_CONTENT_PER_PAGE = 1500
-MAX_TOTAL_CONTENT = 6000
+MAX_CONTENT_PER_PAGE = 2000
+MAX_TOTAL_CONTENT = 8000
 PRIORITY_PATHS = ["/about", "/product", "/products", "/pricing", "/features",
                   "/solutions", "/docs", "/use-cases", "/customers"]
 
 
 def extract_text(html: str) -> str:
-    """Extract visible text from HTML, stripping tags and scripts."""
+    """Extract visible text from HTML, preserving paragraph structure."""
+    # Remove script, style, nav, footer
     text = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"<nav[^>]*>.*?</nav>", "", text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"<footer[^>]*>.*?</footer>", "", text, flags=re.DOTALL | re.IGNORECASE)
+
+    # Convert block elements to newlines
+    text = re.sub(r"<(p|div|h[1-6]|li|br)[^>]*>", "\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"</(p|div|h[1-6]|li)>", "\n", text, flags=re.IGNORECASE)
+
+    # Remove remaining tags
     text = re.sub(r"<[^>]+>", " ", text)
-    text = re.sub(r"\s+", " ", text).strip()
+
+    # Decode HTML entities
+    text = text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+    text = text.replace("&quot;", '"').replace("&#x27;", "'").replace("&nbsp;", " ")
+
+    # Collapse whitespace but preserve newlines
+    text = re.sub(r"[^\S\n]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    text = text.strip()
+
     return text[:MAX_CONTENT_PER_PAGE]
 
 
@@ -69,9 +87,11 @@ async def crawl_website(domain: str, max_pages: int = MAX_PAGES) -> str:
                         continue
                     text = extract_text(resp.text)
                     if len(text) > 100:
-                        all_content.append(f"[{urlparse(url).path or '/'}] {text}")
+                        path = urlparse(url).path or "/"
+                        all_content.append(f"=== Page: {path} ===\n{text}")
                     links = extract_links(resp.text, url, visited)
                     all_links.extend(links)
+                    logger.debug("Crawled %s: %d chars", url, len(text))
                 except Exception as e:
                     logger.debug("Failed to crawl %s: %s", url, e)
                     continue
@@ -89,7 +109,7 @@ async def crawl_website(domain: str, max_pages: int = MAX_PAGES) -> str:
                             if resp.status_code == 200:
                                 text = extract_text(resp.text)
                                 if len(text) > 100:
-                                    all_content.append(f"[{path}] {text}")
+                                    all_content.append(f"=== Page: {path} ===\n{text}")
                                     visited.add(candidate)
                         except Exception:
                             pass
