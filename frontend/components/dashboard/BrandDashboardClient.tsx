@@ -20,7 +20,7 @@ import { ScoreHistoryChart } from "@/components/dashboard/ScoreHistoryChart";
 import { ScanHistory } from "@/components/dashboard/ScanHistory";
 import { ChatWidget } from "@/components/ChatWidget";
 
-type Tab = "overview" | "queries" | "scans" | "competitors";
+type Tab = "overview" | "prompts" | "scans" | "competitors";
 
 function Scribble({ color = "var(--primary)", style }: { color?: string; style?: React.CSSProperties }) {
   return (
@@ -57,7 +57,7 @@ function BrandDashboardPageInner() {
     const handler = () => {
       const params = new URLSearchParams(window.location.search);
       const t = params.get("tab") as Tab;
-      if (t && ["overview", "queries", "scans", "competitors"].includes(t)) {
+      if (t && ["overview", "prompts", "scans", "competitors"].includes(t)) {
         setTabState(t);
       }
     };
@@ -163,7 +163,7 @@ function BrandDashboardPageInner() {
             <path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round" fill="none" />
           </svg>
           <div role="tablist" style={{ display: "flex", gap: 4, marginLeft: "auto" }}>
-            {(["overview", "queries", "scans", "competitors"] as Tab[]).map((t) => (
+            {(["overview", "prompts", "scans", "competitors"] as Tab[]).map((t) => (
               <button key={t} role="tab" aria-selected={t === tab} onClick={() => setTab(t)} className={`tab ${t === tab ? "tab-active" : ""}`}>{t}</button>
             ))}
           </div>
@@ -223,7 +223,7 @@ function BrandDashboardPageInner() {
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: "var(--gap)" }}>
               {[
                 { val: `${mention_rate}%`, label: "mention rate", bg: "#FFF9DB", acc: "var(--primary)", rot: "-0.3deg" },
-                { val: data.queries_monitored, label: "queries", bg: "#DBEAFF", acc: "#3B82F6", rot: "0.4deg" },
+                { val: data.queries_monitored, label: "prompts", bg: "#DBEAFF", acc: "#3B82F6", rot: "0.4deg" },
                 { val: top_competitor ?? "none", label: "top competitor", bg: top_competitor ? "#FEE2E2" : "#E6F9ED", acc: top_competitor ? "#991B1B" : "#22C55E", rot: "-0.4deg" },
                 { val: llm_breakdown.length || "-", label: "LLMs tracked", bg: "#F3E8FF", acc: "#A855F7", rot: "0.3deg" },
               ].map((s, i) => (
@@ -283,10 +283,10 @@ function BrandDashboardPageInner() {
             <div className="dashboard-bottom-grid" style={{ marginBottom: "var(--gap)" }}>
               <div className="card dashboard-bottom-queries" style={{ position: "relative", transform: "rotate(-0.15deg)", borderTop: "4px solid #22C55E" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <div className="section-label" style={{ marginBottom: 0 }}>Queries</div>
+                  <div className="section-label" style={{ marginBottom: 0 }}>Prompts</div>
                   <Scribble color="#22C55E" />
                 </div>
-                <QueryChipsPanel queries={displayQueries} brandId={brandId} onManageQueries={() => setTab("queries")} />
+                <QueryChipsPanel queries={displayQueries} brandId={brandId} onManageQueries={() => setTab("prompts")} />
               </div>
               <div className="card" style={{ transform: "rotate(0.15deg)", borderTop: "4px solid #A855F7" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
@@ -312,7 +312,7 @@ function BrandDashboardPageInner() {
           </>
         )}
 
-        {tab === "queries" && (
+        {tab === "prompts" && (
           <QueriesTable brandId={brandId} brandName={brand.name} domain={brand.domain} />
         )}
 

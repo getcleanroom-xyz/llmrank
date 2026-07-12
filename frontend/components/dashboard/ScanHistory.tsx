@@ -115,7 +115,7 @@ function ExpandedScan({ scanId, brandId }: { scanId: string; brandId: string }) 
 
   if (isLoading) return <div style={{ padding: "8px 0", fontSize: 11, color: "var(--text-muted)" }}>Loading results...</div>;
   if (error) return <div style={{ padding: "8px 0", fontSize: 11, color: "var(--red)" }}>{error instanceof Error ? error.message : "Failed to load"}</div>;
-  if (!data || data.query_summaries.length === 0) return <div style={{ padding: "8px 0", fontSize: 11, color: "var(--text-muted)" }}>No query results</div>;
+  if (!data || data.query_summaries.length === 0) return <div style={{ padding: "8px 0", fontSize: 11, color: "var(--text-muted)" }}>No prompt results</div>;
 
   return (
     <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1.5px solid var(--bg-dark)" }} onClick={(e) => e.stopPropagation()}>

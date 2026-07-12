@@ -80,7 +80,7 @@ export function CompetitorsTab({ brandId }: { brandId: string }) {
                   <strong>{c.name}</strong>
                   <span style={{ fontSize: 10, fontWeight: 700, color: t.color, background: t.bg, padding: "1px 6px", borderRadius: 4 }}>{t.label}</span>
                 </div>
-                {c.beats_you ? `${c.name} beats you in ${c.beats_you} queries. ` : ""}
+                {c.beats_you ? `${c.name} beats you in ${c.beats_you} prompts. ` : ""}
                 Appears in {c.mention_pct}% of responses.{" "}
                 <a href={`/brands/${bid}/competitors/${encodeURIComponent(c.name)}`} style={{ color: "var(--primary)", fontWeight: 600, textDecoration: "underline" }}>Analyze &rarr;</a>
               </div>
@@ -124,7 +124,7 @@ export function CompetitorsTab({ brandId }: { brandId: string }) {
                 </div>
                 <span style={{ fontSize: 13, fontWeight: 800 }}>{c.mention_pct}%</span>
               </div>
-              {c.beats_you ? <div style={{ fontSize: 11, color: "#991B1B", fontWeight: 600, marginTop: 3 }}>Beats you in {c.beats_you} queries</div> : null}
+              {c.beats_you ? <div style={{ fontSize: 11, color: "#991B1B", fontWeight: 600, marginTop: 3 }}>Beats you in {c.beats_you} prompts</div> : null}
               <div style={{ color: "var(--text-muted)", marginTop: 4, fontWeight: 600, fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 13 }}>click for detail &rarr;</div>
             </div>
           );

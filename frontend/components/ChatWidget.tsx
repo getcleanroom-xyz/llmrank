@@ -26,7 +26,7 @@ function LaiIcon({ size = 24, color = "currentColor" }: { size?: number; color?:
 
 const QUICK_ACTIONS = [
   { label: "Generate content plan", prompt: "Generate a content plan to improve my AI visibility. Focus on the topics where my competitors beat me." },
-  { label: "Fix weakest query", prompt: "Which of my queries is performing worst and how can I improve it?" },
+  { label: "Fix weakest prompt", prompt: "Which of my queries is performing worst and how can I improve it?" },
   { label: "Beat top competitor", prompt: "Who is my top competitor and what specific content gaps should I fill to beat them?" },
 ];
 

@@ -664,3 +664,77 @@ input[type="checkbox"]:not(.native):disabled, input[type="radio"]:not(.native):d
   transform: rotate(0deg) translate(-1px, -1px) !important;
   box-shadow: 4px 4px 0 #1A1A1A, 6px 6px 0 var(--primary) !important;
 }
+
+/* ─── Responsive Prompts Table ─── */
+.prompts-table-grid {
+  display: grid;
+  grid-template-columns: 36px 1fr 70px 90px 80px 90px 60px;
+  gap: 0;
+}
+.prompts-row-grid {
+  display: grid;
+  grid-template-columns: 36px 1fr 70px 90px 80px 90px 60px;
+  gap: 0;
+}
+.prompts-col-score,
+.prompts-col-trend,
+.prompts-col-status,
+.prompts-col-scanned,
+.prompts-col-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.prompts-bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  .prompts-table-grid {
+    display: none;
+  }
+  .prompts-row-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px !important;
+  }
+  .prompts-row-grid .prompts-col-score,
+  .prompts-row-grid .prompts-col-trend,
+  .prompts-row-grid .prompts-col-status,
+  .prompts-row-grid .prompts-col-scanned,
+  .prompts-row-grid .prompts-col-actions {
+    display: none;
+  }
+  .prompts-mobile-meta {
+    display: flex !important;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .prompts-mobile-actions {
+    display: flex !important;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .prompts-bulk-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .prompts-bulk-bar .bulk-actions-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+}
+
+@media (min-width: 641px) {
+  .prompts-mobile-meta,
+  .prompts-mobile-actions {
+    display: none !important;
+  }
+}
