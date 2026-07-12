@@ -106,29 +106,42 @@ async def score_queries(brand_id: str, db: AsyncSession | None = None) -> list[d
 
         scored = []
         for q in queries:
-            latest_result = await session.execute(
-                select(QueryResult)
-                .join(Scan, QueryResult.scan_id == Scan.id)
+            # Get ALL results from the most recent completed scan for this query
+            latest_scan_subq = (
+                select(Scan.id)
+                .join(QueryResult, QueryResult.scan_id == Scan.id)
                 .where(QueryResult.query_id == q.id, Scan.status == ScanStatus.completed)
                 .order_by(Scan.completed_at.desc())
                 .limit(1)
+                .scalar_subquery()
             )
-            latest = latest_result.scalar_one_or_none()
+            latest_results = await session.execute(
+                select(QueryResult)
+                .where(QueryResult.query_id == q.id, QueryResult.scan_id == latest_scan_subq)
+            )
+            results = latest_results.scalars().all()
 
-            if latest:
-                score = 3
-                if latest.mentioned:
-                    score = 5 if (latest.position or 99) <= 2 else 4 if (latest.position or 99) <= 4 else 3
+            if results:
+                # Aggregate: if ANY LLM mentioned the brand, count it as mentioned.
+                # Use the best position/sentiment across LLMs.
+                any_mentioned = any(r.mentioned for r in results)
+                best_position = min((r.position or 99 for r in results if r.mentioned), default=99)
+                best_score = max((r.score or 0 for r in results), default=0)
+
+                if any_mentioned:
+                    score = 5 if best_position <= 2 else 4 if best_position <= 4 else 3
                 else:
-                    score = 1 if latest.score is not None and latest.score < 10 else 2
+                    score = 2 if best_score >= 5 else 1
+                last_scanned = max(r.created_at for r in results)
             else:
                 score = q.query_score or 3
+                last_scanned = None
 
             scored.append({
                 "query_id": str(q.id),
                 "query_text": q.query_text,
                 "score": score,
-                "last_scanned": latest.created_at.isoformat() if latest else None,
+                "last_scanned": last_scanned.isoformat() if last_scanned else None,
             })
 
         scored.sort(key=lambda x: x["score"])
