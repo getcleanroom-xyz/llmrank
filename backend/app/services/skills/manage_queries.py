@@ -1,6 +1,7 @@
 """Manage Queries skill — generate, score, and prune queries."""
 import uuid
 import json
+import re
 import logging
 from datetime import datetime, timezone
 
@@ -35,11 +36,11 @@ async def generate_queries(brand_id: str, brand_name: str, domain: str,
     # Build a clear description of what the product does from crawled content
     product_desc = ""
     if crawl_content:
-        # Extract first meaningful sentences
-        sentences = [s.strip() for s in crawl_content.split(".") if len(s.strip()) > 20][:5]
-        product_desc = ". ".join(sentences)
+        # Clean: remove page markers like [/], normalize whitespace
+        cleaned = re.sub(r"\[[^\]]*\]\s*", "", crawl_content)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        product_desc = cleaned[:800]
     if not product_desc:
-        # Fallback: use brand name + domain as context
         product_desc = f"{brand_name} at {domain}"
 
     logger.info("Query gen for %s: product_desc=%s", brand_name, product_desc[:200])
@@ -49,14 +50,14 @@ async def generate_queries(brand_id: str, brand_name: str, domain: str,
     prompt = (
         f"Generate 20 conversational questions that people would ask an AI assistant "
         f"when researching a product like {brand_name}.\n\n"
-        f"WHAT THIS PRODUCT DOES:\n{product_desc}\n\n"
+        f"IMPORTANT: {brand_name} is described below. Base your questions ONLY on this description.\n\n"
+        f"PRODUCT DESCRIPTION:\n{product_desc}\n\n"
         f"Industry: {classification.get('industry', 'unknown')}\n"
         f"Category: {classification.get('sub_category', 'unknown')}\n"
         f"Competitors: {comp_str or 'none known'}\n\n"
         f"RULES:\n"
-        f"- Questions must be directly about the TYPE of product {brand_name} is\n"
-        f"- Use the WHAT THIS PRODUCT DOES section above as the ONLY source of truth\n"
-        f"- Do NOT generate questions about topics unrelated to this specific product\n"
+        f"- Questions must be about the specific type of product described above\n"
+        f"- Do NOT generate questions about unrelated topics\n"
         f"- Do NOT include the brand name {brand_name} in questions\n\n"
         f'Return ONLY a valid JSON array: [{{"query_text":"...","query_type":"workflow","score":1-5}}]'
     )
