@@ -105,8 +105,16 @@ async def get_query_drilldown(
         overall_sentiment = "mixed"
 
     # Generate insights — from successful results only
-    raw_insights = await generate_insights_for_query(brand.name, query.query_text, successful)
-    insights = [DrilldownInsight(type=i["type"], text=i["text"]) for i in raw_insights]
+    # Cache query insight to avoid repeated LLM calls
+    insight_cache_key = f"query_insight:{brand_id}:{latest_scan.id}:{query_id}"
+    from app.services.cache import dashboard_cache
+    cached_insights = dashboard_cache.get(insight_cache_key)
+    if cached_insights is not None:
+        insights = cached_insights
+    else:
+        raw_insights = await generate_insights_for_query(brand.name, query.query_text, successful)
+        insights = [DrilldownInsight(type=i["type"], text=i["text"]) for i in raw_insights]
+        dashboard_cache.set(insight_cache_key, insights, ttl=300)
 
     return QueryDrilldownOut(
         query_text=query.query_text,
@@ -300,24 +308,33 @@ async def get_competitor_drilldown(
                 break
 
     comp_insight = ""
-    try:
-        top_queries = [q.query_text for q in [query_map.get(r.query_id) for r, _ in comp_results] if q]
-        brand_positions = [r.position for r, _ in comp_results if r.mentioned and r.position]
-        comp_positions = [p for _, p in comp_results if p is not None]
-        brand_avg_pos = round(sum(brand_positions) / len(brand_positions), 1) if brand_positions else None
-        comp_avg_pos = round(sum(comp_positions) / len(comp_positions), 1) if comp_positions else None
-        comp_insight = await generate_competitor_insight(
-            brand_name, competitor_name,
-            round(len(comp_results) / len(all_results) * 100, 1) if all_results else 0,
-            brand_wins, beats_count,
-            len({r.query_id for r, _ in comp_results}) - beats_count - brand_wins,
-            branded_total=total_queries,
-            brand_position=brand_avg_pos,
-            competitor_position=comp_avg_pos,
-            top_queries=top_queries,
-        )
-    except Exception as e:
-        logger.warning("Competitor insight failed: %s", e)
+    # Cache competitor insight to avoid repeated 15s LLM calls
+    insight_cache_key = f"comp_insight:{brand_id}:{latest_scan.id}:{_normalize_competitor(competitor_name)}"
+    from app.services.cache import dashboard_cache
+    cached_insight = dashboard_cache.get(insight_cache_key)
+    if cached_insight is not None:
+        comp_insight = cached_insight
+    else:
+        try:
+            top_queries = [q.query_text for q in [query_map.get(r.query_id) for r, _ in comp_results] if q]
+            brand_positions = [r.position for r, _ in comp_results if r.mentioned and r.position]
+            comp_positions = [p for _, p in comp_results if p is not None]
+            brand_avg_pos = round(sum(brand_positions) / len(brand_positions), 1) if brand_positions else None
+            comp_avg_pos = round(sum(comp_positions) / len(comp_positions), 1) if comp_positions else None
+            comp_insight = await generate_competitor_insight(
+                brand_name, competitor_name,
+                round(len(comp_results) / len(all_results) * 100, 1) if all_results else 0,
+                brand_wins, beats_count,
+                len({r.query_id for r, _ in comp_results}) - beats_count - brand_wins,
+                branded_total=total_queries,
+                brand_position=brand_avg_pos,
+                competitor_position=comp_avg_pos,
+                top_queries=top_queries,
+            )
+            if comp_insight:
+                dashboard_cache.set(insight_cache_key, comp_insight, ttl=300)
+        except Exception as e:
+            logger.warning("Competitor insight failed: %s", e)
 
     comp_insight = comp_insight or (
         f"{competitor_name} beats you in {beats_count} out of {total_queries} queries. "

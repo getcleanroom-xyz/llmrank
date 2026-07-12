@@ -53,6 +53,13 @@ async def diagnose_visibility_gap(brand_name: str, brand_domain: str, query_text
     Returns {"exists": bool, "diagnosis": str, "evidence": str, "fix_type": str}.
     fix_type is one of: "content_gap", "discoverability", "authority", "mentions", "unknown"
     """
+    import asyncio
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, _diagnose_sync, brand_name, brand_domain, query_text)
+
+
+def _diagnose_sync(brand_name: str, brand_domain: str, query_text: str) -> dict:
+    """Synchronous diagnosis — runs in thread pool to avoid blocking event loop."""
     try:
         from ddgs import DDGS
 
@@ -239,11 +246,22 @@ async def generate_dashboard_insights(
         for r in all_results:
             query_results[r.query_id].append(r)
 
+        # Run all diagnoses concurrently (each makes 3 web searches)
+        diag_tasks = []
+        diag_query_ids = []
         for query_id, results in query_results.items():
             if not any(r.mentioned for r in results):
-                # Brand was completely absent — run multi-signal diagnosis
-                query_text = query_map.get(query_id, str(query_id)) if query_map else str(query_id)
-                diag = await diagnose_visibility_gap(brand_name, brand_domain, query_text)
+                query_obj = query_map.get(query_id) if query_map else None
+                query_text = query_obj.query_text if hasattr(query_obj, "query_text") else str(query_id)
+                diag_tasks.append(diagnose_visibility_gap(brand_name, brand_domain, query_text))
+                diag_query_ids.append(query_text)
+
+        if diag_tasks:
+            import asyncio
+            diags = await asyncio.gather(*diag_tasks, return_exceptions=True)
+            for query_text, diag in zip(diag_query_ids, diags):
+                if isinstance(diag, Exception):
+                    continue
                 diagnosis_lines.append(
                     f"  [{diag['fix_type'].upper()}] \"{query_text}\" — {diag['diagnosis']}. Evidence: {diag['evidence']}"
                 )
