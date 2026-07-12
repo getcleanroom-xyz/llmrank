@@ -1,7 +1,5 @@
 """Manage Queries skill — generate, score, and prune queries."""
 import uuid
-import json
-import re
 import logging
 from datetime import datetime, timezone
 
@@ -30,28 +28,44 @@ async def generate_queries(brand_id: str, brand_name: str, domain: str,
 
     Returns list of {query_text, query_type, score}.
     """
-    summary_json = json.dumps(summary, indent=2)
-
     logger.info("Query gen for %s: industry=%s, category=%s",
                 brand_name, summary.get("industry"), summary.get("category"))
 
+    description = summary.get("description") or f"products in the {summary.get('industry', 'technology')} space"
+    features = summary.get("key_features") or []
+    use_cases = summary.get("use_cases") or []
+    audience = summary.get("target_audience") or "general users"
+    category = summary.get("category") or summary.get("industry") or "technology"
+
     prompt = (
-        f"Generate 20 conversational questions that people would ask an AI assistant "
-        f"when researching a product like {brand_name}.\n\n"
-        f"Here is structured information about {brand_name}:\n{summary_json}\n\n"
-        f"RULES:\n"
-        f"- Questions must be directly about THIS specific product type\n"
-        f"- Use the product description, features, and use cases above as the source of truth\n"
-        f"- Do NOT generate generic questions unrelated to this product\n"
-        f"- Do NOT include the brand name {brand_name} in questions\n\n"
+        f"Generate 20 conversational questions people ask when researching products "
+        f"in the {category} category.\n\n"
+        f"Product description: {description}\n"
+    )
+    if features:
+        prompt += f"Key features: {', '.join(features)}\n"
+    if use_cases:
+        prompt += f"Use cases: {', '.join(use_cases)}\n"
+    prompt += (
+        f"Target audience: {audience}\n\n"
+        f"These are people who NEED this type of product but haven't chosen a brand yet.\n"
+    )
+    if use_cases:
+        prompt += f"They're solving problems like: {', '.join(use_cases[:3])}\n"
+    prompt += (
+        f"\nRULES:\n"
+        f"- Questions must be about solving these specific problems\n"
+        f"- Do NOT mention {brand_name} or any brand name\n"
+        f"- Be scenario-based and specific to this product category\n\n"
         f'Return ONLY a valid JSON array: [{{"query_text":"...","query_type":"workflow","score":1-5}}]'
     )
 
     messages = [
         {"role": "developer", "content": (
             "You are a UX researcher. Generate questions people ask when researching "
-            "a SPECIFIC type of product. The questions must be directly relevant to what "
-            "this product does, based on the description provided. Return ONLY a valid JSON array."
+            "products in a specific category. Ground every question in the product description, "
+            "features, and use cases provided. Questions should sound like real users solving "
+            "real problems — not meta questions about a tool. Return ONLY a valid JSON array."
         )},
         {"role": "user", "content": prompt},
     ]
@@ -171,10 +185,23 @@ async def refresh_queries(brand_id: str, brand_name: str, domain: str,
     """
     from app.core.database import AsyncSessionLocal
     from app.models.models import Brand, MonitoredQuery
+    from app.services.tools.summarize import summarize_company
+
+    # Fetch brand summary if not provided
+    summary = classification
+    if not summary:
+        try:
+            from app.services.crawler import crawl_website
+            crawl_content = await crawl_website(domain)
+            summary = await summarize_company(crawl_content, brand_name, domain)
+        except Exception as e:
+            logger.warning("Failed to get summary for %s: %s", brand_name, e)
+            summary = {"description": brand_name, "industry": None, "category": None,
+                       "key_features": [], "target_audience": None, "use_cases": []}
 
     # Generate queries OUTSIDE the session to avoid holding a connection during LLM calls
     generated = await generate_queries(
-        brand_id, brand_name, domain, classification, competitors, agent_name
+        brand_id, brand_name, domain, summary, agent_name
     )
 
     async def _execute(session: AsyncSession):
