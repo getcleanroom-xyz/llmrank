@@ -216,7 +216,7 @@ async def get_dashboard(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db),
     if dash_insights is None:
         dash_insights = []
         import asyncio as _asyncio
-        _asyncio.ensure_future(_compute_and_cache_insights(brand.name, all_results, brand.domain, insights_cache_key))
+        _asyncio.ensure_future(_compute_and_cache_insights(brand.name, all_results, brand.domain, insights_cache_key, query_map=query_map))
 
     result = DashboardOut(
         brand=BrandOut.model_validate(brand),
@@ -236,10 +236,10 @@ async def get_dashboard(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db),
     return result
 
 
-async def _compute_and_cache_insights(brand_name: str, all_results: list, domain: str, cache_key: str) -> None:
+async def _compute_and_cache_insights(brand_name: str, all_results: list, domain: str, cache_key: str, query_map: dict | None = None) -> None:
     """Background task: generate insights and cache them."""
     try:
-        raw = await generate_dashboard_insights(brand_name, all_results, domain)
+        raw = await generate_dashboard_insights(brand_name, all_results, domain, query_map=query_map)
         insights = [DrilldownInsight(type=i["type"], text=i["text"]) for i in raw]
         dashboard_cache.set(cache_key, insights, ttl=300)
         logger.info("Dashboard insights cached for %s", brand_name)

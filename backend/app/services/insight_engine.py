@@ -205,6 +205,7 @@ async def generate_dashboard_insights(
     all_results: list,
     brand_domain: str = "",
     classification: dict | None = None,
+    query_map: dict | None = None,
 ) -> list[dict]:
     """Generate tailored dashboard-level insights using LLM."""
     if not all_results:
@@ -236,11 +237,12 @@ async def generate_dashboard_insights(
         # Group results by query to find fully-missed queries
         query_results = defaultdict(list)
         for r in all_results:
-            query_results[r.query_text].append(r)
+            query_results[r.query_id].append(r)
 
-        for query_text, results in query_results.items():
+        for query_id, results in query_results.items():
             if not any(r.mentioned for r in results):
                 # Brand was completely absent — run multi-signal diagnosis
+                query_text = query_map.get(query_id, str(query_id)) if query_map else str(query_id)
                 diag = await diagnose_visibility_gap(brand_name, brand_domain, query_text)
                 diagnosis_lines.append(
                     f"  [{diag['fix_type'].upper()}] \"{query_text}\" — {diag['diagnosis']}. Evidence: {diag['evidence']}"
