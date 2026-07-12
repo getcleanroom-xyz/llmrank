@@ -101,6 +101,12 @@ async def build_brand_context(brand_id: str, db: AsyncSession | None = None) -> 
 
         # Query performance
         lines.append("\n## Monitored Queries and Their Performance")
+        lines.append(
+            "These queries are auto-generated questions that real users might ask an AI assistant "
+            "when researching products in this category. They simulate what people say BEFORE they "
+            "know about any specific brand. The purpose is to test whether LLMs mention this brand "
+            "when users ask general category questions — not to rank for branded search terms."
+        )
         if not queries:
             lines.append("No queries configured yet.")
         else:
