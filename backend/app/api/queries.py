@@ -70,7 +70,10 @@ async def add_query(request: Request, brand_id: uuid.UUID, body: QueryCreate, db
 
 @router.delete("/brands/{brand_id}/queries/{query_id}", status_code=204, tags=["Queries"])
 @limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")
-async def delete_query(request: Request, brand_id: uuid.UUID, query_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+async def delete_query(request: Request, brand_id: uuid.UUID, query_id: uuid.UUID, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    brand_result = await db.execute(Brand.active().where(Brand.id == brand_id, Brand.owner_id == user.id))
+    if not brand_result.scalar_one_or_none():
+        raise HTTPException(404, "Brand not found")
     result = await db.execute(
         select(MonitoredQuery)
         .where(MonitoredQuery.id == query_id, MonitoredQuery.brand_id == brand_id)
@@ -89,7 +92,13 @@ async def list_queries_table(
     per_page: int = 20,
     q: str = "",
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
+    # Verify brand ownership
+    brand_result = await db.execute(Brand.active().where(Brand.id == brand_id, Brand.owner_id == user.id))
+    if not brand_result.scalar_one_or_none():
+        raise HTTPException(404, "Brand not found")
+
     # count total matching
     count_query = select(func.count(MonitoredQuery.id)).where(MonitoredQuery.brand_id == brand_id)
     if q:
@@ -153,11 +162,16 @@ async def query_trend(
     brand_id: uuid.UUID,
     days: int = 30,
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     """Get score history per query for sparkline rendering.
 
     Returns: {query_id: [{date, score, mention_rate}, ...]}
     """
+    # Verify brand ownership
+    brand_result = await db.execute(Brand.active().where(Brand.id == brand_id, Brand.owner_id == user.id))
+    if not brand_result.scalar_one_or_none():
+        raise HTTPException(404, "Brand not found")
     from app.models.models import Scan, ScanStatus
     from datetime import timedelta
 
@@ -225,11 +239,17 @@ async def bulk_update_queries(
     brand_id: uuid.UUID,
     body: dict,
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     """Bulk update queries: activate, deactivate, or delete.
 
     Body: {action: "activate"|"deactivate"|"delete", query_ids: [uuid, ...]}
     """
+    # Verify brand ownership
+    brand_result = await db.execute(Brand.active().where(Brand.id == brand_id, Brand.owner_id == user.id))
+    if not brand_result.scalar_one_or_none():
+        raise HTTPException(404, "Brand not found")
+
     action = body.get("action")
     query_ids = body.get("query_ids", [])
 
@@ -307,8 +327,14 @@ async def rescan_single_query(
     brand_id: uuid.UUID,
     query_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     """Rescan a single query across standard LLMs and persist results."""
+    # Verify brand ownership
+    brand_result = await db.execute(Brand.active().where(Brand.id == brand_id, Brand.owner_id == user.id))
+    if not brand_result.scalar_one_or_none():
+        raise HTTPException(404, "Brand not found")
+
     query_result = await db.execute(
         select(MonitoredQuery).where(MonitoredQuery.id == query_id, MonitoredQuery.brand_id == brand_id)
     )

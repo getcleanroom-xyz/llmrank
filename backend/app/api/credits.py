@@ -6,6 +6,7 @@ from app.models.models import User
 from app.schemas.schemas import CreditBalanceOut, CreditGrantRequest, CreditTransactionOut
 from app.services.credit_service import get_or_create_wallet, grant_credits, get_credit_history, CREDIT_COSTS
 from app.api.auth import get_current_user
+from app.api.admin import require_admin
 
 router = APIRouter()
 
@@ -24,7 +25,7 @@ async def get_credits(db: AsyncSession = Depends(get_db), user: User = Depends(g
 
 
 @router.post("/credits/grant", response_model=CreditBalanceOut, tags=["Credits"])
-async def admin_grant_credits(body: CreditGrantRequest, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+async def admin_grant_credits(body: CreditGrantRequest, db: AsyncSession = Depends(get_db), user: User = Depends(require_admin)):
     wallet = await grant_credits(db, body.amount, body.description, "admin_grant", user.id)
     await db.commit()
     return CreditBalanceOut(

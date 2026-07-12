@@ -29,6 +29,9 @@ async def upload_campaign_csv(
     if campaign.status != CampaignStatus.draft:
         raise HTTPException(400, "Can only modify draft or cancelled campaigns")
 
+    if file.size and file.size > 5 * 1024 * 1024:
+        raise HTTPException(413, "File too large")
+
     content = await file.read()
     text = content.decode("utf-8-sig")
     reader = csv.reader(io.StringIO(text))

@@ -39,10 +39,11 @@ class StatsResponse(BaseModel):
 # ─── Users ────────────────────────────────────────────────────────────────────
 
 @router.get("/users", response_model=list[AdminUserResponse])
-async def list_users(search: str | None = None, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+async def list_users(search: str | None = None, page: int = 1, per_page: int = 50, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     query = select(User).order_by(User.created_at.desc())
     if search:
         query = query.where(User.email.ilike(f"%{search}%") | User.display_name.ilike(f"%{search}%"))
+    query = query.offset((page - 1) * per_page).limit(per_page)
     result = await db.execute(query)
     users = result.scalars().all()
     return [

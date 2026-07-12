@@ -86,7 +86,7 @@ async def trigger_scan(
         )
 
     # Deduct credits
-    await deduct_credits(db, cost, f"Scan: {len(active_queries)} queries × {len(body.llms)} LLMs", user.id)
+    _, credit_tx_id = await deduct_credits(db, cost, f"Scan: {len(active_queries)} queries × {len(body.llms)} LLMs", user.id)
 
     # Create pending scan immediately to return to client
     scan = Scan(
@@ -100,12 +100,12 @@ async def trigger_scan(
     await db.refresh(scan)
 
     # Run in background — pass scan.id so orchestrator updates the same record
-    background_tasks.add_task(_run_scan_background, brand_id, scan.id, body.llms)
+    background_tasks.add_task(_run_scan_background, brand_id, scan.id, body.llms, str(credit_tx_id))
 
     return scan
 
 
-async def _run_scan_background(brand_id: uuid.UUID, scan_id: uuid.UUID, llm_names: list[str]):
+async def _run_scan_background(brand_id: uuid.UUID, scan_id: uuid.UUID, llm_names: list[str], credit_tx_id: str = ""):
     """Background task — runs scan via the Scan Orchestrator Agent."""
     from app.core.database import AsyncSessionLocal
     from app.services.agents.base import AgentContext
@@ -128,20 +128,19 @@ async def _run_scan_background(brand_id: uuid.UUID, scan_id: uuid.UUID, llm_name
                     scan.status = ScanStatus.failed
                     scan.completed_at = _utcnow()
                     await db.commit()
-                from app.services.credit_service import grant_credits
-                from app.models.models import CreditTransaction
-                tx_result = await db.execute(
-                    select(CreditTransaction)
-                    .where(CreditTransaction.description.ilike(f"%Scan: %{scan_id}%"))
-                    .order_by(CreditTransaction.created_at.desc()).limit(1)
-                )
-                last_tx = tx_result.scalar_one_or_none()
-                if last_tx and last_tx.amount < 0:
-                    brand_result = await db.execute(Brand.active().where(Brand.id == brand_id))
-                    brand = brand_result.scalar_one_or_none()
-                    if brand:
-                        await grant_credits(db, abs(last_tx.amount), f"Refund: failed scan {scan_id}", "refund", brand.owner_id)
-                        await db.commit()
+                if credit_tx_id:
+                    from app.services.credit_service import grant_credits
+                    from app.models.models import CreditTransaction
+                    tx_result = await db.execute(
+                        select(CreditTransaction).where(CreditTransaction.id == uuid.UUID(credit_tx_id))
+                    )
+                    last_tx = tx_result.scalar_one_or_none()
+                    if last_tx and last_tx.amount < 0:
+                        brand_result = await db.execute(Brand.active().where(Brand.id == brand_id))
+                        brand = brand_result.scalar_one_or_none()
+                        if brand:
+                            await grant_credits(db, abs(last_tx.amount), f"Refund: failed scan {scan_id}", "refund", brand.owner_id)
+                            await db.commit()
         except Exception as e:
             logger.exception("Background scan failed: scan_id=%s error=%s", scan_id, e)
 
@@ -186,10 +185,15 @@ async def get_scan(brand_id: uuid.UUID, scan_id: uuid.UUID, db: AsyncSession = D
 
 
 @router.get("/brands/{brand_id}/scans/{scan_id}/results", tags=["Scans"])
-async def get_scan_results(brand_id: uuid.UUID, scan_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+async def get_scan_results(brand_id: uuid.UUID, scan_id: uuid.UUID, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     """Return scan with grouped per-query results."""
     from pydantic import BaseModel
     from app.schemas.schemas import QueryResultOut, QuerySummary
+
+    # Verify brand ownership
+    brand_result = await db.execute(Brand.active().where(Brand.id == brand_id, Brand.owner_id == user.id))
+    if not brand_result.scalar_one_or_none():
+        raise HTTPException(404, "Brand not found")
 
     result = await db.execute(
         select(Scan).where(Scan.id == scan_id, Scan.brand_id == brand_id)
@@ -261,13 +265,20 @@ async def get_scan_results(brand_id: uuid.UUID, scan_id: uuid.UUID, db: AsyncSes
 async def stream_scan_progress(
     brand_id: uuid.UUID,
     scan_id: uuid.UUID,
+    user: User = Depends(get_current_user),
 ):
     async def event_generator() -> AsyncGenerator[str, None]:
         from app.core.database import AsyncSessionLocal
         async with AsyncSessionLocal() as db:
+            # Verify brand ownership
+            brand_result = await db.execute(Brand.active().where(Brand.id == brand_id, Brand.owner_id == user.id))
+            if not brand_result.scalar_one_or_none():
+                yield f"data: {json.dumps({'error': 'brand not found'})}\n\n"
+                return
+
             for _ in range(60):  # Poll up to 60s
                 try:
-                    result = await db.execute(select(Scan).where(Scan.id == scan_id))
+                    result = await db.execute(select(Scan).where(Scan.id == scan_id, Scan.brand_id == brand_id))
                     scan = result.scalar_one_or_none()
                     if not scan:
                         yield f"data: {json.dumps({'error': 'scan not found'})}\n\n"

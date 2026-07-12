@@ -70,7 +70,7 @@ async def _get_access_token() -> str:
 def verify_flutterwave_signature(payload: bytes, signature: str, secret_hash: str) -> bool:
     """Verify Flutterwave v4 webhook signature using HMAC-SHA256 (base64)."""
     if not secret_hash:
-        return True
+        return False
     expected = base64.b64encode(
         hmac.new(secret_hash.encode(), payload, hashlib.sha256).digest()
     ).decode()

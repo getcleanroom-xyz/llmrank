@@ -12,6 +12,7 @@ from app.models.models import User, Brand, MonitoredQuery, Scan, QueryResult, Sc
 from app.schemas.schemas import BrandOut, ScanOut, DashboardOut, LLMBreakdown, CompetitorShareItem, QuerySummary, DrilldownInsight
 from app.services.insight_engine import generate_dashboard_insights
 from app.services.cache import dashboard_cache
+from app.api.auth import get_current_user
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -25,9 +26,9 @@ def _normalize_competitor(name: str) -> str:
 # ─── Dashboard ─────────────────────────────────────────────────────────────────
 
 @router.get("/brands/{brand_id}/dashboard", response_model=DashboardOut, tags=["Dashboard"])
-async def get_dashboard(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+async def get_dashboard(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     # Brand
-    brand_result = await db.execute(Brand.active().where(Brand.id == brand_id))
+    brand_result = await db.execute(Brand.active().where(Brand.id == brand_id, Brand.owner_id == user.id))
     brand = brand_result.scalar_one_or_none()
     if not brand:
         raise HTTPException(404, "Brand not found")

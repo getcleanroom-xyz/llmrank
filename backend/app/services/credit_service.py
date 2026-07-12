@@ -85,14 +85,29 @@ async def check_credits(db: AsyncSession, llm_names: list[str], num_queries: int
     return wallet.balance >= cost, cost, wallet.balance
 
 
-async def deduct_credits(db: AsyncSession, amount: int, description: str, user_id: uuid.UUID) -> CreditWallet:
-    """Deduct credits from wallet. Returns updated wallet."""
-    wallet = await get_or_create_wallet(db, user_id)
+async def deduct_credits(db: AsyncSession, amount: int, description: str, user_id: uuid.UUID) -> tuple[CreditWallet, uuid.UUID]:
+    """Deduct credits from wallet with row-level locking to prevent double-spend. Returns (wallet, tx_id)."""
+    result = await db.execute(
+        select(CreditWallet).where(CreditWallet.user_id == user_id).with_for_update()
+    )
+    wallet = result.scalar_one_or_none()
+    if not wallet:
+        wallet = CreditWallet(
+            id=uuid.uuid4(),
+            user_id=user_id,
+            balance=FREE_CREDITS,
+            total_purchased=0,
+            total_used=0,
+        )
+        db.add(wallet)
+        await db.flush()
+
     wallet.balance -= amount
     wallet.total_used += amount
 
+    tx_id = uuid.uuid4()
     tx = CreditTransaction(
-        id=uuid.uuid4(),
+        id=tx_id,
         user_id=user_id,
         amount=-amount,
         type="scan_usage",
@@ -103,7 +118,7 @@ async def deduct_credits(db: AsyncSession, amount: int, description: str, user_i
     await db.flush()
 
     logger.info("Deducted %d credits from %s (balance: %d)", amount, user_id, wallet.balance)
-    return wallet
+    return wallet, tx_id
 
 
 async def grant_credits(db: AsyncSession, amount: int, description: str, tx_type: str, user_id: uuid.UUID) -> CreditWallet:

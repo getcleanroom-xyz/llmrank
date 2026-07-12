@@ -15,6 +15,7 @@ from app.schemas.schemas import (
     CompetitorDrilldownOut, CompetitorQueryResult, CompetitorMention,
 )
 from app.services.insight_engine import generate_insights_for_query, generate_competitor_insight
+from app.api.auth import get_current_user
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -48,9 +49,10 @@ async def get_query_drilldown(
     brand_id: uuid.UUID,
     query_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     # Brand
-    brand_result = await db.execute(Brand.active().where(Brand.id == brand_id))
+    brand_result = await db.execute(Brand.active().where(Brand.id == brand_id, Brand.owner_id == user.id))
     brand = brand_result.scalar_one_or_none()
     if not brand:
         raise HTTPException(404, "Brand not found")
@@ -131,10 +133,11 @@ async def get_llm_drilldown(
     brand_id: uuid.UUID,
     llm_name: str,
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     # Verify brand exists and not deleted
     brand_result = await db.execute(
-        Brand.active().where(Brand.id == brand_id)
+        Brand.active().where(Brand.id == brand_id, Brand.owner_id == user.id)
     )
     if not brand_result.scalar_one_or_none():
         raise HTTPException(404, "Brand not found")
@@ -205,10 +208,11 @@ async def get_competitor_drilldown(
     brand_id: uuid.UUID,
     competitor_name: str,
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     # Verify brand exists and not deleted
     brand_result = await db.execute(
-        Brand.active().where(Brand.id == brand_id)
+        Brand.active().where(Brand.id == brand_id, Brand.owner_id == user.id)
     )
     if not brand_result.scalar_one_or_none():
         raise HTTPException(404, "Brand not found")

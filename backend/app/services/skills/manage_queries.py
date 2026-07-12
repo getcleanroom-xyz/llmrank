@@ -46,13 +46,6 @@ async def generate_queries(brand_id: str, brand_name: str, domain: str,
         f"- Do NOT include the brand name {brand_name} in questions\n\n"
         f'Return ONLY a valid JSON array: [{{"query_text":"...","query_type":"workflow","score":1-5}}]'
     )
-        f"RULES:\n"
-        f"- Questions must be directly about THIS specific product type\n"
-        f"- Use the DESCRIPTION and USE CASES above as the source of truth\n"
-        f"- Do NOT generate generic questions unrelated to this product\n"
-        f"- Do NOT include the brand name {brand_name} in questions\n\n"
-        f'Return ONLY a valid JSON array: [{{"query_text":"...","query_type":"workflow","score":1-5}}]'
-    )
 
     messages = [
         {"role": "developer", "content": (

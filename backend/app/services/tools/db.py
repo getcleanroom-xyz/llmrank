@@ -45,12 +45,16 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+ALLOWED_TABLES = {"brands", "monitored_queries", "scans", "query_results", "conversations", "chat_messages"}
+
+
 async def query_db(sql: str, params: dict | None = None, db: AsyncSession | None = None) -> list[dict]:
     """Execute a read-only SQL query and return results as list of dicts.
 
     Security:
     - Parameterized queries only (no string interpolation)
     - READ-ONLY: rejects INSERT/UPDATE/DELETE/DROP/TRUNCATE/ALTER
+    - Only whitelisted tables allowed
     - Results limited to 1000 rows
     """
     from app.core.database import AsyncSessionLocal
@@ -61,6 +65,19 @@ async def query_db(sql: str, params: dict | None = None, db: AsyncSession | None
     for word in forbidden:
         if normalized.startswith(word) or f" {word} " in normalized:
             raise ValueError(f"Query contains forbidden operation: {word}")
+
+    # Security: only allow whitelisted tables
+    sql_lower = sql.lower()
+    for table in ("information_schema", "pg_catalog", "pg_", "sys.", "sqlite_"):
+        if table in sql_lower:
+            raise ValueError(f"Query references restricted system tables")
+
+    # Extract table references from SQL (simple heuristic for FROM and JOIN clauses)
+    import re as _re
+    table_refs = set(_re.findall(r'(?:from|join)\s+(\w+)', sql_lower))
+    disallowed = table_refs - ALLOWED_TABLES
+    if disallowed:
+        raise ValueError(f"Query references disallowed tables: {disallowed}. Allowed: {ALLOWED_TABLES}")
 
     # Add LIMIT if not present
     if "LIMIT" not in normalized:

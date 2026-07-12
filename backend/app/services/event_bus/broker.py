@@ -1,6 +1,7 @@
 """EventBroker — publish/subscribe event bus with Postgres persistence and DLQ."""
 import uuid
 import asyncio
+import collections
 import logging
 from typing import Callable, Awaitable
 from datetime import datetime, timezone
@@ -47,7 +48,7 @@ class EventBus:
 
     def __init__(self):
         self._subscriptions: dict[str, list[Subscription]] = {}
-        self._event_log: list[Event] = []  # in-memory event log
+        self._event_log: collections.deque = collections.deque(maxlen=500)  # in-memory event log
 
     def subscribe(self, topic: str, handler: EventHandler, name: str = "",
                   event_types: list[str] | None = None,

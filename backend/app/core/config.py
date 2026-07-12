@@ -1,3 +1,4 @@
+import secrets as _secrets
 from pydantic_settings import BaseSettings
 
 
@@ -33,3 +34,11 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+if settings.SECRET_KEY == "dev-secret-change-in-production":
+    import logging as _logging
+    _logging.getLogger(__name__).warning(
+        "SECRET_KEY is the default value — generating random key for this session. "
+        "Set SECRET_KEY env var for production."
+    )
+    settings.SECRET_KEY = _secrets.token_hex(32)

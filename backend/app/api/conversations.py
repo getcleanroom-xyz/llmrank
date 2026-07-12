@@ -178,6 +178,8 @@ async def delete_conversation(
 async def list_messages(
     brand_id: uuid.UUID,
     conversation_id: uuid.UUID,
+    limit: int = 100,
+    offset: int = 0,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -199,6 +201,8 @@ async def list_messages(
         select(ChatMessage)
         .where(ChatMessage.conversation_id == conversation_id)
         .order_by(ChatMessage.created_at)
+        .offset(offset)
+        .limit(limit)
     )
     messages = msg_result.scalars().all()
     return [ChatMessageOut.model_validate(m) for m in messages]
