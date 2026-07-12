@@ -37,6 +37,7 @@ export function QueriesTable({
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; text: string } | null>(null);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Selection state
@@ -321,11 +322,7 @@ export function QueriesTable({
             Deactivate
           </button>
           <button
-            onClick={() => {
-              if (confirm(`Delete ${selected.size} queries?`)) {
-                handleBulkAction("delete");
-              }
-            }}
+            onClick={() => setBulkDeleteConfirm(true)}
             disabled={bulkUpdate.isPending}
             className="btn btn-sm btn-danger"
             style={{ fontSize: 11 }}
@@ -538,6 +535,18 @@ export function QueriesTable({
         onCancel={() => setDeleteTarget(null)}
       >
         Delete <strong>&quot;{deleteTarget?.text}&quot;</strong>? This will also remove all scan results for this query. This cannot be undone.
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        open={bulkDeleteConfirm}
+        title="Delete queries"
+        confirmLabel="Delete"
+        destructive
+        loading={bulkUpdate.isPending}
+        onConfirm={() => { setBulkDeleteConfirm(false); handleBulkAction("delete"); }}
+        onCancel={() => setBulkDeleteConfirm(false)}
+      >
+        Delete <strong>{selected.size} queries</strong>? This will also remove all scan results for these queries. This cannot be undone.
       </ConfirmDialog>
     </div>
   );
