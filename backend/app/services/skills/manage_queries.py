@@ -38,8 +38,8 @@ async def generate_queries(brand_id: str, brand_name: str, domain: str,
     category = summary.get("category") or summary.get("industry") or "technology"
 
     prompt = (
-        f"Generate 20 natural language prompts that a REAL USER would type into an AI assistant "
-        f"like ChatGPT or Claude when researching products in the {category} category.\n\n"
+        f"Generate 20 conversational questions people ask when researching products "
+        f"in the {category} category.\n\n"
         f"Product description: {description}\n"
     )
     if features:
@@ -48,29 +48,24 @@ async def generate_queries(brand_id: str, brand_name: str, domain: str,
         prompt += f"Use cases: {', '.join(use_cases)}\n"
     prompt += (
         f"Target audience: {audience}\n\n"
-        f"These are people who NEED this type of product but haven't chosen a brand yet. "
-        f"They're asking the AI for help, not searching Google.\n"
+        f"These are people who NEED this type of product but haven't chosen a brand yet.\n"
     )
     if use_cases:
-        prompt += f"They're trying to solve problems like: {', '.join(use_cases[:3])}\n"
+        prompt += f"They're solving problems like: {', '.join(use_cases[:3])}\n"
     prompt += (
         f"\nRULES:\n"
-        f"- Write like a real person talking to an AI, not like a search engine query\n"
-        f"- Examples of GOOD prompts: 'How do I track my brand in AI responses?', "
-        f"'What tools help me see if ChatGPT recommends my product?'\n"
-        f"- Examples of BAD prompts: 'AI brand tracking tools', 'best SEO software 2024'\n"
+        f"- Questions must be about solving these specific problems\n"
         f"- Do NOT mention {brand_name} or any brand name\n"
-        f"- Be specific and scenario-based\n\n"
+        f"- Be scenario-based and specific to this product category\n\n"
         f'Return ONLY a valid JSON array: [{{"query_text":"...","query_type":"workflow","score":1-5}}]'
     )
 
     messages = [
         {"role": "developer", "content": (
-            "You are simulating real users asking AI assistants for help. "
-            "Generate natural language prompts — the kind of thing a person would actually type "
-            "into ChatGPT or Claude. NOT search engine keywords. NOT formal questions. "
-            "Think: 'how do I...' or 'what's the best way to...' or 'can AI help me...'. "
-            "Return ONLY a valid JSON array."
+            "You are a UX researcher. Generate questions people ask when researching "
+            "products in a specific category. Ground every question in the product description, "
+            "features, and use cases provided. Questions should sound like real users solving "
+            "real problems — not meta questions about a tool. Return ONLY a valid JSON array."
         )},
         {"role": "user", "content": prompt},
     ]
