@@ -217,7 +217,7 @@ async def query_trend(
             )
             score = round(min(100.0, base + pos_bonus + sent_bonus), 1)
         elif score is None:
-            score = 5.0
+            score = 0.0
 
         trend[qid].append({
             "date": scan_dates.get(str(r.scan_id), ""),
@@ -330,7 +330,8 @@ async def rescan_single_query(
     """Rescan a single query across standard LLMs and persist results."""
     # Verify brand ownership
     brand_result = await db.execute(Brand.active().where(Brand.id == brand_id, Brand.owner_id == user.id))
-    if not brand_result.scalar_one_or_none():
+    brand = brand_result.scalar_one_or_none()
+    if not brand:
         raise HTTPException(404, "Brand not found")
 
     query_result = await db.execute(
@@ -342,6 +343,11 @@ async def rescan_single_query(
 
     llm_names = ["chatgpt", "gemini", "llama"]
 
+    from app.services.credit_service import check_credits, deduct_credits
+    has_enough, cost, balance = await check_credits(db, llm_names, 1, user.id)
+    if not has_enough:
+        raise HTTPException(402, f"Insufficient credits. This rescan costs {cost} credits but you have {balance}.")
+
     # Create a scan record
     scan = Scan(id=uuid.uuid4(), brand_id=brand_id, status=ScanStatus.running, started_at=_utcnow())
     db.add(scan)
@@ -349,7 +355,7 @@ async def rescan_single_query(
 
     import httpx as _httpx
     async with _httpx.AsyncClient(timeout=45) as client:
-        raw_results = await scan_all_llms([(str(query.id), query.query_text)], llm_names, client)
+        raw_results = await scan_all_llms([(str(query.id), query.query_text)], llm_names, client, brand_name=brand.name)
 
     results: list[QueryResult] = []
     for q_id, llm_name, result_data, error in raw_results:
@@ -376,6 +382,7 @@ async def rescan_single_query(
     db.add_all(results)
     scan.status = ScanStatus.completed
     scan.completed_at = _utcnow()
+    await deduct_credits(db, cost, f"Rescan: 1 query × {len(llm_names)} LLMs", user.id)
     await db.commit()
 
     return {"scan_id": str(scan.id)}
@@ -384,7 +391,7 @@ async def rescan_single_query(
 def _compute_scan_score(mentioned: bool, position: Optional[int], sentiment: str) -> float:
     """Replicate the score logic from scan_orchestrator."""
     if not mentioned:
-        return 5.0
+        return 0.0
     base = 40.0
     pos_bonus = {1: 35, 2: 25, 3: 15, 4: 8}.get(position or 99, 3)
     sent_bonus = {"positive": 20, "neutral": 10, "negative": 0}.get(sentiment, 0)

@@ -14,6 +14,7 @@ function QueryDrilldownInner() {
   const { data, isFetching, error: loadError, refetch } = useQueryDrilldown(brandId, queryId);
   const [rescanning, setRescanning] = useState(false);
   const [rescanId, setRescanId] = useState<string | null>(null);
+  const [rescanError, setRescanError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Poll for re-scan completion
@@ -32,11 +33,13 @@ function QueryDrilldownInner() {
 
   const handleRescan = async () => {
     setRescanning(true);
+    setRescanError(null);
     try {
       const { scan_id } = await rescanQuery(brandId, queryId);
       setRescanId(scan_id);
-    } catch {
+    } catch (err) {
       setRescanning(false);
+      setRescanError(err instanceof Error ? err.message : "Re-scan failed");
     }
   };
 
@@ -70,7 +73,13 @@ function QueryDrilldownInner() {
         <Link href={`/brands/${brandId}`} className="btn btn-sm btn-ghost btn-back">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
         </Link>
-        <div style={{ display: "flex", gap: 6, alignItems: "center", marginLeft: "auto" }}>
+        {rescanError && (
+          <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "5px 10px", fontSize: 11, color: "#991B1B", fontWeight: 600, flex: 1 }}>
+            {rescanError}
+            <button onClick={() => setRescanError(null)} style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer", fontWeight: 700, color: "#991B1B" }}>x</button>
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 6, alignItems: "center", marginLeft: rescanError ? undefined : "auto" }}>
           <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>{new Date(data.scanned_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
           <button onClick={handleRescan} disabled={rescanning} className="btn btn-primary btn-sm">{rescanning ? "Scanning..." : "Re-scan"}</button>
         </div>

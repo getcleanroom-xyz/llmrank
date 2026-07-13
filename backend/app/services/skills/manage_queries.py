@@ -224,7 +224,7 @@ async def refresh_queries(brand_id: str, brand_name: str, domain: str,
         # 2. Prune low-performing
         pruned = await prune_queries(brand_id, min_score=2, db=session)
 
-        # 3. Count active
+        # 3. Count active (after prune)
         active_count = await count_records("MonitoredQuery", {
             "brand_id": uuid.UUID(brand_id), "is_active": True
         }, db=session)

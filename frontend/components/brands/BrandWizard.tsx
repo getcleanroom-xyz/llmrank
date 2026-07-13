@@ -41,14 +41,14 @@ export function BrandWizard({ open, onClose, onCreated, creating }: BrandWizardP
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }} onClick={onClose} />
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }} onClick={onClose} onKeyDown={(e) => { if (e.key === "Escape") onClose(); }} />
       <div className="card" style={{ position: "relative", width: "100%", maxWidth: 440, margin: "0 16px", padding: 24, zIndex: 10 }}>
 
         {step === 1 && (
           <>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
               <div className="section-label">New brand</div>
-              <button onClick={onClose} className="btn btn-ghost btn-sm">x</button>
+              <button onClick={onClose} className="btn btn-ghost btn-sm" aria-label="Close">x</button>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 18 }}>
               <div>
@@ -91,11 +91,6 @@ export function BrandWizard({ open, onClose, onCreated, creating }: BrandWizardP
                 ))}
               </div>
             )}
-
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, padding: "8px 0" }}>
-              <input type="checkbox" defaultChecked className="native" style={{ width: 14, height: 14 }} />
-              <span style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 500 }}>Auto-suggest new queries monthly</span>
-            </div>
 
             <button onClick={() => onCreated(name.trim(), domain.trim(), competitors)} disabled={creating} className="btn btn-primary" style={{ width: "100%" }}>
               {creating ? "Creating..." : `Create ${name || "brand"}`}

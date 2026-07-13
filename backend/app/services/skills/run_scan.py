@@ -76,6 +76,7 @@ async def run_scan(brand_id: str, scan_id: str, llm_names: list[str],
         async with httpx.AsyncClient(timeout=45) as client:
             raw_results = await scan_all_llms(
                 [(str(q.id), q.query_text) for q in queries], llm_names, client,
+                brand_name=brand.name,
             )
 
         # 5. Process results
@@ -144,7 +145,15 @@ async def run_scan(brand_id: str, scan_id: str, llm_names: list[str],
 
         scan.visibility_score = visibility_score
         scan.mention_rate = mention_rate
-        scan.status = ScanStatus.completed
+        has_any_success = any(
+            not (r.raw_response.startswith("[Error") or r.raw_response.startswith("[Empty"))
+            for r in all_results
+        )
+        if has_any_success:
+            scan.status = ScanStatus.completed
+        else:
+            scan.status = ScanStatus.failed
+            logger.warning("Scan %s: all LLMs failed, marking as failed", scan.id)
         scan.completed_at = _utcnow()
 
         logger.info("Scan %s: score=%.1f mention_rate=%.1f successful=%d/%d",

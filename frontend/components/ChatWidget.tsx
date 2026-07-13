@@ -189,6 +189,7 @@ export function ChatWidget({ brandId }: { brandId: string }) {
       {!open && (
         <button
           onClick={() => setOpen(true)}
+          aria-label="Open AI copilot"
           style={{
             position: "fixed", bottom: 24, right: 24, zIndex: 100,
             width: 56, height: 56, borderRadius: "50%",

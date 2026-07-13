@@ -102,6 +102,9 @@ async def deduct_credits(db: AsyncSession, amount: int, description: str, user_i
         db.add(wallet)
         await db.flush()
 
+    if wallet.balance < amount:
+        raise ValueError(f"Insufficient credits: have {wallet.balance}, need {amount}")
+
     wallet.balance -= amount
     wallet.total_used += amount
 

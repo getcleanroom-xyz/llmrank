@@ -15,8 +15,11 @@ async def search_google(brand_name: str, domain: str) -> str:
     try:
         from ddgs import DDGS
 
-        with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=8))
+        try:
+            with DDGS() as ddgs:
+                results = list(ddgs.text(query, max_results=8))
+        except Exception:
+            results = []
 
         cleaned = []
         for r in results:

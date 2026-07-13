@@ -91,6 +91,7 @@ async def run_scan(
             [(str(q.id), q.query_text) for q in queries],
             llm_names,
             client,
+            brand_name=brand.name,
         )
 
     # Stop keepalive

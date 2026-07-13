@@ -69,8 +69,8 @@ RULES:
         if isinstance(result, dict):
             logger.info("Summarized %s: industry=%s, category=%s, features=%d, competitors=%d",
                         brand_name, result.get("industry"), result.get("category"),
-                        len(result.get("key_features", [])),
-                        len(result.get("competitors_mentioned", [])))
+                        len(result.get("key_features") or []),
+                        len(result.get("competitors_mentioned") or []))
             return result
     except Exception as e:
         logger.warning("Summarize failed for %s: %s", brand_name, e)

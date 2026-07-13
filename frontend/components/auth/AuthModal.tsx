@@ -118,11 +118,12 @@ export function AuthModal() {
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" }} onClick={closeAuthModal} />
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" }} onClick={closeAuthModal} onKeyDown={(e) => { if (e.key === "Escape") closeAuthModal(); }} />
 
       <div className="card" style={{ position: "relative", width: "100%", maxWidth: 400, margin: "0 16px", padding: 24, zIndex: 10 }}>
         {user ? (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+            <button onClick={closeAuthModal} className="btn btn-ghost btn-sm" aria-label="Close" style={{ position: "absolute", top: 12, right: 12 }}>x</button>
             <div style={{ width: 48, height: 48, borderRadius: "var(--radius)", background: "var(--primary)", border: "2px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 800 }}>
               {user.display_name.charAt(0).toUpperCase()}
             </div>

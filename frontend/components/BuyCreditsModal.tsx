@@ -102,7 +102,7 @@ export function BuyCreditsModal({ open, onClose }: BuyCreditsModalProps) {
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" }} onClick={onClose} />
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" }} onClick={onClose} onKeyDown={(e) => { if (e.key === "Escape") onClose(); }} />
       <div className="card" style={{ position: "relative", width: "100%", maxWidth: 420, margin: "0 16px", padding: 24, zIndex: 10 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <div>
@@ -111,7 +111,7 @@ export function BuyCreditsModal({ open, onClose }: BuyCreditsModalProps) {
             </div>
             <div style={{ fontSize: 12, color: "var(--text-muted)" }}>1 credit = $0.001</div>
           </div>
-          <button onClick={onClose} className="btn btn-ghost btn-sm">x</button>
+          <button onClick={onClose} className="btn btn-ghost btn-sm" aria-label="Close">x</button>
         </div>
 
         {error && (

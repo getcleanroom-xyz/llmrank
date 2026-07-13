@@ -195,7 +195,7 @@ export function ScanHistory({ brandId }: { brandId: string }) {
   }, [scans, filters]);
 
   if (isLoading) return <div style={{ color: "var(--text-muted)", fontSize: 13, padding: "16px 0", textAlign: "center", fontWeight: 600 }}>Loading scans...</div>;
-  if (!scans.length) return <div style={{ color: "var(--text-muted)", fontSize: 13, padding: "16px 0", textAlign: "center", fontWeight: 600 }}>No scans yet.</div>;
+  if (!scans.length) return <div style={{ color: "var(--text-muted)", fontSize: 13, padding: "16px 0", textAlign: "center", fontWeight: 600 }}>No scans yet. Click &apos;Scan&apos; in the top-right to run your first scan.</div>;
 
   return (
     <div>

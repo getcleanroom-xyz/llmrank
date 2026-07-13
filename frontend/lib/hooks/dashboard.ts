@@ -10,8 +10,11 @@ export function useDashboard(brandId: string) {
         api.getDashboard(brandId),
         api.getQueries(brandId),
       ]);
+      if (dashResult.status === "rejected") {
+        throw dashResult.reason instanceof Error ? dashResult.reason : new Error("Failed to load dashboard");
+      }
       return {
-        dashboard: dashResult.status === "fulfilled" ? dashResult.value : null,
+        dashboard: dashResult.value,
         queries: queriesResult.status === "fulfilled" ? queriesResult.value : [],
       };
     },

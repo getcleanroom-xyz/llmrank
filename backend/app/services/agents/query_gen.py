@@ -347,6 +347,7 @@ class QueryGenAgent(BaseAgent):
             raw = await scan_all_llms(
                 [(q["query_text"], q["query_text"]) for q in probe_queries],
                 ["chatgpt", "gemini", "llama"], client,
+                brand_name=brand.name,
             )
             results_text = []
             for q_id, llm_name, result_data, error in raw:

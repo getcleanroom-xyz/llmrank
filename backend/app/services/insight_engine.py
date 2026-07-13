@@ -69,8 +69,11 @@ def _diagnose_sync(brand_name: str, brand_domain: str, query_text: str) -> dict:
         # 1. Check brand's own domain for this topic
         own_query = f'site:{brand_domain} {query_text}'
         try:
-            with DDGS() as ddgs:
-                own_results = list(ddgs.text(own_query, max_results=3))
+            try:
+                with DDGS() as ddgs:
+                    own_results = list(ddgs.text(own_query, max_results=3))
+            except Exception:
+                own_results = []
             if own_results:
                 scores["own_domain"] = 2
                 evidence_parts.append(f"Content exists on {brand_domain} about this topic")
@@ -80,8 +83,11 @@ def _diagnose_sync(brand_name: str, brand_domain: str, query_text: str) -> dict:
         # 2. Check brand mentions across the web
         mention_query = f'"{brand_name}" {query_text}'
         try:
-            with DDGS() as ddgs:
-                mention_results = list(ddgs.text(mention_query, max_results=5))
+            try:
+                with DDGS() as ddgs:
+                    mention_results = list(ddgs.text(mention_query, max_results=5))
+            except Exception:
+                mention_results = []
             brand_domain_lower = brand_domain.lower().replace("www.", "")
             third_party_mentions = 0
             for r in mention_results:
@@ -101,8 +107,11 @@ def _diagnose_sync(brand_name: str, brand_domain: str, query_text: str) -> dict:
         # 3. Check key citation sources (Reddit, YouTube, Wikipedia)
         citation_query = f'"{brand_name}" {query_text}'
         try:
-            with DDGS() as ddgs:
-                citation_results = list(ddgs.text(citation_query, max_results=10))
+            try:
+                with DDGS() as ddgs:
+                    citation_results = list(ddgs.text(citation_query, max_results=10))
+            except Exception:
+                citation_results = []
             citation_domains = {"reddit.com", "youtube.com", "wikipedia.org", "medium.com",
                                 "github.com", "stackoverflow.com", "quora.com"}
             found_on = set()

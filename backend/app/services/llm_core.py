@@ -32,16 +32,13 @@ SCAN_DEVELOPER = (
     "You are a product recommendation engine. A user has asked a question. "
     "Return ONLY a valid JSON object with this exact schema. Do NOT make up products or brands.\n"
     '{"items":[{"name":"Real Product","position":1,"description":"one sentence why"}],'
-    '"brand_mentioned":true_or_false,'
-    '"brand_position":1_or_null,'
-    '"brand_sentiment":"positive"|"neutral"|"negative"|"not_mentioned",'
     '"competitors":["Existing Competitor Name"],'
-    '"summary":"natural language summary"}\n'
+    '"summary":"natural language summary of your full answer"}\n'
     "RULES:\n"
     "- Only include real products and competitor names you are certain exist\n"
     "- If you don't know any competitors, return an empty array []\n"
-    "- If the brand was NOT mentioned, set brand_mentioned: false and brand_position: null\n"
     "- Never make up brands like 'BrandA' or 'Brand1'\n"
+    "- Give a genuine, helpful answer to the user's question\n"
     "- No text, no markdown, no explanation. Only the JSON object."
 )
 
@@ -103,8 +100,12 @@ def _parse_json(text: str) -> any:
 
 # ─── Scan ──────────────────────────────────────────────────────────────────────
 
-async def scan_query(query_text: str, llm_name: str, client) -> tuple[Optional[dict], Optional[str]]:
-    """Query an LLM for a scan. Returns (parsed_json, error_message)."""
+async def scan_query(query_text: str, llm_name: str, client, brand_name: str = "") -> tuple[Optional[dict], Optional[str]]:
+    """Query an LLM for a scan. Returns (parsed_json, error_message).
+    
+    Post-hoc detects brand mentions in the LLM's response text rather than
+    relying on LLM self-reporting, giving an accurate organic visibility measurement.
+    """
     import asyncio
     messages = [
         {"role": "developer", "content": SCAN_DEVELOPER},
@@ -115,22 +116,57 @@ async def scan_query(query_text: str, llm_name: str, client) -> tuple[Optional[d
             resp = await _call_openrouter(messages, llm_name, client)
             try:
                 parsed = _parse_json(resp)
-                logger.info("Scan %s/%s: brand_mentioned=%s position=%s competitors=%d",
-                            llm_name, query_text[:40],
-                            parsed.get("brand_mentioned"),
-                            parsed.get("brand_position"),
-                            len(parsed.get("competitors", [])))
-                return parsed, None
             except ValueError:
                 logger.warning("Scan %s/%s: JSON parse failed, using fallback. Response: %s",
                                llm_name, query_text[:40], resp[:200])
-                return {
+                parsed = {
                     "items": [{"name": line.strip(), "position": i + 1, "description": ""}
                                for i, line in enumerate(resp.strip().split("\n")) if line.strip()],
-                    "brand_mentioned": False, "brand_position": None,
-                    "brand_sentiment": "not_mentioned", "competitors": [],
+                    "competitors": [],
                     "summary": resp[:500],
-                }, None
+                }
+
+            # Post-hoc brand mention detection
+            brand_mentioned = False
+            brand_position = None
+            brand_sentiment = "not_mentioned"
+            
+            if brand_name:
+                summary_text = parsed.get("summary", "").lower()
+                items = parsed.get("items", [])
+                
+                # Check items list for brand mention
+                for item in items:
+                    item_name = item.get("name", "").lower()
+                    if brand_name.lower() in item_name or item_name in brand_name.lower():
+                        brand_mentioned = True
+                        brand_position = item.get("position")
+                        break
+                
+                # Also check summary text
+                if not brand_mentioned and brand_name.lower() in summary_text:
+                    brand_mentioned = True
+                
+                # Fuzzy check: brand name words appear in items
+                if not brand_mentioned and len(brand_name.split()) > 1:
+                    brand_words = set(brand_name.lower().split())
+                    for item in items:
+                        item_words = set(item.get("name", "").lower().split())
+                        if len(brand_words & item_words) >= len(brand_words) * 0.7:
+                            brand_mentioned = True
+                            brand_position = item.get("position")
+                            break
+
+            parsed["brand_mentioned"] = brand_mentioned
+            parsed["brand_position"] = brand_position
+            parsed["brand_sentiment"] = brand_sentiment
+
+            logger.info("Scan %s/%s: brand_mentioned=%s position=%s competitors=%d",
+                        llm_name, query_text[:40],
+                        parsed.get("brand_mentioned"),
+                        parsed.get("brand_position"),
+                        len(parsed.get("competitors", [])))
+            return parsed, None
         except httpx.HTTPStatusError as e:
             status = e.response.status_code
             if status == 429:
@@ -144,10 +180,16 @@ async def scan_query(query_text: str, llm_name: str, client) -> tuple[Optional[d
     return None, f"{llm_name} unavailable after retries"
 
 
-async def scan_all_llms(queries: list[tuple[str, str]], llm_names: list[str], client) -> list[tuple[str, str, dict | None, Optional[str]]]:
+async def scan_all_llms(queries: list[tuple[str, str]], llm_names: list[str], client, brand_name: str = "") -> list[tuple[str, str, dict | None, Optional[str]]]:
     """Returns [(query_id, llm_name, result_dict_or_None, error_or_None)]."""
     import asyncio
-    tasks = [scan_query(q_text, llm, client) for q_id, q_text in queries for llm in llm_names]
+    semaphore = asyncio.Semaphore(10)  # Limit concurrent requests
+
+    async def _bounded_scan(q_text, llm):
+        async with semaphore:
+            return await scan_query(q_text, llm, client, brand_name)
+
+    tasks = [_bounded_scan(q_text, llm) for q_id, q_text in queries for llm in llm_names]
     results = await asyncio.gather(*tasks, return_exceptions=True)
     out = []
     idx = 0

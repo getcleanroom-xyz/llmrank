@@ -82,7 +82,7 @@ function BrandDashboardPageInner() {
         // Scan just finished
         setScanComplete(true);
         qc.invalidateQueries({ queryKey: queryKeys.dashboard(brandId) });
-        setTimeout(() => setScanComplete(false), 5000);
+        setTimeout(() => setScanComplete(false), 10000);
         wasRunningRef.current = false;
       }
       return;
@@ -171,6 +171,25 @@ function BrandDashboardPageInner() {
 
         {tab === "overview" && (
           <>
+            {/* Empty state onboarding */}
+            {!hasScan && queries.length === 0 && (
+              <div className="card" style={{ textAlign: "center", padding: "48px 24px", marginBottom: "var(--gap)", background: "#FFF9DB", border: "2px solid var(--border)", boxShadow: "3px 3px 0 #1A1A1A", transform: "rotate(-0.3deg)" }}>
+                <svg width="22" height="26" viewBox="0 0 22 26" fill="none" style={{ display: "block", margin: "0 auto 12px" }}>
+                  <ellipse cx="11" cy="5" rx="5.5" ry="5.5" fill="#EF4444" stroke="#1A1A1A" strokeWidth="1.5" />
+                  <rect x="9" y="10" width="4" height="10" rx="1" fill="#DC2626" stroke="#1A1A1A" strokeWidth="1.5" />
+                </svg>
+                <div style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: "clamp(24px, 4vw, 32px)", fontWeight: 700, marginBottom: 8, lineHeight: 1.1 }}>
+                  Run your first scan to see your AI visibility
+                </div>
+                <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 20, maxWidth: 400, margin: "0 auto 20px" }}>
+                  We&apos;ll check how your brand appears across ChatGPT, Gemini, Claude, and other AI models — then show you where you stand.
+                </div>
+                <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
+                  <ScanControls brandId={brandId} latestScan={active_scan ?? latest_scan} credits={credits} onScanError={setScanError} />
+                </div>
+              </div>
+            )}
+
             {/* Hero score card */}
             {hasScan && (
               <div

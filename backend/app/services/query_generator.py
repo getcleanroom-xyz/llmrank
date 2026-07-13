@@ -129,6 +129,7 @@ async def run_probe_scan(brand_name: str, domain: str, queries: list[dict], clie
         [(q["query_text"], q["query_text"]) for q in probe_queries],
         llm_names,
         client,
+        brand_name=brand_name,
     )
 
     results_text = []

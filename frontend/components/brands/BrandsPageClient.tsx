@@ -27,6 +27,7 @@ function BrandsPageInner() {
   const deleteBrand = useDeleteBrand();
 
   const [success, setSuccess] = useState<string | null>(null);
+  const [brandError, setBrandError] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState(search);
 
   const [showModal, setShowModal] = useState(false);
@@ -52,6 +53,7 @@ function BrandsPageInner() {
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setSuccess(null);
+      setBrandError(err instanceof Error ? err.message : "Failed to create brand");
     }
   };
 
@@ -63,6 +65,7 @@ function BrandsPageInner() {
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setSuccess(null);
+      setBrandError(err instanceof Error ? err.message : "Failed to delete brand");
     }
   };
 
@@ -131,6 +134,12 @@ function BrandsPageInner() {
         {error && (
           <div className="card" style={{ background: "#FEE2E2", borderColor: "var(--red)", padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#991B1B", fontWeight: 600 }}>
             {error}
+          </div>
+        )}
+        {brandError && (
+          <div className="card" style={{ background: "#FEE2E2", borderColor: "var(--red)", padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#991B1B", fontWeight: 600 }}>
+            {brandError}
+            <button onClick={() => setBrandError(null)} style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer", fontWeight: 700, color: "#991B1B" }}>x</button>
           </div>
         )}
         {success && (

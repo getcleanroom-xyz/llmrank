@@ -19,7 +19,7 @@ def compute_visibility_score(mentioned: bool, position: int | None = None,
     - Mentioned: base 40 + position bonus + sentiment bonus
     """
     if not mentioned:
-        return 5.0
+        return 0.0
 
     base = 40.0
     position_bonus = {1: 35, 2: 25, 3: 15, 4: 8}.get(position or 99, 3)
@@ -65,6 +65,7 @@ async def build_brand_context(brand_id: str, db: AsyncSession | None = None) -> 
     from app.models.models import Brand, MonitoredQuery, Scan, QueryResult, ScanStatus
 
     async def _execute(session: AsyncSession):
+        from app.models.models import BrandAgentContext
         brand_result = await session.execute(
             Brand.active().where(Brand.id == uuid.UUID(brand_id))
         )
@@ -98,6 +99,26 @@ async def build_brand_context(brand_id: str, db: AsyncSession | None = None) -> 
 
         # Build context
         lines = [f"## Brand: {brand.name} ({brand.domain})"]
+
+        # Add brand summary from agent context if available
+        try:
+            ctx_result = await session.execute(
+                select(BrandAgentContext).where(BrandAgentContext.brand_id == uuid.UUID(brand_id))
+            )
+            agent_ctx = ctx_result.scalar_one_or_none()
+            if agent_ctx and isinstance(agent_ctx.context, dict):
+                summary = agent_ctx.context.get("summary") or agent_ctx.context
+                if isinstance(summary, dict):
+                    if summary.get("description"):
+                        lines.append(f"Description: {summary['description']}")
+                    if summary.get("industry"):
+                        lines.append(f"Industry: {summary['industry']}")
+                    if summary.get("category"):
+                        lines.append(f"Category: {summary['category']}")
+                    if summary.get("key_features"):
+                        lines.append(f"Key features: {', '.join(summary['key_features'])}")
+        except Exception:
+            pass
 
         # Query performance
         lines.append("\n## Monitored Queries and Their Performance")
