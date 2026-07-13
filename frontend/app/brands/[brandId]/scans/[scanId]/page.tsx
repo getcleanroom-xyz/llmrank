@@ -164,7 +164,7 @@ export default function ScanDetailPage() {
             <div className="section-label" style={{ marginBottom: 4 }}>Mention Rate</div>
             <div style={{ fontSize: 24, fontWeight: 700, lineHeight: 1 }}>{mentionRate}%</div>
             <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
-              {data.query_summaries.filter((q) => q.results.some((r) => r.mentioned)).length}/{data.query_summaries.length} prompts
+              {data.query_summaries.filter((q) => q.results.some((r) => r.mentioned)).length}/{data.query_summaries.length} queries
             </div>
           </div>
           <div className="card" style={{ padding: "14px 16px", transform: "rotate(-0.2deg)" }}>
@@ -183,13 +183,13 @@ export default function ScanDetailPage() {
         {/* Per-query results */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span className="section-label">Prompt Results ({data.query_summaries.length})</span>
+            <span className="section-label">Query Results ({data.query_summaries.length})</span>
             <svg width="30" height="8" viewBox="0 0 30 8" fill="none">
               <path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5" stroke="#22C55E" strokeWidth="1.5" strokeLinecap="round" fill="none" />
             </svg>
           </div>
           <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-            {data.query_summaries.length} prompts tested
+            {data.query_summaries.length} queries tested
           </span>
         </div>
 
@@ -201,7 +201,7 @@ export default function ScanDetailPage() {
 
         {data.query_summaries.length === 0 && (
           <div className="card" style={{ textAlign: "center", padding: 32, color: "var(--text-muted)", fontSize: 13 }}>
-            No prompt results found
+            No query results found
           </div>
         )}
       </div>

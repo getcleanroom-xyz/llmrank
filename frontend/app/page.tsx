@@ -56,8 +56,8 @@ const STEPS = [
   },
   {
     step: "2",
-    title: "We run the prompts",
-    desc: "The actual questions people ask AI about your category. Real prompts, real answers.",
+    title: "We run the queries",
+    desc: "The actual questions people ask AI about your category. Real queries, real answers.",
   },
   {
     step: "3",
@@ -86,11 +86,11 @@ const FEATURES = [
     desc: "Threat levels, not just mentions. Know who's actually beating you and why.",
   },
   {
-    title: "Per-Prompt Drilldown",
-    desc: "Click any prompt. Read the exact AI response. Word for word.",
+    title: "Per-Query Drilldown",
+    desc: "Click any query. Read the exact AI response. Word for word.",
   },
   {
-    title: "AI-Suggested Prompts",
+    title: "AI-Suggested Queries",
     desc: "Not sure what to track? We'll tell you what your market is asking.",
   },
   {

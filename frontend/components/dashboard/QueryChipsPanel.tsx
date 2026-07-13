@@ -14,8 +14,8 @@ export function QueryChipsPanel({ queries, brandId, onManageQueries }: { queries
 
   if (!queries.length) return (
     <div style={{ textAlign: "center", padding: "12px 0" }}>
-      <div style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 8, fontWeight: 600 }}>No prompt data yet</div>
-      {onManageQueries && <button onClick={onManageQueries} className="btn btn-sm">Add prompts</button>}
+      <div style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 8, fontWeight: 600 }}>No query data yet</div>
+      {onManageQueries && <button onClick={onManageQueries} className="btn btn-sm">Add queries</button>}
     </div>
   );
 

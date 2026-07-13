@@ -82,7 +82,7 @@ export default function LLMDrilldownPage() {
               <path d="M0 3 Q8 0 16 4 Q24 6 32 2 Q40 0 48 5 Q56 6 64 2 Q72 0 80 4 Q88 6 96 2 Q104 0 112 4 Q120 3 120 2" fill="none" stroke={llmColor} strokeWidth="2" strokeLinecap="round" />
             </svg>
             <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5, margin: 0, fontFamily: "var(--font-serif), Georgia, serif" }}>
-              Mentioned in <strong>{data.times_mentioned}</strong> of <strong>{data.total_queries}</strong> prompts ({data.visibility_pct}% visibility).
+              Mentioned in <strong>{data.times_mentioned}</strong> of <strong>{data.total_queries}</strong> queries ({data.visibility_pct}% visibility).
               {data.avg_position && <> Average position: <strong>#{data.avg_position}</strong>.</>}
             </p>
           </div>
@@ -175,7 +175,7 @@ export default function LLMDrilldownPage() {
 
         {data.queries.length === 0 && (
           <div className="card" style={{ textAlign: "center", padding: 32, color: "var(--text-muted)", fontSize: 13 }}>
-            No prompt results for this model
+            No query results for this model
           </div>
         )}
       </div>

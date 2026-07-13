@@ -665,27 +665,27 @@ input[type="checkbox"]:not(.native):disabled, input[type="radio"]:not(.native):d
   box-shadow: 4px 4px 0 #1A1A1A, 6px 6px 0 var(--primary) !important;
 }
 
-/* ─── Responsive Prompts Table ─── */
-.prompts-table-grid {
+/* ─── Responsive Queries Table ─── */
+.queries-table-grid {
   display: grid;
   grid-template-columns: 36px 1fr 70px 90px 80px 90px 60px;
   gap: 0;
 }
-.prompts-row-grid {
+.queries-row-grid {
   display: grid;
   grid-template-columns: 36px 1fr 70px 90px 80px 90px 60px;
   gap: 0;
 }
-.prompts-col-score,
-.prompts-col-trend,
-.prompts-col-status,
-.prompts-col-scanned,
-.prompts-col-actions {
+.queries-col-score,
+.queries-col-trend,
+.queries-col-status,
+.queries-col-scanned,
+.queries-col-actions {
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.prompts-bulk-bar {
+.queries-bulk-bar {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -693,39 +693,39 @@ input[type="checkbox"]:not(.native):disabled, input[type="radio"]:not(.native):d
 }
 
 @media (max-width: 640px) {
-  .prompts-table-grid {
+  .queries-table-grid {
     display: none;
   }
-  .prompts-row-grid {
+  .queries-row-grid {
     display: flex;
     flex-direction: column;
     gap: 6px;
     padding: 12px !important;
   }
-  .prompts-row-grid .prompts-col-score,
-  .prompts-row-grid .prompts-col-trend,
-  .prompts-row-grid .prompts-col-status,
-  .prompts-row-grid .prompts-col-scanned,
-  .prompts-row-grid .prompts-col-actions {
+  .queries-row-grid .queries-col-score,
+  .queries-row-grid .queries-col-trend,
+  .queries-row-grid .queries-col-status,
+  .queries-row-grid .queries-col-scanned,
+  .queries-row-grid .queries-col-actions {
     display: none;
   }
-  .prompts-mobile-meta {
+  .queries-mobile-meta {
     display: flex !important;
     gap: 8px;
     flex-wrap: wrap;
     font-size: 11px;
     color: var(--text-muted);
   }
-  .prompts-mobile-actions {
+  .queries-mobile-actions {
     display: flex !important;
     gap: 6px;
     margin-top: 4px;
   }
-  .prompts-bulk-bar {
+  .queries-bulk-bar {
     flex-direction: column;
     align-items: stretch;
   }
-  .prompts-bulk-bar .bulk-actions-row {
+  .queries-bulk-bar .bulk-actions-row {
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
@@ -733,8 +733,8 @@ input[type="checkbox"]:not(.native):disabled, input[type="radio"]:not(.native):d
 }
 
 @media (min-width: 641px) {
-  .prompts-mobile-meta,
-  .prompts-mobile-actions {
+  .queries-mobile-meta,
+  .queries-mobile-actions {
     display: none !important;
   }
 }

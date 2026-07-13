@@ -71,7 +71,7 @@ export function BrandWizard({ open, onClose, onCreated, creating }: BrandWizardP
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <div>
                 <div style={{ fontSize: 15, fontWeight: 700 }}>Who competes with {name}?</div>
-                <div style={{ fontSize: 11, color: "var(--text-muted)" }}>This helps generate better prompts</div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)" }}>This helps generate better queries</div>
               </div>
               <button onClick={() => setStep(1)} className="btn btn-ghost btn-sm">Back</button>
             </div>
@@ -94,7 +94,7 @@ export function BrandWizard({ open, onClose, onCreated, creating }: BrandWizardP
 
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, padding: "8px 0" }}>
               <input type="checkbox" defaultChecked className="native" style={{ width: 14, height: 14 }} />
-              <span style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 500 }}>Auto-suggest new prompts monthly</span>
+              <span style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 500 }}>Auto-suggest new queries monthly</span>
             </div>
 
             <button onClick={() => onCreated(name.trim(), domain.trim(), competitors)} disabled={creating} className="btn btn-primary" style={{ width: "100%" }}>
