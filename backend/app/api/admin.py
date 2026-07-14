@@ -36,6 +36,13 @@ class StatsResponse(BaseModel):
     total_clicked: int
 
 
+class BlogGenerateResponse(BaseModel):
+    title: str
+    filename: str
+    pr_url: str | None
+    social: dict
+
+
 # ─── Users ────────────────────────────────────────────────────────────────────
 
 @router.get("/users", response_model=list[AdminUserResponse])
@@ -70,3 +77,42 @@ async def admin_stats(admin: User = Depends(require_admin), db: AsyncSession = D
         total_opened=opened,
         total_clicked=clicked,
     )
+
+
+# ─── Blog ────────────────────────────────────────────────────────────────────
+
+@router.post("/blog/generate", response_model=BlogGenerateResponse)
+async def generate_blog(admin: User = Depends(require_admin)):
+    """Generate a blog post from the content calendar and create a PR."""
+    from app.services.blog_generator import run_weekly_post
+
+    result = await run_weekly_post()
+    if not result:
+        raise HTTPException(500, "Blog generation failed. Check logs for details.")
+
+    return BlogGenerateResponse(
+        title=result["title"],
+        filename=result["filename"],
+        pr_url=result.get("pr_url"),
+        social=result.get("social", {}),
+    )
+
+
+@router.get("/blog/calendar")
+async def list_calendar(admin: User = Depends(require_admin)):
+    """List remaining topics in the content calendar."""
+    from app.services.blog_generator import load_calendar
+    return {"topics": load_calendar()}
+
+
+@router.get("/blog/posts")
+async def list_generated_posts(admin: User = Depends(require_admin)):
+    """List all blog posts (generated and manual)."""
+    import os
+    blog_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "frontend", "content", "blog")
+    posts = []
+    if os.path.exists(blog_dir):
+        for f in sorted(os.listdir(blog_dir)):
+            if f.endswith(".md"):
+                posts.append({"filename": f, "generated": f.startswith("generated-")})
+    return {"posts": posts}

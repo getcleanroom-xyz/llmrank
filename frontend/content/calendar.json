@@ -1,0 +1,86 @@
+[
+  {
+    "topic": "How we increased a SaaS brand's ChatGPT visibility from 15% to 62% in 2 weeks",
+    "angle": "Step-by-step case study with real numbers from LLMRank user data",
+    "keywords": ["ChatGPT visibility", "SaaS AI optimization", "case study"],
+    "category": "case-study",
+    "target_audience": "SaaS founders"
+  },
+  {
+    "topic": "The complete guide to getting mentioned in AI-generated answers",
+    "angle": "Comprehensive GEO playbook covering content, mentions, and structure",
+    "keywords": ["GEO guide", "AI visibility", "ChatGPT mentions"],
+    "category": "pillar",
+    "target_audience": "marketing teams"
+  },
+  {
+    "topic": "Why your SEO agency doesn't understand AI visibility (and what to do instead)",
+    "angle": "Contrast traditional SEO thinking with GEO reality. Personal frustration angle.",
+    "keywords": ["SEO vs GEO", "AI visibility agency", "SEO limitations"],
+    "category": "opinion",
+    "target_audience": "business owners"
+  },
+  {
+    "topic": "We analyzed 500 brand scans. Here's what the most visible brands have in common.",
+    "angle": "Data-driven post using anonymized LLMRank scan data. Patterns across industries.",
+    "keywords": ["AI visibility data", "brand mentions", "LLM optimization"],
+    "category": "data",
+    "target_audience": "marketing teams"
+  },
+  {
+    "topic": "How to write comparison pages that AI models actually cite",
+    "angle": "Tactical guide with examples of good vs bad comparison content",
+    "keywords": ["comparison pages", "AI content", "GEO content strategy"],
+    "category": "tactical",
+    "target_audience": "content marketers"
+  },
+  {
+    "topic": "The Reddit strategy that improves your AI visibility (without spamming)",
+    "angle": "How genuine community participation translates to LLM training data",
+    "keywords": ["Reddit SEO", "AI training data", "community marketing"],
+    "category": "tactical",
+    "target_audience": "indie hackers"
+  },
+  {
+    "topic": "Schema markup for AI: what to add and how to do it in 30 minutes",
+    "angle": "Quick implementation guide with copy-paste examples",
+    "keywords": ["schema markup", "structured data", "AI SEO"],
+    "category": "tactical",
+    "target_audience": "developers"
+  },
+  {
+    "topic": "5 questions to ask before hiring an AI visibility tool",
+    "angle": "Buyer's guide framing. What to look for, what to avoid.",
+    "keywords": ["AI visibility tool", "GEO tools", "brand monitoring"],
+    "category": "buyer-guide",
+    "target_audience": "marketing managers"
+  },
+  {
+    "topic": "What happens to your brand when GPT-5 drops",
+    "angle": "Forward-looking piece about model retraining cycles and visibility windows",
+    "keywords": ["GPT-5", "AI model updates", "brand visibility"],
+    "category": "opinion",
+    "target_audience": "business owners"
+  },
+  {
+    "topic": "How indie hackers can compete with funded companies in AI visibility",
+    "angle": "Leveling the playing field — small brands have advantages in GEO",
+    "keywords": ["indie hacker SEO", "small business AI", "GEO strategy"],
+    "category": "opinion",
+    "target_audience": "indie hackers"
+  },
+  {
+    "topic": "The anatomy of a ChatGPT recommendation: what makes brands get mentioned",
+    "angle": "Reverse-engineering how LLMs choose which brands to include in answers",
+    "keywords": ["ChatGPT recommendations", "LLM brand selection", "AI answers"],
+    "category": "pillar",
+    "target_audience": "marketing teams"
+  },
+  {
+    "topic": "Stop optimizing for Google. Start optimizing for the answer.",
+    "angle": "Provocative take on the shift from rankings to presence in AI responses",
+    "keywords": ["AI vs Google", "answer engine optimization", "search evolution"],
+    "category": "opinion",
+    "target_audience": "business owners"
+  }
+]
