@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { useAdminCampaigns, useAdminStats, useAdminDeleteCampaign, useAdminCancelCampaign, useAdminCloneCampaign } from "@/lib/hooks";
+import { useAdminCampaigns, useAdminStats, useAdminDeleteCampaign, useAdminCancelCampaign, useAdminCloneCampaign, useAdminBlogPosts, useAdminBlogCalendar, useAdminGenerateBlog } from "@/lib/hooks";
 import { AppHeader, PageHeader } from "@/components/AppHeader";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { Select } from "@/components/admin/Select";
@@ -40,10 +40,14 @@ export function AdminDashboard() {
   const deleteCampaign = useAdminDeleteCampaign();
   const cancelCampaign = useAdminCancelCampaign();
   const cloneCampaign = useAdminCloneCampaign();
+  const { data: blogPosts } = useAdminBlogPosts();
+  const { data: blogCalendar } = useAdminBlogCalendar();
+  const generateBlog = useAdminGenerateBlog();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
+  const [blogMessage, setBlogMessage] = useState<string | null>(null);
 
   const error = loadError ? (loadError instanceof Error ? loadError.message : "Failed to load") : null;
 
@@ -337,6 +341,85 @@ export function AdminDashboard() {
               </div>
             );
           })}
+        </div>
+
+        {/* Blog Management Section */}
+        <div className="card sketchy" style={{ overflow: "hidden", padding: 0, marginTop: "var(--gap)" }}>
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "12px 16px", borderBottom: "2px solid var(--border)",
+            background: "var(--bg-dark)", gap: 8, flexWrap: "wrap",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div className="section-label">Blog</div>
+              <svg width="30" height="8" viewBox="0 0 30 8" fill="none"><path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5" stroke="var(--green)" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg>
+            </div>
+            <button
+              onClick={async () => {
+                setBlogMessage(null);
+                try {
+                  const result = await generateBlog.mutateAsync();
+                  setBlogMessage(`Generated "${result.title}"${result.pr_url ? ` — PR: ${result.pr_url}` : " (saved locally)"}`);
+                } catch (err) {
+                  setBlogMessage(err instanceof Error ? err.message : "Generation failed");
+                }
+              }}
+              disabled={generateBlog.isPending}
+              className="btn btn-primary btn-sm"
+            >
+              {generateBlog.isPending ? "Generating..." : "+ Generate Post"}
+            </button>
+          </div>
+
+          {blogMessage && (
+            <div style={{ padding: "10px 16px", fontSize: 12, fontWeight: 600, background: blogMessage.includes("failed") || blogMessage.includes("Error") ? "#FEE2E2" : "#E6F9ED", borderBottom: "1px solid var(--border)" }}>
+              {blogMessage}
+            </div>
+          )}
+
+          {/* Content Calendar */}
+          {blogCalendar && blogCalendar.topics.length > 0 && (
+            <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)" }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 8 }}>
+                Content Calendar ({blogCalendar.topics.length} topics remaining)
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {blogCalendar.topics.slice(0, 5).map((t, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+                    <span className="pill pill-neu" style={{ fontSize: 9, flexShrink: 0 }}>{t.category}</span>
+                    <span style={{ fontWeight: 600, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.topic}</span>
+                    <span style={{ fontSize: 10, color: "var(--text-muted)", flexShrink: 0 }}>{t.target_audience}</span>
+                  </div>
+                ))}
+                {blogCalendar.topics.length > 5 && (
+                  <div style={{ fontSize: 10, color: "var(--text-muted)" }}>+{blogCalendar.topics.length - 5} more</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Generated Posts */}
+          {blogPosts && blogPosts.posts.length > 0 && (
+            <div style={{ padding: "12px 16px" }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 8 }}>
+                Posts ({blogPosts.posts.length})
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {blogPosts.posts.map((p) => (
+                  <div key={p.filename} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+                    {p.generated && <span className="pill" style={{ fontSize: 9, background: "#DBEAFF", border: "1px solid var(--blue)" }}>AI</span>}
+                    <span style={{ fontWeight: 500 }}>{p.filename.replace(/\.md$/, "").replace(/-/g, " ")}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {blogPosts && blogPosts.posts.length === 0 && (
+            <div style={{ textAlign: "center", padding: "24px 16px", fontSize: 12, color: "var(--text-muted)" }}>
+              No posts yet. Click "Generate Post" to create one.
+            </div>
+          )}
         </div>
       </div>
 

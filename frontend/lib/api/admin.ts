@@ -113,3 +113,34 @@ export const adminGetStats = () =>
 
 export const adminCloneCampaign = (id: string) =>
   apiFetch<AdminCampaignDetail>(`/admin/campaigns/${id}/clone`, { method: "POST" });
+
+// ─── Blog ──────────────────────────────────────────────────────────────────
+
+export interface BlogCalendarTopic {
+  topic: string;
+  angle: string;
+  keywords: string[];
+  category: string;
+  target_audience: string;
+}
+
+export interface BlogGenerateResult {
+  title: string;
+  filename: string;
+  pr_url: string | null;
+  social: Record<string, string>;
+}
+
+export interface BlogPost {
+  filename: string;
+  generated: boolean;
+}
+
+export const adminGenerateBlog = () =>
+  apiFetch<BlogGenerateResult>("/admin/blog/generate", { method: "POST" });
+
+export const adminListCalendar = () =>
+  apiFetch<{ topics: BlogCalendarTopic[] }>("/admin/blog/calendar");
+
+export const adminListBlogPosts = () =>
+  apiFetch<{ posts: BlogPost[] }>("/admin/blog/posts");

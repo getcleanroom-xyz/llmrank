@@ -95,3 +95,30 @@ export function useAdminCloneCampaign() {
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.campaigns }),
   });
 }
+
+// ─── Blog ──────────────────────────────────────────────────────────────────
+
+export function useAdminBlogPosts() {
+  return useQuery({
+    queryKey: ["adminBlogPosts"],
+    queryFn: api.adminListBlogPosts,
+  });
+}
+
+export function useAdminBlogCalendar() {
+  return useQuery({
+    queryKey: ["adminBlogCalendar"],
+    queryFn: api.adminListCalendar,
+  });
+}
+
+export function useAdminGenerateBlog() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.adminGenerateBlog,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["adminBlogPosts"] });
+      qc.invalidateQueries({ queryKey: ["adminBlogCalendar"] });
+    },
+  });
+}
