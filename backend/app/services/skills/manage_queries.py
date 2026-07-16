@@ -205,7 +205,11 @@ async def refresh_queries(brand_id: str, brand_name: str, domain: str,
     if not summary:
         try:
             from app.services.crawler import crawl_website
+            from app.services.agents.context_store import store_crawl_content
             crawl_content = await crawl_website(domain)
+            # Cache crawl content for insight generation (avoids redundant web searches)
+            if crawl_content and db:
+                await store_crawl_content(db, uuid.UUID(brand_id), crawl_content)
             summary = await summarize_company(crawl_content, brand_name, domain)
         except Exception as e:
             logger.warning("Failed to get summary for %s: %s", brand_name, e)

@@ -198,7 +198,11 @@ class QueryGenAgent(BaseAgent):
         # Summarize the brand
         from app.services.tools.summarize import summarize_company
         from app.services.crawler import crawl_website
+        from app.services.agents.context_store import store_crawl_content
         crawl_content = await crawl_website(brand.domain)
+        # Cache crawl content for insight generation (avoids redundant web searches)
+        if crawl_content:
+            await store_crawl_content(db, brand_id, crawl_content)
         summary = await summarize_company(crawl_content, brand.name, brand.domain)
 
         queries = await generate_queries(
@@ -259,10 +263,14 @@ class QueryGenAgent(BaseAgent):
         from app.services.skills.manage_queries import generate_queries
         from app.services.tools.summarize import summarize_company
         from app.services.crawler import crawl_website
+        from app.services.agents.context_store import store_crawl_content
         import httpx
 
         # 1. Crawl the brand's website (up to 6 pages)
         crawl_content = await crawl_website(brand.domain)
+        # Cache crawl content for insight generation (avoids redundant web searches)
+        if crawl_content:
+            await store_crawl_content(db, brand_id, crawl_content)
 
         # 2. Summarize what the company does
         summary = await summarize_company(crawl_content, brand.name, brand.domain)

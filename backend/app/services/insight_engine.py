@@ -42,11 +42,16 @@ async def _call_llm(messages: list[dict]) -> str:
         return await _call_openrouter(messages, "chatgpt", client, temperature=0.3, max_tokens=512)
 
 
-async def diagnose_visibility_gap(brand_name: str, brand_domain: str, query_text: str) -> dict:
+async def diagnose_visibility_gap(
+    brand_name: str,
+    brand_domain: str,
+    query_text: str,
+    crawl_content: str | None = None,
+) -> dict:
     """Diagnose why a brand is absent from AI responses for a given query.
 
     Checks multiple signals based on AEO/GEO research:
-    1. Content on brand's own domain
+    1. Content on brand's own domain (uses crawl_content if available, otherwise web search)
     2. Brand mentions across the web (the #1 factor for AI visibility)
     3. Presence on key citation sources (Reddit, YouTube, Wikipedia)
 
@@ -55,30 +60,53 @@ async def diagnose_visibility_gap(brand_name: str, brand_domain: str, query_text
     """
     import asyncio
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(None, _diagnose_sync, brand_name, brand_domain, query_text)
+    return await loop.run_in_executor(
+        None, _diagnose_sync, brand_name, brand_domain, query_text, crawl_content
+    )
 
 
-def _diagnose_sync(brand_name: str, brand_domain: str, query_text: str) -> dict:
+def _diagnose_sync(
+    brand_name: str,
+    brand_domain: str,
+    query_text: str,
+    crawl_content: str | None = None,
+) -> dict:
     """Synchronous diagnosis — runs in thread pool to avoid blocking event loop."""
     try:
+        import time
         from ddgs import DDGS
 
         evidence_parts = []
         scores = {"own_domain": 0, "web_mentions": 0, "citation_sources": 0}
 
         # 1. Check brand's own domain for this topic
-        own_query = f'site:{brand_domain} {query_text}'
-        try:
-            try:
-                with DDGS() as ddgs:
-                    own_results = list(ddgs.text(own_query, max_results=3))
-            except Exception:
-                own_results = []
-            if own_results:
+        # Use crawl_content if available (fast, no rate limits), otherwise fall back to web search
+        if crawl_content:
+            query_lower = query_text.lower()
+            crawl_lower = crawl_content.lower()
+            # Check if key words from the query appear in the crawled content
+            query_words = [w for w in query_lower.split() if len(w) > 3]
+            matches = sum(1 for w in query_words if w in crawl_lower)
+            if matches >= max(1, len(query_words) // 2):
                 scores["own_domain"] = 2
-                evidence_parts.append(f"Content exists on {brand_domain} about this topic")
-        except Exception:
-            pass
+                evidence_parts.append(f"Content exists on {brand_domain} about this topic (from crawl)")
+            else:
+                scores["own_domain"] = 0
+                evidence_parts.append(f"No relevant content found on {brand_domain} for this topic (from crawl)")
+        else:
+            # Fallback to web search if no crawl content available
+            own_query = f'site:{brand_domain} {query_text}'
+            try:
+                try:
+                    with DDGS() as ddgs:
+                        own_results = list(ddgs.text(own_query, max_results=3))
+                except Exception:
+                    own_results = []
+                if own_results:
+                    scores["own_domain"] = 2
+                    evidence_parts.append(f"Content exists on {brand_domain} about this topic")
+            except Exception:
+                pass
 
         # 2. Check brand mentions across the web
         mention_query = f'"{brand_name}" {query_text}'
@@ -105,8 +133,10 @@ def _diagnose_sync(brand_name: str, brand_domain: str, query_text: str) -> dict:
             pass
 
         # 3. Check key citation sources (Reddit, YouTube, Wikipedia)
+        # Rate-limited: pause before search to avoid 429s
         citation_query = f'"{brand_name}" {query_text}'
         try:
+            time.sleep(1.5)  # Rate limit: pause before citation search
             try:
                 with DDGS() as ddgs:
                     citation_results = list(ddgs.text(citation_query, max_results=10))
@@ -222,8 +252,13 @@ async def generate_dashboard_insights(
     brand_domain: str = "",
     classification: dict | None = None,
     query_map: dict | None = None,
+    crawl_content: str | None = None,
 ) -> list[dict]:
-    """Generate tailored dashboard-level insights using LLM."""
+    """Generate tailored dashboard-level insights using LLM.
+
+    Args:
+        crawl_content: Optional cached crawl content to avoid web searches for own-domain checks.
+    """
     if not all_results:
         return []
 
@@ -255,18 +290,26 @@ async def generate_dashboard_insights(
         for r in all_results:
             query_results[r.query_id].append(r)
 
-        # Run all diagnoses concurrently (each makes 3 web searches)
+        # Run diagnoses with rate limiting (max 3 concurrent to avoid 429s)
+        import asyncio
+        sem = asyncio.Semaphore(3)
+
+        async def _rate_limited_diagnose(q_text: str) -> dict:
+            async with sem:
+                return await diagnose_visibility_gap(
+                    brand_name, brand_domain, q_text, crawl_content=crawl_content
+                )
+
         diag_tasks = []
         diag_query_ids = []
         for query_id, results in query_results.items():
             if not any(r.mentioned for r in results):
                 query_obj = query_map.get(query_id) if query_map else None
                 query_text = query_obj.query_text if hasattr(query_obj, "query_text") else str(query_id)
-                diag_tasks.append(diagnose_visibility_gap(brand_name, brand_domain, query_text))
+                diag_tasks.append(_rate_limited_diagnose(query_text))
                 diag_query_ids.append(query_text)
 
         if diag_tasks:
-            import asyncio
             diags = await asyncio.gather(*diag_tasks, return_exceptions=True)
             for query_text, diag in zip(diag_query_ids, diags):
                 if isinstance(diag, Exception):
