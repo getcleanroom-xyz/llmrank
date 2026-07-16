@@ -157,6 +157,25 @@ async def scan_query(query_text: str, llm_name: str, client, brand_name: str = "
                             brand_position = item.get("position")
                             break
 
+                # Determine sentiment when brand is mentioned
+                if brand_mentioned:
+                    full_text = (parsed.get("summary", "") + " " + " ".join(
+                        item.get("description", "") for item in items
+                    )).lower()
+                    
+                    positive_signals = ["best", "excellent", "top", "great", "recommend", "leading", "popular", "trusted", "innovative", "award"]
+                    negative_signals = ["avoid", "poor", "bad", "issue", "problem", "complaint", "expensive", "overpriced", "disappointing"]
+                    
+                    pos_count = sum(1 for s in positive_signals if s in full_text)
+                    neg_count = sum(1 for s in negative_signals if s in full_text)
+                    
+                    if pos_count > neg_count:
+                        brand_sentiment = "positive"
+                    elif neg_count > pos_count:
+                        brand_sentiment = "negative"
+                    else:
+                        brand_sentiment = "neutral"
+
             parsed["brand_mentioned"] = brand_mentioned
             parsed["brand_position"] = brand_position
             parsed["brand_sentiment"] = brand_sentiment

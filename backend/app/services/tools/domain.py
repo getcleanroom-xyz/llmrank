@@ -19,7 +19,7 @@ def compute_visibility_score(mentioned: bool, position: int | None = None,
     - Mentioned: base 40 + position bonus + sentiment bonus
     """
     if not mentioned:
-        return 0.0
+        return 5.0
 
     base = 40.0
     position_bonus = {1: 35, 2: 25, 3: 15, 4: 8}.get(position or 99, 3)

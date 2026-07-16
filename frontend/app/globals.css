@@ -262,8 +262,8 @@ body {
 
 /* ─── Scan progress ─── */
 @keyframes progress-slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
-.scan-progress { height: 6px; background: var(--bg-dark); border: 2px solid var(--border); border-radius: 2px; overflow: hidden; }
-.scan-progress-fill { height: 100%; background: var(--primary); width: 40%; animation: progress-slide 1.2s ease-in-out infinite; }
+.scan-progress { height: 10px; background: var(--bg-dark); border: 2px solid var(--border); border-radius: 2px; overflow: hidden; }
+.scan-progress-fill { height: 100%; background: var(--primary); width: 50%; animation: progress-slide 1.5s ease-in-out infinite; }
 
 /* ─── App Header ─── */
 .app-header {

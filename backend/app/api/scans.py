@@ -1,4 +1,5 @@
 import uuid
+import json
 import logging
 import asyncio
 from datetime import datetime, timezone
@@ -44,6 +45,16 @@ async def trigger_scan(
     brand = brand_result.scalar_one_or_none()
     if not brand:
         raise HTTPException(404, "Brand not found")
+
+    # Check for existing running scan (prevent duplicates)
+    running_result = await db.execute(
+        select(Scan).where(
+            Scan.brand_id == brand_id,
+            Scan.status.in_([ScanStatus.pending, ScanStatus.running])
+        ).limit(1)
+    )
+    if running_result.scalar_one_or_none():
+        raise HTTPException(409, "A scan is already in progress for this brand. Please wait for it to complete.")
 
     # Check for active queries
     queries_result = await db.execute(
@@ -98,6 +109,29 @@ async def trigger_scan(
     return scan
 
 
+async def _handle_scan_failure(db: AsyncSession, scan_id: uuid.UUID, brand_id: uuid.UUID, credit_tx_id: str):
+    """Mark scan as failed and refund credits."""
+    scan_result = await db.execute(select(Scan).where(Scan.id == scan_id))
+    scan = scan_result.scalar_one_or_none()
+    if scan and scan.status != ScanStatus.failed:
+        scan.status = ScanStatus.failed
+        scan.completed_at = _utcnow()
+        await db.commit()
+    if credit_tx_id:
+        from app.services.credit_service import grant_credits
+        from app.models.models import CreditTransaction
+        tx_result = await db.execute(
+            select(CreditTransaction).where(CreditTransaction.id == uuid.UUID(credit_tx_id))
+        )
+        last_tx = tx_result.scalar_one_or_none()
+        if last_tx and last_tx.amount < 0:
+            brand_result = await db.execute(Brand.active().where(Brand.id == brand_id))
+            brand = brand_result.scalar_one_or_none()
+            if brand:
+                await grant_credits(db, abs(last_tx.amount), f"Refund: failed scan {scan_id}", "refund", brand.owner_id)
+                await db.commit()
+
+
 async def _run_scan_background(brand_id: uuid.UUID, scan_id: uuid.UUID, llm_names: list[str], credit_tx_id: str = ""):
     """Background task — runs scan via the Scan Orchestrator Agent."""
     from app.core.database import AsyncSessionLocal
@@ -114,49 +148,11 @@ async def _run_scan_background(brand_id: uuid.UUID, scan_id: uuid.UUID, llm_name
                 logger.info("Background scan completed: scan_id=%s", scan_id)
             else:
                 logger.error("Background scan failed: scan_id=%s error=%s", scan_id, result.error)
-                # Mark scan as failed and refund credits
-                scan_result = await db.execute(select(Scan).where(Scan.id == scan_id))
-                scan = scan_result.scalar_one_or_none()
-                if scan:
-                    scan.status = ScanStatus.failed
-                    scan.completed_at = _utcnow()
-                    await db.commit()
-                if credit_tx_id:
-                    from app.services.credit_service import grant_credits
-                    from app.models.models import CreditTransaction
-                    tx_result = await db.execute(
-                        select(CreditTransaction).where(CreditTransaction.id == uuid.UUID(credit_tx_id))
-                    )
-                    last_tx = tx_result.scalar_one_or_none()
-                    if last_tx and last_tx.amount < 0:
-                        brand_result = await db.execute(Brand.active().where(Brand.id == brand_id))
-                        brand = brand_result.scalar_one_or_none()
-                        if brand:
-                            await grant_credits(db, abs(last_tx.amount), f"Refund: failed scan {scan_id}", "refund", brand.owner_id)
-                            await db.commit()
+                await _handle_scan_failure(db, scan_id, brand_id, credit_tx_id)
         except Exception as e:
             logger.exception("Background scan failed: scan_id=%s error=%s", scan_id, e)
-            # Mark scan as failed and refund credits
             try:
-                scan_result = await db.execute(select(Scan).where(Scan.id == scan_id))
-                scan = scan_result.scalar_one_or_none()
-                if scan and scan.status != ScanStatus.failed:
-                    scan.status = ScanStatus.failed
-                    scan.completed_at = _utcnow()
-                    await db.commit()
-                if credit_tx_id:
-                    from app.services.credit_service import grant_credits
-                    from app.models.models import CreditTransaction
-                    tx_result = await db.execute(
-                        select(CreditTransaction).where(CreditTransaction.id == uuid.UUID(credit_tx_id))
-                    )
-                    last_tx = tx_result.scalar_one_or_none()
-                    if last_tx and last_tx.amount < 0:
-                        brand_result = await db.execute(Brand.active().where(Brand.id == brand_id))
-                        brand = brand_result.scalar_one_or_none()
-                        if brand:
-                            await grant_credits(db, abs(last_tx.amount), f"Refund: failed scan {scan_id}", "refund", brand.owner_id)
-                            await db.commit()
+                await _handle_scan_failure(db, scan_id, brand_id, credit_tx_id)
             except Exception as refund_err:
                 logger.error("Failed to refund credits for scan %s: %s", scan_id, refund_err)
 
