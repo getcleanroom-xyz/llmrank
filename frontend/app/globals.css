@@ -261,9 +261,28 @@ body {
 .skeleton { background: linear-gradient(90deg, var(--bg-dark) 25%, #ddd 50%, var(--bg-dark) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 2px; border: 1.5px solid var(--border); }
 
 /* ─── Scan progress ─── */
-@keyframes progress-slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
-.scan-progress { height: 10px; background: var(--bg-dark); border: 2px solid var(--border); border-radius: 2px; overflow: hidden; }
-.scan-progress-fill { height: 100%; background: var(--primary); width: 50%; animation: progress-slide 1.5s ease-in-out infinite; }
+@keyframes progress-slide {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(0%); }
+  100% { transform: translateX(200%); }
+}
+.scan-progress {
+  height: 8px;
+  background: var(--bg-dark);
+  border: 2px solid var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+.scan-progress-fill {
+  height: 100%;
+  background: var(--primary);
+  width: 40%;
+  position: absolute;
+  left: 0;
+  top: 0;
+  animation: progress-slide 2s ease-in-out infinite;
+}
 
 /* ─── App Header ─── */
 .app-header {
@@ -312,6 +331,8 @@ body {
 .page-header {
   background: var(--surface);
   border-bottom: 2px solid var(--border);
+  position: relative;
+  z-index: 40;
 }
 .page-header-inner {
   max-width: 1200px;

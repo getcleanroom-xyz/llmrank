@@ -73,7 +73,7 @@ export function ScanControls({ brandId, latestScan, credits, onScanError }: { br
             {selectedLLMs.length} model{selectedLLMs.length !== 1 ? "s" : ""}
           </button>
           {showConfig && (
-            <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, background: "var(--surface)", border: "2px solid var(--border)", borderRadius: "var(--radius)", padding: 10, minWidth: 220, zIndex: 50, boxShadow: "var(--shadow)" }}>
+            <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, background: "var(--surface)", border: "2px solid var(--border)", borderRadius: "var(--radius)", padding: 10, minWidth: 220, zIndex: 100, boxShadow: "var(--shadow)" }}>
               <div className="section-label" style={{ marginBottom: 6 }}>Models</div>
               {LLM_OPTIONS.map((llm) => {
                 const cost = credits?.cost_per_scan?.[llm.id] ?? 0;
