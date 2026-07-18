@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { LandingHeader, LandingCTA } from "@/components/landing/LandingHeader";
 import { FlashcardStack } from "@/components/landing/FlashcardStack";
 import Link from "next/link";
@@ -75,7 +76,7 @@ const STEP_COLORS = [
 const FEATURES = [
   {
     title: "Visibility Score",
-    desc: "One number. All models. Track it over time.",
+    desc: "One number across all models. Track it over time.",
   },
   {
     title: "Per-Model Breakdown",
@@ -83,7 +84,7 @@ const FEATURES = [
   },
   {
     title: "Competitor Intelligence",
-    desc: "Threat levels, not just mentions. Know who's actually beating you and why.",
+    desc: "Threat levels, not just mentions. Know who's beating you and why.",
   },
   {
     title: "Per-Query Drilldown",
@@ -91,12 +92,19 @@ const FEATURES = [
   },
   {
     title: "AI-Suggested Queries",
-    desc: "Not sure what to track? We'll tell you what your market is asking.",
+    desc: "Not sure what to track? We generate questions your market actually asks.",
   },
   {
     title: "AI Copilot",
     desc: "Ask lai anything. Get content plans, gap analysis, and competitor strategy on demand.",
   },
+];
+
+const PRICING_PLANS = [
+  { name: "Free", credits: "500", price: "$0", note: "On signup", highlight: true },
+  { name: "Starter", credits: "1,000", price: "$5", note: "~10 full scans" },
+  { name: "Popular", credits: "5,000", price: "$20", note: "~50 full scans" },
+  { name: "Pro", credits: "15,000", price: "$50", note: "~150 full scans" },
 ];
 
 const Q_AND_A = [
@@ -118,7 +126,8 @@ const Q_AND_A = [
   },
   {
     q: "What can I actually do to improve my AI visibility?",
-    a: "Structured data on your site. Getting mentioned in the sources AI trains on. Publishing comparison pages. We'll tell you exactly what to do based on your gaps.",
+    desc: "We diagnose the root cause — whether it's a content gap, discoverability issue, lack of web mentions, or missing authority signals — then tell you exactly what to fix.",
+    a: "We diagnose the root cause — whether it's a content gap, discoverability issue, lack of web mentions, or missing authority signals — then tell you exactly what to fix.",
   },
   {
     q: "Can I see what my competitors are doing?",
@@ -177,6 +186,157 @@ function PushPin() {
   );
 }
 
+function DashboardPreview() {
+  return (
+    <div
+      className="card"
+      style={{
+        position: "relative",
+        overflow: "hidden",
+        border: "2px solid var(--border)",
+        borderRadius: "var(--radius)",
+        boxShadow: "6px 6px 0 #1A1A1A",
+        transform: "rotate(-0.5deg)",
+        marginBottom: 32,
+      }}
+    >
+      {/* Mock browser chrome */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", background: "var(--bg-dark)", borderBottom: "2px solid var(--border)" }}>
+        <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#EF4444", border: "1.5px solid #1A1A1A" }} />
+        <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#FBBF24", border: "1.5px solid #1A1A1A" }} />
+        <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#22C55E", border: "1.5px solid #1A1A1A" }} />
+        <div style={{ flex: 1, height: 16, borderRadius: 4, background: "var(--surface)", border: "1.5px solid var(--border)", marginLeft: 8, display: "flex", alignItems: "center", paddingLeft: 8, fontSize: 9, color: "var(--text-muted)", fontWeight: 600 }}>
+          llmrank.getcleanroom.xyz/brands/abc123
+        </div>
+      </div>
+
+      {/* Dashboard content mock */}
+      <div style={{ padding: "16px 20px", background: "var(--surface)" }}>
+        {/* Header row */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 800 }}>Acme Corp</div>
+            <div style={{ fontSize: 10, color: "var(--text-muted)" }}>acme.com</div>
+          </div>
+          <div style={{ display: "flex", gap: 4 }}>
+            <span className="pill pill-pos" style={{ fontSize: 9 }}>Completed</span>
+            <span className="pill pill-gold" style={{ fontSize: 9 }}>12 queries</span>
+          </div>
+        </div>
+
+        {/* Score cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
+          <div style={{ background: "var(--bg-dark)", borderRadius: "var(--radius)", padding: 10, border: "1.5px solid var(--border)" }}>
+            <div style={{ fontSize: 9, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", marginBottom: 2 }}>Score</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "#22C55E" }}>72</div>
+          </div>
+          <div style={{ background: "var(--bg-dark)", borderRadius: "var(--radius)", padding: 10, border: "1.5px solid var(--border)" }}>
+            <div style={{ fontSize: 9, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", marginBottom: 2 }}>Mentions</div>
+            <div style={{ fontSize: 22, fontWeight: 800 }}>67%</div>
+          </div>
+          <div style={{ background: "var(--bg-dark)", borderRadius: "var(--radius)", padding: 10, border: "1.5px solid var(--border)" }}>
+            <div style={{ fontSize: 9, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", marginBottom: 2 }}>Position</div>
+            <div style={{ fontSize: 22, fontWeight: 800 }}>#2</div>
+          </div>
+        </div>
+
+        {/* Mini LLM breakdown */}
+        <div style={{ background: "var(--bg-dark)", borderRadius: "var(--radius)", padding: 10, border: "1.5px solid var(--border)" }}>
+          <div style={{ fontSize: 9, color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>Per-Model Breakdown</div>
+          {[
+            { name: "ChatGPT", pct: 85, color: "#22C55E" },
+            { name: "Gemini", pct: 72, color: "#3B82F6" },
+            { name: "Claude", pct: 45, color: "#F59E0B" },
+            { name: "Llama", pct: 60, color: "#8B5CF6" },
+          ].map((llm) => (
+            <div key={llm.name} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+              <span style={{ fontSize: 10, fontWeight: 600, width: 50 }}>{llm.name}</span>
+              <div style={{ flex: 1, height: 6, borderRadius: 3, background: "var(--border)", overflow: "hidden" }}>
+                <div style={{ width: `${llm.pct}%`, height: "100%", background: llm.color, borderRadius: 3 }} />
+              </div>
+              <span style={{ fontSize: 9, color: "var(--text-muted)", fontWeight: 600, width: 28, textAlign: "right" }}>{llm.pct}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PricingSection() {
+  return (
+    <section style={{ paddingBottom: 36 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <h2
+          style={{
+            fontFamily: "var(--font-hand), Caveat, cursive",
+            fontSize: "clamp(24px, 3.5vw, 30px)",
+            fontWeight: 700,
+            margin: 0,
+            lineHeight: 1,
+            transform: "rotate(-0.3deg)",
+          }}
+        >
+          Simple pricing
+        </h2>
+        <svg width="40" height="10" viewBox="0 0 40 10" fill="none">
+          <path d="M0 5 Q6 2 12 6 Q18 9 24 4 Q30 1 40 7" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" fill="none" />
+        </svg>
+      </div>
+
+      <div className="grid-2" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+        {PRICING_PLANS.map((plan, i) => (
+          <div
+            key={plan.name}
+            className="card sketchy"
+            style={{
+              padding: 14,
+              textAlign: "center",
+              transform: `rotate(${i % 2 === 0 ? "-0.3deg" : "0.3deg"})`,
+              border: plan.highlight ? "2px solid var(--primary)" : undefined,
+              background: plan.highlight ? "#FFF9DB" : undefined,
+            }}
+          >
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 4 }}>{plan.name}</div>
+            <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 2 }}>{plan.price}</div>
+            <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 4 }}>{plan.credits} credits</div>
+            <div style={{ fontSize: 10, color: "var(--text-secondary)" }}>{plan.note}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600, marginTop: 8, textAlign: "center" }}>
+        1 credit = $0.001 &middot; No subscriptions &middot; Pay as you go
+      </div>
+    </section>
+  );
+}
+
+function SocialProof() {
+  return (
+    <section style={{ paddingBottom: 36 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, 1fr)",
+          gap: 12,
+          textAlign: "center",
+        }}
+      >
+        {[
+          { value: "10", label: "AI models monitored" },
+          { value: "500", label: "Free credits on signup" },
+          { value: "<1min", label: "Time to first scan" },
+        ].map((stat) => (
+          <div key={stat.label} style={{ padding: "12px 8px" }}>
+            <div style={{ fontSize: 24, fontWeight: 800, color: "var(--primary)", lineHeight: 1 }}>{stat.value}</div>
+            <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600, marginTop: 4 }}>{stat.label}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function HomePage() {
   return (
     <main className="page" style={{ display: "flex", flexDirection: "column" }}>
@@ -184,13 +344,17 @@ export default function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }}
+      />
 
       <LandingHeader />
 
       <div style={{ flex: 1, maxWidth: 720, margin: "0 auto", padding: "0 var(--page-px)", width: "100%" }}>
 
         {/* Hero */}
-        <header style={{ paddingTop: "clamp(44px, 10vh, 80px)", paddingBottom: 40 }}>
+        <header style={{ paddingTop: "clamp(44px, 10vh, 80px)", paddingBottom: 24 }}>
           <div
             style={{
               fontFamily: "var(--font-hand), Caveat, cursive",
@@ -216,7 +380,7 @@ export default function HomePage() {
           >
             What does{" "}
             <span style={{ background: "var(--primary)", padding: "0 4px", border: "2px solid var(--border)", display: "inline-block" }}>
-              ChatGPT
+              AI
             </span>{" "}
             say<br />about your brand?
           </h1>
@@ -233,7 +397,7 @@ export default function HomePage() {
               fontFamily: "var(--font-serif), Georgia, serif",
             }}
           >
-            Your customers are asking AI models about products like yours every day.
+            Your customers are asking ChatGPT, Gemini, Claude, and other AI models about products like yours every day.
             If you don&apos;t know what the AI is telling them, you&apos;re flying blind.
           </p>
 
@@ -242,6 +406,12 @@ export default function HomePage() {
             <LandingCTA variant="secondary" />
           </div>
         </header>
+
+        {/* Dashboard preview */}
+        <DashboardPreview />
+
+        {/* Social proof */}
+        <SocialProof />
 
         {/* Supported LLMs */}
         <section style={{ paddingBottom: 24, borderBottom: "2px solid var(--border)", marginBottom: 28 }}>
@@ -358,6 +528,9 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Pricing */}
+        <PricingSection />
+
         {/* Q&A - Flashcard stack */}
         <FlashcardStack items={Q_AND_A} />
 
@@ -435,7 +608,14 @@ export default function HomePage() {
           </svg>
           <span style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 14, fontWeight: 700, lineHeight: 1 }}>Featured on</span>
           <a href="https://www.producthunt.com/products/llmrank?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-llmrank" target="_blank" rel="noopener noreferrer" style={{ display: "block", lineHeight: 0 }}>
-            <img alt="LLMRank on Product Hunt" width="200" height="43" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1192976&theme=light&t=1783692046158" style={{ display: "block" }} />
+            <Image
+              alt="LLMRank on Product Hunt"
+              width={200}
+              height={43}
+              src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1192976&theme=light&t=1783692046158"
+              style={{ display: "block" }}
+              unoptimized
+            />
           </a>
         </div>
 
