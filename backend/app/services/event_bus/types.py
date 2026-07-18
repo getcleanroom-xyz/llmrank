@@ -27,11 +27,18 @@ class Event:
 
     @classmethod
     def from_dict(cls, data: dict) -> "Event":
+        created_at = data.get("created_at", _utcnow())
+        if isinstance(created_at, str):
+            from datetime import datetime
+            try:
+                created_at = datetime.fromisoformat(created_at)
+            except (ValueError, TypeError):
+                created_at = _utcnow()
         return cls(
             id=data.get("id", str(uuid.uuid4())),
             topic=data.get("topic", ""),
             event_type=data.get("event_type", ""),
             payload=data.get("payload", {}),
             metadata=data.get("metadata", {}),
-            created_at=data.get("created_at", _utcnow()),
+            created_at=created_at,
         )

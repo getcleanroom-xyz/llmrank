@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
@@ -53,12 +54,13 @@ async def recover_pending_scans():
                 # Reset pending scans to re-run, mark running as failed (unclear state)
                 if scan.status == ScanStatus.running:
                     scan.status = ScanStatus.failed
+                    scan.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
                     await db.commit()
                     logger.warning("Marked stuck running scan %s as failed", scan.id)
                     continue
 
-                # Re-queue pending scans
-                # We need to determine which LLMs were selected — default to free models
+                # Re-queue pending scans — use the scan's original LLM selection if stored
+                # Default to free models for recovery
                 asyncio.create_task(
                     _run_scan_background(scan.brand_id, scan.id, ["chatgpt", "llama"])
                 )

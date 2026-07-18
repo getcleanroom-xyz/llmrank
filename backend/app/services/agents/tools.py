@@ -33,12 +33,13 @@ class ToolRegistry:
         self._allowed_permissions = allowed_permissions  # None = allow all
 
     def register(self, tool: Tool):
-        """Register a tool. Checks permissions if restricted."""
+        """Register a tool. Rejects if agent lacks required permissions."""
         if self._allowed_permissions is not None:
             for perm in tool.permissions:
                 if perm not in self._allowed_permissions and perm.split(":")[0] not in self._allowed_permissions:
-                    logger.warning("Tool '%s' requires permission '%s' not in allowed: %s",
+                    logger.warning("Tool '%s' requires permission '%s' not in allowed: %s — skipping registration",
                                    tool.name, perm, self._allowed_permissions)
+                    return
         self._tools[tool.name] = tool
 
     def get(self, name: str) -> Tool | None:

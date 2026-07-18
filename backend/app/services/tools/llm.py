@@ -115,7 +115,8 @@ async def stream_llm(messages: list[dict], model_key: str = "claude",
                         break
                     try:
                         chunk = json.loads(data)
-                        delta = chunk.get("choices", [{}])[0].get("delta", {})
+                        choices = chunk.get("choices", [])
+                        delta = choices[0].get("delta", {}) if choices else {}
                         content = delta.get("content", "")
                         if content:
                             newline_buffer += content

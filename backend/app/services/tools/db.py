@@ -59,12 +59,19 @@ async def query_db(sql: str, params: dict | None = None, db: AsyncSession | None
     """
     from app.core.database import AsyncSessionLocal
 
-    # Security: reject write operations
+    # Security: reject write operations — check for SQL keywords as whole words or after semicolons/comments
+    import re as _re
     normalized = sql.strip().upper()
+    # Remove string literals to avoid false positives on keyword detection
+    cleaned = _re.sub(r"'[^']*'", "''", normalized)
+    cleaned = _re.sub(r'"[^"]*"', '""', cleaned)
     forbidden = ("INSERT", "UPDATE", "DELETE", "DROP", "TRUNCATE", "ALTER", "CREATE", "GRANT", "REVOKE")
     for word in forbidden:
-        if normalized.startswith(word) or f" {word} " in normalized:
+        if cleaned.startswith(word) or f" {word} " in cleaned or f"\n{word} " in cleaned or f";{word}" in cleaned:
             raise ValueError(f"Query contains forbidden operation: {word}")
+    # Also block CTEs and subqueries that could bypass the check
+    if cleaned.startswith("WITH"):
+        raise ValueError("Query contains forbidden operation: WITH (CTE)")
 
     # Security: only allow whitelisted tables
     sql_lower = sql.lower()

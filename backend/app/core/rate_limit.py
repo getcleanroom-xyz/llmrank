@@ -3,12 +3,17 @@ from slowapi.util import get_remote_address
 
 
 def _rate_limit_key(request) -> str:
-    """Use user ID for authenticated requests, IP for anonymous."""
+    """Use user ID for authenticated requests, IP for anonymous.
+
+    Verifies the session token signature before trusting the user ID
+    to prevent IDOR via forged cookies.
+    """
     token = request.cookies.get("session")
     if token:
-        parts = token.split(":")
-        if len(parts) == 3:
-            return f"user:{parts[0]}"
+        from app.api.auth import _verify_session_token
+        user_id = _verify_session_token(token)
+        if user_id:
+            return f"user:{user_id}"
     return get_remote_address(request)
 
 

@@ -154,6 +154,16 @@ class BaseAgent:
                 return AgentResult(True, output=decision.get("output"), steps=steps,
                                    metadata={"thought": thought})
 
+            if not action:
+                result_str = "Error: no action provided"
+                logger.warning("Agent %s step %d: empty action in decision", self.name, step_num)
+                steps.append({
+                    "step": step_num + 1, "thought": thought,
+                    "action": action, "action_input": action_input,
+                    "result": result_str,
+                })
+                continue
+
             # Execute tool
             try:
                 result = await self.tools.execute(action, **action_input)

@@ -1,6 +1,7 @@
 import uuid
 import logging
 import re
+import asyncio
 from datetime import datetime, timezone
 
 from sqlalchemy import select, func, update, delete
@@ -78,12 +79,16 @@ async def dispatch_campaign(db: AsyncSession, campaign_id: uuid.UUID, base_url: 
 
     sent = 0
     failed = 0
+    loop = asyncio.get_event_loop()
     for recipient in recipients:
         user = users_map.get(recipient.user_id) if recipient.user_id else None
         ctx = _build_recipient_vars(user, recipient.email, template_vars)
         personalized_body = _apply_template_vars(campaign.html_body, ctx)
         tracked_html = prepare_tracked_html(personalized_body, str(campaign.id), str(recipient.id), links_data, base_url)
-        ok, err = send_email(recipient.email, campaign.subject, tracked_html, campaign.from_email)
+        # Run synchronous send_email in thread pool to avoid blocking the event loop
+        ok, err = await loop.run_in_executor(
+            None, lambda: send_email(recipient.email, campaign.subject, tracked_html, campaign.from_email)
+        )
         if ok:
             recipient.status = RecipientStatus.sent
             recipient.sent_at = _utcnow()

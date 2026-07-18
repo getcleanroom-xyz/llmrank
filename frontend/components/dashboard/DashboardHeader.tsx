@@ -80,7 +80,7 @@ export function ScanControls({ brandId, latestScan, credits, onScanError }: { br
                 return (
                   <label key={llm.id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 0", cursor: "pointer", fontSize: 12, fontWeight: 500 }}>
                     <input type="checkbox" checked={selectedLLMs.includes(llm.id)} onChange={() => setSelectedLLMs((p) => p.includes(llm.id) ? p.filter((l) => l !== llm.id) : [...p, llm.id])} style={{ accentColor: "var(--primary)", width: 14, height: 14 }} />
-                    <span style={{ flex: 1 }}>{llm.id}</span>
+                    <span style={{ flex: 1 }}>{llm.label || llm.id}</span>
                     <span style={{ fontSize: 10, color: "var(--text-muted)" }}>{cost}cr</span>
                   </label>
                 );
@@ -93,7 +93,7 @@ export function ScanControls({ brandId, latestScan, credits, onScanError }: { br
             </div>
           )}
         </div>
-        <button onClick={handleScan} disabled={triggerScan.isPending || selectedLLMs.length === 0 || isRunning || (credits?.balance ?? 0) <= 0} className={`btn btn-sm ${isRunning || triggerScan.isPending ? "btn-ghost" : "btn-primary"}`} style={{ fontSize: 11, padding: "3px 12px", lineHeight: "20px" }}>
+        <button onClick={handleScan} disabled={triggerScan.isPending || selectedLLMs.length === 0 || isRunning || credits === undefined || (credits?.balance ?? 0) <= 0} className={`btn btn-sm ${isRunning || triggerScan.isPending ? "btn-ghost" : "btn-primary"}`} style={{ fontSize: 11, padding: "3px 12px", lineHeight: "20px" }}>
           Scan
         </button>
       </div>

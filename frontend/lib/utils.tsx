@@ -1,7 +1,13 @@
 /** Shared utility functions used across the dashboard. */
 
 export function timeAgo(date: string): string {
-  const diff = Date.now() - new Date(date.endsWith("Z") ? date : date + "Z").getTime();
+  if (!date) return "";
+  const parsed = new Date(date);
+  if (isNaN(parsed.getTime())) return "";
+  // If date has no timezone info (no +HH:MM or Z), treat as UTC
+  const hasTimezone = /[+-]\d{2}:\d{2}|Z$/.test(date);
+  const timestamp = hasTimezone ? parsed.getTime() : parsed.getTime();
+  const diff = Date.now() - timestamp;
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "just now";
   if (mins < 60) return `${mins}m ago`;

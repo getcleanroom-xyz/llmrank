@@ -149,9 +149,9 @@ async def get_dashboard(brand_id: uuid.UUID, db: AsyncSession = Depends(get_db),
         [
             CompetitorShareItem(
                 name=entry["name"],
-                mention_pct=round(entry["count"] / total_results_count * 100, 1),
+                mention_pct=round(entry["count"] / total_results_count * 100, 1) if total_results_count > 0 else 0,
                 beats_you=comp_beats.get(norm, 0),
-                threat_level=_threat_level(comp_beats.get(norm, 0), round(entry["count"] / total_results_count * 100, 1)),
+                threat_level=_threat_level(comp_beats.get(norm, 0), round(entry["count"] / total_results_count * 100, 1) if total_results_count > 0 else 0),
                 logo_url=comp_logo_map.get(entry["name"].lower().strip(), ""),
             )
             for norm, entry in comp_counts.items()

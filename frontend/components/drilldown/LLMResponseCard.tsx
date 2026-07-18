@@ -116,7 +116,7 @@ export function LLMResponseCard({ result }: { result: QueryResult }) {
   const brandHits = annotations.filter((a) => a.type === "brand");
   const competitorHits = annotations.filter((a) => a.type === "competitor");
   const qualifierHits = annotations.filter((a) => a.type === "qualifier");
-  const isError = result.raw_response.startsWith("[Error");
+  const isError = (result.raw_response ?? "").startsWith("[Error");
 
   const uniqueBrands = uniqueEntities(brandHits);
   const uniqueCompetitors = uniqueEntities(competitorHits);

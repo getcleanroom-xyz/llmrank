@@ -31,9 +31,11 @@ ALLOWED_EVENTS = {
 
 def _validate_event(agent_name: str, topic: str, event_type: str) -> bool:
     """Validate that an agent is allowed to emit this event."""
-    perms = ALLOWED_EVENTS.get(agent_name, ALLOWED_EVENTS.get("_all"))
+    perms = ALLOWED_EVENTS.get(agent_name)
     if perms is None:
-        return True
+        # Unknown agent — deny by default (no wildcard bypass)
+        logger.warning("Agent '%s' not in allowlist, denying event '%s' on '%s'", agent_name, event_type, topic)
+        return False
     if perms["topics"] and topic not in perms["topics"]:
         logger.warning("Agent '%s' not allowed to emit on topic '%s'", agent_name, topic)
         return False

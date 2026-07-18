@@ -45,7 +45,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit, timeoutMs = 
     if (res.status === 204) return undefined as T;
     return res.json() as Promise<T>;
   } catch (err) {
-    if (err instanceof DOMException && err.name === "AbortError") {
+    if (err instanceof Error && err.name === "AbortError") {
       throw new ApiError(408, `Request timed out after ${timeoutMs / 1000}s`);
     }
     throw err;

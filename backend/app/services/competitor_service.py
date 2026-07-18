@@ -163,7 +163,12 @@ def competitors_need_refresh(competitors: list[dict], ttl_days: int = 7) -> bool
         if not fetched:
             return True
         try:
-            if time.mktime(datetime.fromisoformat(fetched).timetuple()) < cutoff:
+            dt = datetime.fromisoformat(fetched)
+            if dt.tzinfo is None:
+                from datetime import timezone
+                dt = dt.replace(tzinfo=timezone.utc)
+            import calendar
+            if calendar.timegm(dt.timetuple()) < cutoff:
                 return True
         except Exception:
             return True

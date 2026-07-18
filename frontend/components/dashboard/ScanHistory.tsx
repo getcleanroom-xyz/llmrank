@@ -155,7 +155,7 @@ function ExpandedScan({ scanId, brandId }: { scanId: string; brandId: string }) 
                       <span style={{ textTransform: "capitalize", fontWeight: 600, minWidth: 60, color: "var(--text-secondary)" }}>{r.llm_name}</span>
                       <PositionBadge mentioned={r.mentioned} position={r.position} />
                       <span style={{ color: r.sentiment === "positive" ? "#166534" : r.sentiment === "negative" ? "#991B1B" : "var(--text-muted)", fontSize: 10 }}>{SENTIMENT_LABELS[r.sentiment] ?? "Unmentioned"}</span>
-                      {r.competitors_mentioned.length > 0 && (
+                      {(r.competitors_mentioned?.length ?? 0) > 0 && (
                         <span style={{ fontSize: 10, color: "var(--text-muted)" }}>
                           {r.competitors_mentioned.map((c) => c.name).join(", ")}
                         </span>

@@ -35,7 +35,7 @@ export function LLMBreakdownTable({ data }: { data: LLMBreakdown[] }) {
           </div>
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             <PositionPill position={row.avg_position != null ? Math.round(row.avg_position) : null} />
-            <SentimentPill sentiment={(row.sentiment_distribution.positive ?? 0) > (row.sentiment_distribution.negative ?? 0) ? "positive" : (row.sentiment_distribution.negative ?? 0) > 0 ? "negative" : "neutral"} />
+            <SentimentPill sentiment={((row.sentiment_distribution?.positive ?? 0) > (row.sentiment_distribution?.negative ?? 0)) ? "positive" : (row.sentiment_distribution?.negative ?? 0) > 0 ? "negative" : "neutral"} />
           </div>
         </div>
       ))}

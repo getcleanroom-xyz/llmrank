@@ -212,8 +212,26 @@ async def grant_credits_from_payment(
     reference: str,
     charge_id: str,
 ) -> CreditWallet:
-    """Grant credits after successful payment."""
+    """Grant credits after successful payment.
+
+    Includes idempotency check: if a transaction with this charge_id already exists,
+    the existing wallet is returned without granting duplicate credits.
+    """
     from app.services.credit_service import grant_credits, CREDITS_PER_DOLLAR
+
+    # Idempotency: check if we already granted credits for this charge
+    existing_tx = await db.execute(
+        select(CreditTransaction).where(
+            CreditTransaction.description.contains(f"[txn:{charge_id}]")
+        )
+    )
+    if existing_tx.scalar_one_or_none():
+        logger.info("Duplicate payment detected for charge %s, skipping credit grant", charge_id)
+        wallet_result = await db.execute(select(CreditWallet).where(CreditWallet.user_id == user_id))
+        wallet = wallet_result.scalar_one_or_none()
+        if wallet:
+            return wallet
+        raise ValueError("Wallet not found for existing payment")
 
     package = CREDIT_PACKAGES.get(package_key)
     if not package:

@@ -15,7 +15,10 @@ MAX_TOTAL_CONTENT = 8000
 
 def extract_text(html: str) -> str:
     """Extract visible text from HTML, keeping tags but removing attributes."""
-    soup = BeautifulSoup(html, "lxml")
+    try:
+        soup = BeautifulSoup(html, "lxml")
+    except Exception:
+        soup = BeautifulSoup(html, "html.parser")
 
     # Remove unwanted elements entirely
     for tag in soup.find_all(["script", "style", "nav", "footer", "header",
@@ -38,7 +41,10 @@ def extract_text(html: str) -> str:
 
 def extract_links(html: str, base_url: str, visited: set) -> list[str]:
     """Extract internal links from HTML."""
-    soup = BeautifulSoup(html, "lxml")
+    try:
+        soup = BeautifulSoup(html, "lxml")
+    except Exception:
+        soup = BeautifulSoup(html, "html.parser")
     parsed_base = urlparse(base_url)
     urls = []
 

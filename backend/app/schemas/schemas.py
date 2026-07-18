@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
@@ -76,6 +76,16 @@ class QueryTableResponse(BaseModel):
 # Scan schemas
 class ScanCreate(BaseModel):
     llms: list[str] = Field(default_factory=lambda: ["chatgpt", "llama"])
+
+    @field_validator("llms")
+    @classmethod
+    def validate_llm_names(cls, v: list[str]) -> list[str]:
+        from app.services.credit_service import CREDIT_COSTS
+        valid = set(CREDIT_COSTS.keys())
+        invalid = [llm for llm in v if llm not in valid]
+        if invalid:
+            raise ValueError(f"Invalid LLM names: {invalid}. Valid options: {sorted(valid)}")
+        return v
 
 
 class ScanOut(BaseModel):
@@ -235,6 +245,7 @@ class CreditBalanceOut(BaseModel):
 class CreditGrantRequest(BaseModel):
     amount: int = Field(..., gt=0, description="Credits to grant")
     description: str = Field(default="Admin grant")
+    target_user_id: UUID | None = Field(default=None, description="User to grant credits to (admin only)")
 
 
 class CreditTransactionOut(BaseModel):

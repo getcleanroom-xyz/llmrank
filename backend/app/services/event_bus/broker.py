@@ -98,9 +98,9 @@ class EventBus:
                 else:
                     logger.error("Subscriber '%s' failed after %d attempts: %s",
                                  sub.name, sub.max_retries + 1, e)
-                    await self._send_to_dlq(event, sub.name, str(e))
+                    await self._send_to_dlq(event, sub.name, str(e), sub.max_retries + 1)
 
-    async def _send_to_dlq(self, event: Event, subscription: str, error: str):
+    async def _send_to_dlq(self, event: Event, subscription: str, error: str, attempts: int = 1):
         """Send failed event to dead letter queue (Postgres)."""
         try:
             from app.core.database import AsyncSessionLocal
@@ -108,7 +108,7 @@ class EventBus:
             async with AsyncSessionLocal() as db:
                 entry = AgentFailedEvent(
                     id=uuid.uuid4(), event_id=uuid.UUID(event.id),
-                    error=error, subscription=subscription, attempts=1,
+                    error=error, subscription=subscription, attempts=attempts,
                 )
                 db.add(entry)
                 await db.commit()

@@ -1,8 +1,10 @@
 import secrets as _secrets
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env")
+
     DATABASE_URL: str = "postgresql+asyncpg://user:password@localhost:5432/llmrank"
     OPENROUTER_API_KEY: str = ""
     SECRET_KEY: str = "dev-secret-change-in-production"
@@ -29,16 +31,17 @@ class Settings(BaseSettings):
     def admin_emails_list(self) -> list[str]:
         return [e.strip() for e in self.ADMIN_EMAILS.split(",") if e.strip()]
 
-    class Config:
-        env_file = ".env"
+
+def _create_settings() -> Settings:
+    s = Settings()
+    if s.SECRET_KEY == "dev-secret-change-in-production":
+        import logging as _logging
+        _logging.getLogger(__name__).warning(
+            "SECRET_KEY is the default value — generating random key for this session. "
+            "Set SECRET_KEY env var for production."
+        )
+        object.__setattr__(s, "SECRET_KEY", _secrets.token_hex(32))
+    return s
 
 
-settings = Settings()
-
-if settings.SECRET_KEY == "dev-secret-change-in-production":
-    import logging as _logging
-    _logging.getLogger(__name__).warning(
-        "SECRET_KEY is the default value — generating random key for this session. "
-        "Set SECRET_KEY env var for production."
-    )
-    settings.SECRET_KEY = _secrets.token_hex(32)
+settings = _create_settings()

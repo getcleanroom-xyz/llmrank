@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { authLogout } from "@/lib/api";
 import type { CreditBalance } from "@/lib/api";
@@ -15,6 +16,7 @@ interface AuthButtonProps {
 export function AuthButton({ credits, onBuyClick }: AuthButtonProps) {
   const { user, setUser, openAuthModal } = useAuth();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -127,6 +129,7 @@ export function AuthButton({ credits, onBuyClick }: AuthButtonProps) {
               setShowMenu(false);
               try { await authLogout(); } catch {}
               setUser(null);
+              queryClient.clear();
               router.push("/");
             }}
             style={{

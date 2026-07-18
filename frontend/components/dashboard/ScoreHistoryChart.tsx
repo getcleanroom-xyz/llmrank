@@ -6,12 +6,10 @@ import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer } from "recharts";
 interface HistoryPoint { date: string; visibility_score: number; mention_rate: number; }
 
 export function ScoreHistoryChart({ data }: { data: HistoryPoint[] }) {
-  if (!data || data.length < 2) return <div style={{ color: "var(--text-muted)", fontSize: 12, padding: "20px 0", textAlign: "center", fontWeight: 600 }}>{data?.length === 1 ? "Run another scan for trends." : "No history yet."}</div>;
-
   // Check if multiple scans share the same day
   const dayCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    data.forEach((d) => {
+    (data || []).forEach((d) => {
       const day = new Date(d.date).toLocaleDateString();
       counts[day] = (counts[day] || 0) + 1;
     });
@@ -20,11 +18,10 @@ export function ScoreHistoryChart({ data }: { data: HistoryPoint[] }) {
 
   const hasMultipleSameDay = Object.values(dayCounts).some((c) => c > 1);
 
-  const formatted = data.map((d, i) => {
+  const formatted = (data || []).map((d, i) => {
     const dt = new Date(d.date);
     let label: string;
     if (hasMultipleSameDay) {
-      // Show time for same-day scans
       label = dt.toLocaleDateString(undefined, { month: "short", day: "numeric" })
         + " " + dt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
     } else {
@@ -32,6 +29,8 @@ export function ScoreHistoryChart({ data }: { data: HistoryPoint[] }) {
     }
     return { ...d, label, id: `${dt.getTime()}-${i}` };
   });
+
+  if (!data || data.length < 2) return <div style={{ color: "var(--text-muted)", fontSize: 12, padding: "20px 0", textAlign: "center", fontWeight: 600 }}>{data?.length === 1 ? "Run another scan for trends." : "No history yet."}</div>;
 
   return (
     <ResponsiveContainer width="100%" height={140}>

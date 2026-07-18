@@ -191,7 +191,7 @@ async def query_trend(
         return {}
 
     scan_ids = [s.id for s in scans]
-    scan_dates = {s.id: s.completed_at.isoformat() for s in scans}
+    scan_dates = {str(s.id): s.completed_at.isoformat() for s in scans}
 
     # Get all query results for these scans
     results_result = await db.execute(
@@ -297,9 +297,14 @@ async def suggest_queries(request: Request, brand_id: uuid.UUID, body: QuerySugg
     if not brand:
         raise HTTPException(404, "Brand not found")
     from app.services.agents.registry import agent_registry
-    result = await agent_registry.query_gen.suggest(brand, [c.get("name", "") for c in (brand.competitors or [])])
+    result = await agent_registry.query_gen.suggest(brand, [c.get("name", "") for c in (brand.competitors or [])], db=db)
+    # Merge LLM-generated competitors with user's curated list instead of overwriting
     if result.get("competitors"):
-        brand.competitors = result["competitors"]
+        existing_names = {c.get("name", "").lower() for c in (brand.competitors or [])}
+        for comp in result["competitors"]:
+            name = comp.get("name", "").lower()
+            if name and name not in existing_names:
+                (brand.competitors or []).append(comp)
         await db.commit()
     return result
 

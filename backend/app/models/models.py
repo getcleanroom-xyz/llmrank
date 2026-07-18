@@ -48,7 +48,7 @@ class Passkey(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     credential_id: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
-    credential_public_key: Mapped[bytes] = mapped_column(Text, nullable=False)
+    credential_public_key: Mapped[str] = mapped_column(Text, nullable=False)
     sign_count: Mapped[int] = mapped_column(Integer, default=0)
     transports: Mapped[list | None] = mapped_column(JSON, nullable=True)
     device_name: Mapped[str] = mapped_column(String(200), nullable=False, default="Unknown device")

@@ -181,11 +181,8 @@ function BrandDashboardPageInner() {
                 <div style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: "clamp(24px, 4vw, 32px)", fontWeight: 700, marginBottom: 8, lineHeight: 1.1 }}>
                   Run your first scan to see your AI visibility
                 </div>
-                <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 20, maxWidth: 400, margin: "0 auto 20px" }}>
+                <div style={{ fontSize: 13, color: "var(--text-secondary)", maxWidth: 400, margin: "0 auto" }}>
                   We&apos;ll check how your brand appears across ChatGPT, Gemini, Claude, and other AI models — then show you where you stand.
-                </div>
-                <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
-                  <ScanControls brandId={brandId} latestScan={active_scan ?? latest_scan} credits={credits} onScanError={setScanError} />
                 </div>
               </div>
             )}

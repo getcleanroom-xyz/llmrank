@@ -30,6 +30,8 @@ export const useAuth = create<AuthState>((set) => ({
   logout: () => {
     document.cookie = "session=; path=/; max-age=0; SameSite=Lax";
     set({ user: null });
+    // Note: Server-side logout is handled by the AuthButton component which calls authLogout()
+    // before invoking this function. The cookie deletion here is a client-side fallback.
   },
   authModalOpen: false,
   authModalMode: "login",

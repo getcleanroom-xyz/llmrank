@@ -45,8 +45,8 @@ export function useAdminDeleteCampaign() {
 export function useAdminScheduleCampaign() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
-      api.adminScheduleCampaign(id, data as any),
+    mutationFn: ({ id, data }: { id: string; data: { schedule_type: string; cron_expr?: string; scheduled_at?: string } }) =>
+      api.adminScheduleCampaign(id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.campaigns }),
   });
 }
@@ -77,7 +77,7 @@ export function useAdminUsers(search?: string) {
   return useQuery({
     queryKey: queryKeys.adminUsers(search),
     queryFn: () => api.adminListUsers(search),
-    enabled: search !== undefined,
+    enabled: search !== undefined && search !== "",
   });
 }
 

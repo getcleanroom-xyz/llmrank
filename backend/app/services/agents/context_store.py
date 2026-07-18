@@ -85,9 +85,10 @@ async def get_crawl_content(db: AsyncSession, brand_id: uuid.UUID) -> str | None
 
     try:
         cached_at = datetime.fromisoformat(cached_at_str)
+        now = datetime.now(timezone.utc)
         if cached_at.tzinfo is None:
             cached_at = cached_at.replace(tzinfo=timezone.utc)
-        if _utcnow().replace(tzinfo=timezone.utc) - cached_at > timedelta(hours=CRAWL_CONTENT_TTL_HOURS):
+        if now - cached_at > timedelta(hours=CRAWL_CONTENT_TTL_HOURS):
             logger.debug("Crawl content for brand %s is stale (> %dh old)", brand_id, CRAWL_CONTENT_TTL_HOURS)
             return None
     except (ValueError, TypeError):

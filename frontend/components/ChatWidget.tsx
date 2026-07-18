@@ -44,6 +44,7 @@ export function ChatWidget({ brandId }: { brandId: string }) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const streamAbortRef = useRef<AbortController | null>(null);
+  const titleRefreshRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const qc = useQueryClient();
 
   const { data: convsData } = useConversations(brandId);
@@ -75,7 +76,10 @@ export function ChatWidget({ brandId }: { brandId: string }) {
 
   // Abort streaming on unmount
   useEffect(() => {
-    return () => { streamAbortRef.current?.abort(); };
+    return () => {
+      streamAbortRef.current?.abort();
+      if (titleRefreshRef.current) clearTimeout(titleRefreshRef.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -177,7 +181,8 @@ export function ChatWidget({ brandId }: { brandId: string }) {
         qc.invalidateQueries({ queryKey: ["conversationMessages", brandId, convId] });
       }
       // Re-refetch after delay to pick up auto-generated title from event bus
-      setTimeout(() => {
+      if (titleRefreshRef.current) clearTimeout(titleRefreshRef.current);
+      titleRefreshRef.current = setTimeout(() => {
         qc.invalidateQueries({ queryKey: ["conversations", brandId] });
       }, 4000);
     }

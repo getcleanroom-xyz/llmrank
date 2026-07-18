@@ -40,14 +40,14 @@ class TTLCache:
 
     def _evict_expired(self) -> None:
         now = time.time()
-        expired = [k for k, (exp, _) in self._store.items() if now > exp]
+        expired = [k for k, (exp, _) in list(self._store.items()) if now > exp]
         for k in expired:
-            del self._store[k]
+            self._store.pop(k, None)
 
     def _evict_oldest(self) -> None:
         if self._store:
             oldest_key = min(self._store, key=lambda k: self._store[k][0])
-            del self._store[oldest_key]
+            self._store.pop(oldest_key, None)
 
 
 dashboard_cache = TTLCache(default_ttl=30, max_size=200)

@@ -49,11 +49,14 @@ async def list_brands(
     per_page: int = 50,
     search: str = "",
 ):
-    per_page = min(per_page, 100)
+    page = max(1, page)
+    per_page = max(1, min(per_page, 100))
     stmt = Brand.active().where(Brand.owner_id == user.id)
     if search:
+        # Escape LIKE wildcards to prevent injection
+        safe_search = search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         stmt = stmt.where(
-            (Brand.name.ilike(f"%{search}%")) | (Brand.domain.ilike(f"%{search}%"))
+            (Brand.name.ilike(f"%{safe_search}%", escape="\\")) | (Brand.domain.ilike(f"%{safe_search}%", escape="\\"))
         )
     stmt = stmt.order_by(desc(Brand.created_at)).offset((page - 1) * per_page).limit(per_page)
     result = await db.execute(stmt)

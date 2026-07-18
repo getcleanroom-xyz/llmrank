@@ -254,7 +254,7 @@ class QueryGenAgent(BaseAgent):
         )
         return AgentResult(success=True, output=result)
 
-    async def suggest(self, brand, user_competitors: list[str]) -> dict:
+    async def suggest(self, brand, user_competitors: list[str], db: AsyncSession | None = None) -> dict:
         """Full query suggestion pipeline (for the suggest_queries endpoint)."""
         from app.services.competitor_service import (
             discover_competitors_from_crawl, discover_competitors_by_category,
@@ -269,8 +269,8 @@ class QueryGenAgent(BaseAgent):
         # 1. Crawl the brand's website (up to 6 pages)
         crawl_content = await crawl_website(brand.domain)
         # Cache crawl content for insight generation (avoids redundant web searches)
-        if crawl_content:
-            await store_crawl_content(db, brand_id, crawl_content)
+        if crawl_content and db is not None:
+            await store_crawl_content(db, brand.id, crawl_content)
 
         # 2. Summarize what the company does
         summary = await summarize_company(crawl_content, brand.name, brand.domain)

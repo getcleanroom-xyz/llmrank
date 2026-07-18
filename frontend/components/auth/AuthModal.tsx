@@ -111,7 +111,11 @@ export function AuthModal() {
   };
 
   const handleLogout = async () => {
-    await authLogout();
+    try {
+      await authLogout();
+    } catch {
+      // Continue with local logout even if server call fails
+    }
     setUser(null);
     closeAuthModal();
   };

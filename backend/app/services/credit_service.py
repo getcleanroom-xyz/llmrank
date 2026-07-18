@@ -79,8 +79,24 @@ async def get_or_create_wallet(db: AsyncSession, user_id: uuid.UUID) -> CreditWa
 
 
 async def check_credits(db: AsyncSession, llm_names: list[str], num_queries: int, user_id: uuid.UUID) -> tuple[bool, int, int]:
-    """Check if user has enough credits. Returns (has_enough, cost, balance)."""
-    wallet = await get_or_create_wallet(db, user_id)
+    """Check if user has enough credits. Returns (has_enough, cost, balance).
+
+    Uses row-level locking to prevent TOCTOU race conditions.
+    """
+    result = await db.execute(
+        select(CreditWallet).where(CreditWallet.user_id == user_id).with_for_update()
+    )
+    wallet = result.scalar_one_or_none()
+    if not wallet:
+        wallet = CreditWallet(
+            id=uuid.uuid4(),
+            user_id=user_id,
+            balance=FREE_CREDITS,
+            total_purchased=0,
+            total_used=0,
+        )
+        db.add(wallet)
+        await db.flush()
     cost = calculate_scan_cost(llm_names, num_queries)
     return wallet.balance >= cost, cost, wallet.balance
 

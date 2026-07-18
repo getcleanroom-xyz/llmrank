@@ -26,7 +26,8 @@ async def get_credits(db: AsyncSession = Depends(get_db), user: User = Depends(g
 
 @router.post("/credits/grant", response_model=CreditBalanceOut, tags=["Credits"])
 async def admin_grant_credits(body: CreditGrantRequest, db: AsyncSession = Depends(get_db), user: User = Depends(require_admin)):
-    wallet = await grant_credits(db, body.amount, body.description, "admin_grant", user.id)
+    target_id = body.target_user_id or user.id
+    wallet = await grant_credits(db, body.amount, body.description, "admin_grant", target_id)
     await db.commit()
     return CreditBalanceOut(
         balance=wallet.balance,

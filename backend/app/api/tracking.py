@@ -49,22 +49,21 @@ async def track_open(recipient_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.get("/click/{redirect_path}")
 async def track_click(redirect_path: str, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(CampaignLink).where(CampaignLink.redirect_path == redirect_path))
-    link = result.scalar_one_or_none()
+    link_result = await db.execute(
+        select(CampaignLink)
+        .where(CampaignLink.redirect_path == redirect_path)
+        .with_for_update()
+    )
+    link = link_result.scalar_one_or_none()
     if not link:
         raise HTTPException(404, "Not found")
 
-    link.click_count += 1
+    # Atomic increment to prevent lost updates
+    link.click_count = CampaignLink.click_count + 1
 
-    # Update any recipient that opened from this campaign to clicked
-    await db.execute(
-        update(CampaignRecipient)
-        .where(
-            CampaignRecipient.campaign_id == link.campaign_id,
-            CampaignRecipient.status == RecipientStatus.opened,
-        )
-        .values(status=RecipientStatus.clicked, clicked_at=_utcnow())
-    )
+    # Note: click tracking only counts link clicks, not recipient status,
+    # because the redirect_path doesn't include recipient identification.
+    # Recipient-level click tracking requires recipient_id in the redirect URL.
 
     await db.commit()
 

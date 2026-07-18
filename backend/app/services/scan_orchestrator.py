@@ -17,10 +17,10 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-def _compute_score(mentioned: bool, position: int | None, sentiment: str) -> float:
-    """Compute visibility score 0-100 from structured LLM output."""
+def _compute_score(mentioned: bool, position: int | None, sentiment: str) -> float | None:
+    """Compute visibility score 0-100 from structured LLM output. Returns None if not mentioned."""
     if not mentioned:
-        return 5.0
+        return None
     base = 40.0
     position_bonus = {1: 35, 2: 25, 3: 15, 4: 8}.get(position or 99, 3)
     sentiment_bonus = {"positive": 20, "neutral": 10, "negative": 0}.get(sentiment, 0)
@@ -65,7 +65,7 @@ async def run_scan(
         raise ValueError("No active queries for this brand")
 
     if scan_id:
-        scan_result = await db.execute(select(Scan).where(Scan.id == scan_id))
+        scan_result = await db.execute(select(Scan).where(Scan.id == scan_id).with_for_update())
         scan = scan_result.scalar_one_or_none()
         if scan:
             scan.status = ScanStatus.running
