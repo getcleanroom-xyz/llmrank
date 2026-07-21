@@ -407,7 +407,7 @@ async def get_competitor_drilldown(
                 brand_row.name, competitor_name,
                 round(len(comp_results) / len(all_results) * 100, 1) if all_results else 0,
                 brand_wins, beats_count,
-                both_absent,
+                neither_mentioned,
                 branded_total=total_queries,
                 brand_position=avg_brand_pos,
                 competitor_position=avg_comp_pos,
