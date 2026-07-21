@@ -38,14 +38,14 @@ export default function CompetitorDrilldownPage() {
 
   const totalResponses = data.total_queries * 4;
 
-  const sentimentEntries = Object.entries(data.sentiment_summary).sort((a, b) => b[1] - a[1]);
+  const sentimentEntries = Object.entries(data.sentiment_summary).filter(([k]) => k !== "not_mentioned").sort((a, b) => b[1] - a[1]);
   const dominantSentiment = sentimentEntries.length > 0 ? sentimentEntries[0][0] : null;
   const sentimentLabel = (() => {
     const pos = data.sentiment_summary["positive"] ?? 0;
     const neg = data.sentiment_summary["negative"] ?? 0;
     const neu = data.sentiment_summary["neutral"] ?? 0;
     const total = pos + neg + neu;
-    if (total === 0) return "No sentiment data";
+    if (total === 0) return null;
     const ratio = Math.max(pos, neg, neu) / total;
     if (ratio > 0.6) return `Mostly ${dominantSentiment}`;
     return "Mixed sentiment";
@@ -155,13 +155,13 @@ export default function CompetitorDrilldownPage() {
               )}
             </div>
             <div className="card sketchy" style={{ background: "var(--bg-dark)", padding: "12px 14px", textAlign: "center", transform: "rotate(-0.2deg)" }}>
-              <div style={{ fontSize: 28, fontWeight: 800, color: "var(--text-muted)", lineHeight: 1 }}>{data.both_absent_count}</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Neither mentioned</div>
+              <div style={{ fontSize: 28, fontWeight: 800, color: "var(--text-muted)", lineHeight: 1 }}>{youAbsent.length}</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>You not mentioned</div>
             </div>
           </div>
         </div>
 
-        {data.llm_breakdown && data.llm_breakdown.length > 0 && (
+        {data.llm_breakdown && data.llm_breakdown.some((x) => x.competitor_wins > 0) && (
           <div className="card sketchy" style={{ padding: "16px 18px", transform: "rotate(-0.2deg)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
               <div className="section-label" style={{ marginBottom: 0 }}>Where they beat you per LLM</div>
@@ -183,15 +183,6 @@ export default function CompetitorDrilldownPage() {
                     </div>
                   );
                 })}
-            </div>
-            {data.llm_breakdown.filter((x) => x.competitor_wins > 0).length === 0 && (
-              <div style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", padding: 12 }}>No LLMs where they rank higher.</div>
-            )}
-            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 10, lineHeight: 1.5 }}>
-              {data.llm_breakdown.filter((x) => x.competitor_wins > 0).sort((a, b) => (b.competitor_wins / (b.total || 1)) - (a.competitor_wins / (a.total || 1)))[0]?.competitor_wins > 0
-                ? `${decodedName} dominates ${data.llm_breakdown.filter((x) => x.competitor_wins > 0).sort((a, b) => (b.competitor_wins / (b.total || 1)) - (a.competitor_wins / (a.total || 1)))[0].llm_name} — focus your visibility efforts there.`
-                : `${decodedName} has an edge in ${data.llm_breakdown.filter((x) => x.competitor_wins > 0).length} model${data.llm_breakdown.filter((x) => x.competitor_wins > 0).length !== 1 ? "s" : ""}, but the gaps are closable.`
-              }
             </div>
           </div>
         )}
@@ -260,7 +251,7 @@ export default function CompetitorDrilldownPage() {
           </div>
         )}
 
-        {sentimentEntries.length > 0 && (
+        {sentimentLabel && sentimentEntries.length > 0 && (
           <div className="card sketchy" style={{ padding: "16px 18px", transform: "rotate(0.2deg)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
               <div className="section-label" style={{ marginBottom: 0 }}>Sentiment</div>

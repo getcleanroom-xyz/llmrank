@@ -260,10 +260,21 @@ async def get_competitor_drilldown(
     # Compute head-to-head stats
     beats_count = 0
     brand_wins = 0
-    both_absent = 0
+    neither_mentioned = 0
     queries_out = []
     sentiments = {"positive": 0, "neutral": 0, "negative": 0}
     llm_stats: dict[str, dict] = {}
+
+    # Compute "neither mentioned" from all results (queries where brand is absent AND competitor is not in competitors_mentioned)
+    comp_name_lower = normalized_target
+    for r in all_results:
+        brand_absent = not r.mentioned
+        comp_absent = not any(
+            _normalize_competitor(c.get("name", "")) == comp_name_lower
+            for c in (r.competitors_mentioned or [])
+        )
+        if brand_absent and comp_absent:
+            neither_mentioned += 1
 
     for r, comp_pos in comp_results:
         q = query_map.get(r.query_id)
@@ -275,8 +286,6 @@ async def get_competitor_drilldown(
                 beats_count += 1
             elif comp_pos > brand_pos:
                 brand_wins += 1
-        elif not r.mentioned and comp_pos is None:
-            both_absent += 1
 
         sentiments[sentiment] = sentiments.get(sentiment, 0) + 1
 
@@ -425,7 +434,7 @@ async def get_competitor_drilldown(
         total_queries=total_queries,
         beats_brand_count=beats_count,
         brand_wins_count=brand_wins,
-        both_absent_count=both_absent,
+        both_absent_count=neither_mentioned,
         avg_competitor_position=avg_comp_pos,
         avg_brand_position=avg_brand_pos,
         sentiment_summary=sentiments,
