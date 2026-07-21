@@ -43,7 +43,31 @@ function QueryDrilldownInner() {
     }
   };
 
-  if (isFetching && !data) return <div className="page" style={{ display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "var(--text-muted)" }}>Loading...</div>;
+  if (isFetching && !data) return (
+    <div className="page" style={{ display: "flex", flexDirection: "column" }}>
+      <div style={{ background: "var(--surface)", borderBottom: "2px solid var(--border)", padding: "10px 16px" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", gap: 8 }}>
+          <div className="skeleton" style={{ width: 80, height: 20 }} />
+          <div className="skeleton" style={{ width: 200, height: 14 }} />
+        </div>
+      </div>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
+        <div className="card" style={{ padding: 24, marginBottom: "var(--gap)" }}>
+          <div className="skeleton" style={{ width: "70%", height: 24, marginBottom: 8 }} />
+          <div className="skeleton" style={{ width: "40%", height: 8 }} />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="card" style={{ padding: 14 }}>
+              <div className="skeleton" style={{ width: "50%", height: 20, marginBottom: 4 }} />
+              <div className="skeleton" style={{ width: "30%", height: 10, marginBottom: 2 }} />
+              <div className="skeleton" style={{ width: "60%", height: 10 }} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
   if (!data) return <div className="page" style={{ padding: "var(--page-px)" }}><div style={{ color: "var(--red)", fontWeight: 700, marginBottom: 8 }}>{loadError instanceof Error ? loadError.message : "No data yet."}</div><Link href={`/brands/${brandId}`} style={{ color: "var(--text)", fontWeight: 700, fontSize: 13 }}>Back</Link></div>;
 
   const mentioned = data.results.filter((r) => r.mentioned);
