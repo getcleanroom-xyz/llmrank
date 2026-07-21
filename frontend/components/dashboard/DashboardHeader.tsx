@@ -19,7 +19,7 @@ export const LLM_OPTIONS = [
   { id: "qwen", label: "Qwen 2.5 72B", provider: "Alibaba" },
 ];
 
-export function ScanControls({ brandId, latestScan, credits, onScanError, lastScanLLMs }: { brandId: string; latestScan: Scan | null; credits: CreditBalance | undefined; onScanError?: (msg: string | null) => void; lastScanLLMs?: string[] }) {
+export function ScanControls({ brandId, latestScan, credits, onScanError, lastScanLLMs, onScanStarted }: { brandId: string; latestScan: Scan | null; credits: CreditBalance | undefined; onScanError?: (msg: string | null) => void; lastScanLLMs?: string[]; onScanStarted?: () => void }) {
   const triggerScan = useTriggerScan();
   const router = useRouter();
   const [scanError, setScanError] = useState<string | null>(null);
@@ -53,6 +53,7 @@ export function ScanControls({ brandId, latestScan, credits, onScanError, lastSc
     setShowConfig(false);
     try {
       await triggerScan.mutateAsync({ brandId, llms: selectedLLMs });
+      onScanStarted?.();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Scan failed";
       if (msg.includes("402") || msg.includes("Insufficient credits")) {

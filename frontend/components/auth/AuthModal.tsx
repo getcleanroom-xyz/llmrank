@@ -74,7 +74,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 
 const initialState: AuthState = {
   mode: "login",
-  method: "passkey",
+  method: "email",
   view: "auth",
   step: "form",
   email: "",

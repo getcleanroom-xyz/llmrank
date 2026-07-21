@@ -70,11 +70,19 @@ function BrandDashboardPageInner() {
   const qc = useQueryClient();
   const [scanError, setScanError] = useState<string | null>(null);
   const [scanComplete, setScanComplete] = useState(false);
+  const [optimisticScanning, setOptimisticScanning] = useState(false);
   const wasRunningRef = useRef(false);
 
   // Poll for scan completion
   const data: DashboardData | null = dashResult?.dashboard ?? null;
-  const isScanRunning = data && (data.active_scan?.status === "pending" || data.active_scan?.status === "running");
+  const isScanRunning = optimisticScanning || (data && (data.active_scan?.status === "pending" || data.active_scan?.status === "running"));
+
+  // Clear optimistic state once dashboard confirms scan is running
+  useEffect(() => {
+    if (optimisticScanning && data?.active_scan) {
+      setOptimisticScanning(false);
+    }
+  }, [optimisticScanning, data?.active_scan]);
 
   useEffect(() => {
     if (!isScanRunning) {
@@ -135,7 +143,7 @@ function BrandDashboardPageInner() {
                 {new Date((active_scan ?? latest_scan)!.completed_at!).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
               </span>
             )}
-            <ScanControls brandId={brandId} latestScan={active_scan ?? latest_scan} credits={credits} onScanError={setScanError} lastScanLLMs={llm_breakdown.map((b) => b.llm_name)} />
+            <ScanControls brandId={brandId} latestScan={active_scan ?? latest_scan} credits={credits} onScanError={setScanError} lastScanLLMs={llm_breakdown.map((b) => b.llm_name)} onScanStarted={() => setOptimisticScanning(true)} />
           </div>
         </div>
       </PageHeader>
