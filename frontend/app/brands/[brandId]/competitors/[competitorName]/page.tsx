@@ -359,138 +359,96 @@ export default function CompetitorDrilldownPage() {
           const availableLlms = Array.from(new Set(trend.flatMap((t) => Object.keys(t.per_llm || {})))).sort();
           const showPerLlm = trendTab !== "all" && trend[0].per_llm?.[trendTab];
 
-          // Get the data series to plot
-          const compSeries = showPerLlm
-            ? trend.map((t) => t.per_llm?.[trendTab]?.mention_pct ?? 0)
-            : trend.map((t) => t.mention_pct);
-          const brandSeries = showPerLlm
-            ? trend.map((t) => t.per_llm?.[trendTab]?.brand_pct ?? 0)
-            : trend.map((t) => t.brand_mention_pct);
+          const compSeries = showPerLlm ? trend.map((t) => t.per_llm?.[trendTab]?.mention_pct ?? 0) : trend.map((t) => t.mention_pct);
+          const brandSeries = showPerLlm ? trend.map((t) => t.per_llm?.[trendTab]?.brand_pct ?? 0) : trend.map((t) => t.brand_mention_pct);
 
-          const maxVal = Math.max(...compSeries, ...brandSeries, 1);
-          const minVal = 0;
+          const allVals = [...compSeries, ...brandSeries];
+          const minVal = Math.max(0, Math.min(...allVals) - 10);
+          const maxVal = Math.min(100, Math.max(...allVals) + 10);
           const range = maxVal - minVal || 1;
-          const chartW = 600;
-          const chartH = 160;
-          const padX = 40;
-          const padY = 20;
-          const plotW = chartW - padX * 2;
-          const plotH = chartH - padY * 2;
 
-          const toXY = (vals: number[]) => vals.map((v, i) => ({
-            x: padX + (i / (trend.length - 1)) * plotW,
-            y: padY + (1 - (v - minVal) / range) * plotH,
+          const width = 600;
+          const height = 140;
+          const padding = { top: 14, right: 20, bottom: 24, left: 36 };
+          const chartW = width - padding.left - padding.right;
+          const chartH = height - padding.top - padding.bottom;
+
+          const toPoints = (vals: number[]) => vals.map((v, i) => ({
+            x: padding.left + (i / (trend.length - 1)) * chartW,
+            y: padding.top + (1 - (v - minVal) / range) * chartH,
             val: v,
           }));
-          const compPoints = toXY(compSeries);
-          const brandPoints = toXY(brandSeries);
+          const compPts = toPoints(compSeries);
+          const brandPts = toPoints(brandSeries);
 
-          const makePath = (pts: { x: number; y: number }[]) => pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
+          const makePath = (pts: { x: number; y: number }[]) => pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
           const makeArea = (path: string, pts: { x: number; y: number }[]) =>
-            path + ` L${pts[pts.length - 1].x},${padY + plotH} L${pts[0].x},${padY + plotH} Z`;
+            path + ` L ${pts[pts.length - 1].x} ${padding.top + chartH} L ${pts[0].x} ${padding.top + chartH} Z`;
 
-          const compPath = makePath(compPoints);
-          const brandPath = makePath(brandPoints);
+          const compPath = makePath(compPts);
+          const brandPath = makePath(brandPts);
+
+          const yTicks = [minVal, minVal + range / 2, maxVal].map((v) => ({
+            value: Math.round(v),
+            y: padding.top + (1 - (v - minVal) / range) * chartH,
+          }));
 
           const subtitle = showPerLlm
-            ? `${trendTab} only — competitor vs your brand mention rate per scan`
-            : "All models combined — competitor vs your brand mention rate per scan";
+            ? `${trendTab} only`
+            : "All models combined";
 
           return (
-            <div className="card sketchy" style={{ padding: "16px 18px", transform: "rotate(-0.15deg)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                <div className="section-label" style={{ marginBottom: 0 }}>Visibility over time</div>
-                <svg width="40" height="8" viewBox="0 0 40 8" fill="none"><path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5 Q35 7 40 4" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg>
-              </div>
-              <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 10 }}>{subtitle}</div>
-
-              {/* Tabs */}
-              <div style={{ display: "flex", gap: 4, marginBottom: 12, flexWrap: "wrap" }}>
-                <button
-                  onClick={() => setTrendTab("all")}
-                  style={{
-                    padding: "4px 10px", fontSize: 11, fontWeight: 600, borderRadius: "var(--radius)",
-                    border: "1.5px solid var(--border)", cursor: "pointer",
-                    background: trendTab === "all" ? "var(--primary)" : "var(--surface)",
-                    color: trendTab === "all" ? "var(--black)" : "var(--text-muted)",
-                  }}
-                >All models</button>
-                {availableLlms.map((llm) => (
-                  <button
-                    key={llm}
-                    onClick={() => setTrendTab(llm)}
-                    style={{
-                      padding: "4px 10px", fontSize: 11, fontWeight: 600, borderRadius: "var(--radius)",
-                      border: "1.5px solid var(--border)", cursor: "pointer",
-                      background: trendTab === llm ? getLLMColor(llm) : "var(--surface)",
-                      color: trendTab === llm ? "#fff" : "var(--text-muted)",
-                    }}
-                  >{llm}</button>
-                ))}
+            <div style={{ background: "var(--surface)", border: "2px solid var(--border)", borderRadius: "var(--radius)", padding: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.03em" }}>Visibility over time</div>
+                  <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>{subtitle} · {trend.length} scans</div>
+                </div>
+                <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+                  <button onClick={() => setTrendTab("all")} style={{ padding: "3px 8px", fontSize: 10, fontWeight: 600, borderRadius: 4, border: "1.5px solid var(--border)", cursor: "pointer", background: trendTab === "all" ? "var(--primary)" : "var(--surface)", color: trendTab === "all" ? "var(--black)" : "var(--text-muted)" }}>All</button>
+                  {availableLlms.map((llm) => (
+                    <button key={llm} onClick={() => setTrendTab(llm)} style={{ padding: "3px 8px", fontSize: 10, fontWeight: 600, borderRadius: 4, border: "1.5px solid var(--border)", cursor: "pointer", background: trendTab === llm ? getLLMColor(llm) : "var(--surface)", color: trendTab === llm ? "#fff" : "var(--text-muted)" }}>{llm}</button>
+                  ))}
+                </div>
               </div>
 
               {/* Legend */}
-              <div style={{ display: "flex", gap: 16, marginBottom: 8, fontSize: 11, fontWeight: 600 }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <span style={{ width: 12, height: 3, background: "#EF4444", display: "inline-block", borderRadius: 1 }} />
-                  {decodedName}
-                </span>
-                <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <span style={{ width: 12, height: 3, background: "#22C55E", display: "inline-block", borderRadius: 1 }} />
-                  You
-                </span>
+              <div style={{ display: "flex", gap: 14, marginBottom: 6, fontSize: 10, fontWeight: 600, color: "var(--text-muted)" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 2, background: "#EF4444", display: "inline-block" }} />{decodedName}</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 2, background: "#22C55E", display: "inline-block" }} />You</span>
               </div>
 
-              {/* Chart */}
-              <div style={{ overflowX: "auto" }}>
-                <svg viewBox={`0 0 ${chartW} ${chartH}`} style={{ width: "100%", height: chartH }}>
-                  {/* Grid lines */}
-                  {[0, 0.25, 0.5, 0.75, 1].map((pct) => {
-                    const y = padY + (1 - pct) * plotH;
-                    const val = Math.round(minVal + pct * range);
-                    return (
-                      <g key={pct}>
-                        <line x1={padX} y1={y} x2={padX + plotW} y2={y} stroke="var(--border)" strokeWidth="0.5" strokeDasharray="3,3" />
-                        <text x={padX - 4} y={y + 3} fontSize="8" fill="var(--text-muted)" textAnchor="end">{val}%</text>
-                      </g>
-                    );
-                  })}
-                  {/* Brand area + line */}
-                  <path d={makeArea(brandPath, brandPoints)} fill="#22C55E" fillOpacity="0.08" />
-                  <path d={brandPath} fill="none" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  {/* Competitor area + line */}
-                  <path d={makeArea(compPath, compPoints)} fill="#EF4444" fillOpacity="0.08" />
-                  <path d={compPath} fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  {/* Data points — competitor */}
-                  {compPoints.map((p, i) => (
-                    <g key={`c-${i}`}>
-                      <circle cx={p.x} cy={p.y} r="3.5" fill="var(--surface)" stroke="#EF4444" strokeWidth="2" />
-                      <text x={p.x} y={p.y - 8} fontSize="8" fill="#991B1B" textAnchor="middle" fontWeight="700">{p.val}%</text>
-                    </g>
-                  ))}
-                  {/* Data points — brand */}
-                  {brandPoints.map((p, i) => (
-                    <g key={`b-${i}`}>
-                      <circle cx={p.x} cy={p.y} r="3.5" fill="var(--surface)" stroke="#22C55E" strokeWidth="2" />
-                      <text x={p.x} y={p.y + 14} fontSize="8" fill="#166534" textAnchor="middle" fontWeight="700">{p.val}%</text>
-                    </g>
-                  ))}
-                  {/* X-axis labels */}
-                  {trend.map((t, i) => {
-                    const x = padX + (i / (trend.length - 1)) * plotW;
-                    return (
-                      <text key={i} x={x} y={chartH - 2} fontSize="8" fill="var(--text-muted)" textAnchor="middle">{fmtDate(t.date)}</text>
-                    );
-                  })}
-                </svg>
-              </div>
-
-              {/* Context */}
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 10, color: "var(--text-muted)" }}>
-                <span>{fmtDateFull(trend[0].date)}</span>
-                <span>{trend.length} scans · {trend[trend.length - 1].total_queries} queries each</span>
-                <span>{fmtDateFull(trend[trend.length - 1].date)}</span>
-              </div>
+              <svg width="100%" viewBox={`0 0 ${width} ${height}`} style={{ display: "block" }}>
+                {/* Grid */}
+                {yTicks.map((tick) => (
+                  <g key={tick.value}>
+                    <line x1={padding.left} y1={tick.y} x2={width - padding.right} y2={tick.y} stroke="var(--bg-dark)" strokeWidth="1" />
+                    <text x={padding.left - 6} y={tick.y + 4} textAnchor="end" fontSize="10" fill="var(--text-muted)">{tick.value}%</text>
+                  </g>
+                ))}
+                {/* Brand area + line */}
+                <path d={makeArea(brandPath, brandPts)} fill="#22C55E" opacity="0.1" />
+                <path d={brandPath} fill="none" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                {/* Competitor area + line */}
+                <path d={makeArea(compPath, compPts)} fill="#EF4444" opacity="0.1" />
+                <path d={compPath} fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                {/* Dots — competitor */}
+                {compPts.map((p, i) => (
+                  <circle key={`c-${i}`} cx={p.x} cy={p.y} r="3.5" fill="#EF4444" stroke="var(--border)" strokeWidth="1.5" />
+                ))}
+                {/* Dots — brand */}
+                {brandPts.map((p, i) => (
+                  <circle key={`b-${i}`} cx={p.x} cy={p.y} r="3.5" fill="#22C55E" stroke="var(--border)" strokeWidth="1.5" />
+                ))}
+                {/* X-axis labels */}
+                {trend.map((t, i) => {
+                  if (i === 0 || i === trend.length - 1 || i % Math.max(1, Math.floor(trend.length / 5)) === 0) {
+                    const x = padding.left + (i / (trend.length - 1)) * chartW;
+                    return <text key={i} x={x} y={height - 4} textAnchor="middle" fontSize="9" fill="var(--text-muted)">{fmtDate(t.date)}</text>;
+                  }
+                  return null;
+                })}
+              </svg>
             </div>
           );
         })()}
