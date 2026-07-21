@@ -12,7 +12,7 @@ from app.models.models import User, Brand, MonitoredQuery, Scan, QueryResult, Sc
 from app.schemas.schemas import (
     BrandOut, QueryResultOut, QueryDrilldownOut, DrilldownInsight,
     LLMDrilldownOut, LLMQueryResultItem,
-    CompetitorDrilldownOut, CompetitorQueryResult, CompetitorMention,
+    CompetitorDrilldownOut, CompetitorQueryResult, CompetitorMention, CompetitorLLMBreakdown,
 )
 from app.services.insight_engine import generate_insights_for_query, generate_competitor_insight
 from app.api.auth import get_current_user
