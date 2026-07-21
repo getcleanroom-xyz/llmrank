@@ -23,6 +23,9 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
+# Suppress noisy third-party loggers
+for noisy in ("primp", "httpx", "httpcore", "urllib3", "ddgs"):
+    logging.getLogger(noisy).setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
