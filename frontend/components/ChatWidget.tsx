@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useReducer, useRef, useEffect, useCallback, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Markdown from "react-markdown";
 import { streamRecommendation, type ChatMessage } from "@/lib/api/recommendations";
@@ -12,6 +12,61 @@ import {
 } from "@/lib/hooks/conversations";
 import type { Conversation } from "@/lib/api/conversations";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
+
+interface State {
+  open: boolean;
+  sidebarOpen: boolean;
+  activeConvId: string | null;
+  localMessages: ChatMessage[];
+  streamingMsg: string;
+  input: string;
+  streaming: boolean;
+  thinking: boolean;
+  error: string;
+  deleteTarget: string | null;
+}
+
+type Action =
+  | { type: "SET"; field: keyof State; value: unknown }
+  | { type: "RESET_CHAT" }
+  | { type: "SELECT_CONVERSATION"; convId: string }
+  | { type: "CONFIRM_DELETE_ACTIVE"; convId: string }
+  | { type: "SEND_START"; userMsg: ChatMessage }
+  | { type: "SET_CONV_ID"; convId: string }
+  | { type: "SEND_ERROR"; message: string }
+  | { type: "STREAM_TOKEN"; token: string }
+  | { type: "STREAM_FINISH"; fullResponse: string };
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case "SET":
+      return { ...state, [action.field]: action.value };
+    case "RESET_CHAT":
+      return { ...state, activeConvId: null, localMessages: [], streamingMsg: "", error: "", sidebarOpen: false };
+    case "SELECT_CONVERSATION":
+      return { ...state, activeConvId: action.convId, localMessages: [], streamingMsg: "", error: "", sidebarOpen: false };
+    case "CONFIRM_DELETE_ACTIVE":
+      return {
+        ...state,
+        deleteTarget: null,
+        ...(action.convId === state.activeConvId ? { activeConvId: null, localMessages: [], streamingMsg: "" } : {}),
+      };
+    case "SEND_START":
+      return { ...state, input: "", streaming: true, thinking: true, error: "", streamingMsg: "", localMessages: [...state.localMessages, action.userMsg] };
+    case "SET_CONV_ID":
+      return { ...state, activeConvId: action.convId };
+    case "SEND_ERROR":
+      return { ...state, error: action.message, streaming: false, thinking: false };
+    case "STREAM_TOKEN":
+      return { ...state, thinking: false, streamingMsg: state.streamingMsg + action.token };
+    case "STREAM_FINISH": {
+      const localMessages = action.fullResponse
+        ? [...state.localMessages, { role: "assistant" as const, content: action.fullResponse }]
+        : state.localMessages;
+      return { ...state, streaming: false, thinking: false, streamingMsg: "", localMessages };
+    }
+  }
+}
 
 function LaiIcon({ size = 24, color = "currentColor" }: { size?: number; color?: string }) {
   return (
@@ -30,17 +85,21 @@ const QUICK_ACTIONS = [
   { label: "Beat top competitor", prompt: "Who is my top competitor and what specific content gaps should I fill to beat them?" },
 ];
 
+const initialState: State = {
+  open: false,
+  sidebarOpen: false,
+  activeConvId: null,
+  localMessages: [],
+  streamingMsg: "",
+  input: "",
+  streaming: false,
+  thinking: false,
+  error: "",
+  deleteTarget: null,
+};
+
 export function ChatWidget({ brandId }: { brandId: string }) {
-  const [open, setOpen] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeConvId, setActiveConvId] = useState<string | null>(null);
-  const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
-  const [streamingMsg, setStreamingMsg] = useState<string>("");
-  const [input, setInput] = useState("");
-  const [streaming, setStreaming] = useState(false);
-  const [thinking, setThinking] = useState(false);
-  const [error, setError] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [state, dispatch] = useReducer(reducer, initialState);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const streamAbortRef = useRef<AbortController | null>(null);
@@ -48,33 +107,29 @@ export function ChatWidget({ brandId }: { brandId: string }) {
   const qc = useQueryClient();
 
   const { data: convsData } = useConversations(brandId);
-  const { data: serverMessages } = useConversationMessages(brandId, activeConvId);
+  const { data: serverMessages } = useConversationMessages(brandId, state.activeConvId);
   const createConv = useCreateConversation();
   const deleteConv = useDeleteConversation();
 
   const conversations = convsData?.items ?? [];
 
-  // Merge server + local messages for display
   const serverMsgs: ChatMessage[] = (serverMessages ?? []).map((m) => ({ role: m.role, content: m.content }));
   const messages: ChatMessage[] = useMemo(() => {
-    // For loaded conversations, merge server messages with any locally-added messages
-    // (user messages added during this session before server persists them)
-    const base = activeConvId
-      ? [...serverMsgs, ...localMessages.filter(
+    const base = state.activeConvId
+      ? [...serverMsgs, ...state.localMessages.filter(
           (lm) => !serverMsgs.some((sm) => sm.role === lm.role && sm.content === lm.content)
         )]
-      : localMessages;
-    if (streamingMsg) {
-      return [...base, { role: "assistant" as const, content: streamingMsg }];
+      : state.localMessages;
+    if (state.streamingMsg) {
+      return [...base, { role: "assistant" as const, content: state.streamingMsg }];
     }
     return base;
-  }, [activeConvId, serverMsgs, localMessages, streamingMsg]);
+  }, [state.activeConvId, serverMsgs, state.localMessages, state.streamingMsg]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Abort streaming on unmount
   useEffect(() => {
     return () => {
       streamAbortRef.current?.abort();
@@ -83,72 +138,50 @@ export function ChatWidget({ brandId }: { brandId: string }) {
   }, []);
 
   useEffect(() => {
-    if (open) inputRef.current?.focus();
-  }, [open]);
+    if (state.open) inputRef.current?.focus();
+  }, [state.open]);
 
-  const startNewChat = useCallback(() => {
-    setActiveConvId(null);
-    setLocalMessages([]);
-    setStreamingMsg("");
-    setError("");
-    setSidebarOpen(false);
-  }, []);
+  const set = useCallback(
+    <K extends keyof State>(field: K, value: State[K]) => dispatch({ type: "SET", field, value } as Action),
+    [],
+  );
 
-  const selectConversation = useCallback((conv: Conversation) => {
-    setActiveConvId(conv.id);
-    setLocalMessages([]);
-    setStreamingMsg("");
-    setError("");
-    setSidebarOpen(false);
-  }, []);
+  const startNewChat = useCallback(() => dispatch({ type: "RESET_CHAT" }), []);
+
+  const selectConversation = useCallback((conv: Conversation) => dispatch({ type: "SELECT_CONVERSATION", convId: conv.id }), []);
 
   const handleDeleteConversation = useCallback((convId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setDeleteTarget(convId);
+    dispatch({ type: "SET", field: "deleteTarget", value: convId });
   }, []);
 
   const confirmDelete = useCallback(async () => {
-    if (!deleteTarget) return;
-    await deleteConv.mutateAsync({ brandId, conversationId: deleteTarget });
-    if (activeConvId === deleteTarget) {
-      setActiveConvId(null);
-      setLocalMessages([]);
-      setStreamingMsg("");
-    }
-    setDeleteTarget(null);
-  }, [brandId, activeConvId, deleteConv, deleteTarget]);
+    if (!state.deleteTarget) return;
+    await deleteConv.mutateAsync({ brandId, conversationId: state.deleteTarget });
+    dispatch({ type: "CONFIRM_DELETE_ACTIVE", convId: state.deleteTarget });
+  }, [brandId, deleteConv, state.deleteTarget]);
 
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
 
   const send = async (text: string) => {
-    if (!text.trim() || streaming) return;
+    if (!text.trim() || state.streaming) return;
     const userMsg: ChatMessage = { role: "user", content: text.trim() };
-    setInput("");
-    setStreaming(true);
-    setThinking(true);
-    setError("");
-    setStreamingMsg("");
-    setLocalMessages((prev) => [...prev, userMsg]);
+    dispatch({ type: "SEND_START", userMsg });
 
-    // Abort any previous stream
     streamAbortRef.current?.abort();
     const controller = new AbortController();
     streamAbortRef.current = controller;
 
-    // Create conversation if needed
-    let convId = activeConvId;
+    let convId = state.activeConvId;
     if (!convId) {
       try {
         const conv = await createConv.mutateAsync({ brandId });
         convId = conv.id;
-        setActiveConvId(conv.id);
-        // Invalidate conversation list so sidebar shows new conversation
+        dispatch({ type: "SET_CONV_ID", convId: conv.id });
         qc.invalidateQueries({ queryKey: ["conversations", brandId] });
       } catch {
-        setError("Failed to create conversation");
-        setStreaming(false);
-        setThinking(false);
+        dispatch({ type: "SEND_ERROR", message: "Failed to create conversation" });
         return;
       }
     }
@@ -160,27 +193,17 @@ export function ChatWidget({ brandId }: { brandId: string }) {
       fullResponse = "";
 
       for await (const token of streamRecommendation(brandId, text, history, convId ?? undefined, controller.signal)) {
-        setThinking(false);
+        dispatch({ type: "STREAM_TOKEN", token });
         fullResponse += token;
-        setStreamingMsg(fullResponse);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to get response");
+      dispatch({ type: "SEND_ERROR", message: err instanceof Error ? err.message : "Failed to get response" });
     } finally {
-      setStreaming(false);
-      setThinking(false);
-      // Move streaming response into localMessages so it persists until server catches up
-      setStreamingMsg("");
-      if (fullResponse) {
-        setLocalMessages((prev) => [...prev, { role: "assistant", content: fullResponse }]);
-      }
-      // Refresh conversation list immediately (new conversation may appear)
+      dispatch({ type: "STREAM_FINISH", fullResponse });
       qc.invalidateQueries({ queryKey: ["conversations", brandId] });
-      // Refresh messages for loaded conversations
       if (convId) {
         qc.invalidateQueries({ queryKey: ["conversationMessages", brandId, convId] });
       }
-      // Re-refetch after delay to pick up auto-generated title from event bus
       if (titleRefreshRef.current) clearTimeout(titleRefreshRef.current);
       titleRefreshRef.current = setTimeout(() => {
         qc.invalidateQueries({ queryKey: ["conversations", brandId] });
@@ -190,10 +213,9 @@ export function ChatWidget({ brandId }: { brandId: string }) {
 
   return (
     <>
-      {/* Floating button */}
-      {!open && (
+      {!state.open && (
         <button
-          onClick={() => setOpen(true)}
+          onClick={() => set("open", true)}
           aria-label="Open AI copilot"
           style={{
             position: "fixed", bottom: 24, right: 24, zIndex: 100,
@@ -209,8 +231,7 @@ export function ChatWidget({ brandId }: { brandId: string }) {
         </button>
       )}
 
-      {/* Chat panel — full screen on mobile, floating on desktop */}
-      {open && (
+      {state.open && (
         <div
           style={{
             position: "fixed", inset: 0, zIndex: 200,
@@ -218,7 +239,6 @@ export function ChatWidget({ brandId }: { brandId: string }) {
             display: "flex", flexDirection: "column",
           }}
         >
-          {/* Header */}
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
             padding: "12px 16px", borderBottom: "2px solid var(--border)",
@@ -229,10 +249,10 @@ export function ChatWidget({ brandId }: { brandId: string }) {
             </svg>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
+                onClick={() => set("sidebarOpen", !state.sidebarOpen)}
                 style={{
                   width: 32, height: 32, borderRadius: "var(--radius)",
-                  background: sidebarOpen ? "var(--primary)" : "transparent",
+                  background: state.sidebarOpen ? "var(--primary)" : "transparent",
                   border: "2px solid var(--border)",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   cursor: "pointer", fontSize: 16,
@@ -253,12 +273,11 @@ export function ChatWidget({ brandId }: { brandId: string }) {
                 <div style={{ fontSize: 10, color: "var(--text-muted)" }}>Your visibility copilot</div>
               </div>
             </div>
-            <button onClick={() => setOpen(false)} className="btn btn-ghost btn-sm" style={{ fontSize: 16 }}>✕</button>
+            <button onClick={() => set("open", false)} className="btn btn-ghost btn-sm" style={{ fontSize: 16 }}>✕</button>
           </div>
 
           <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-            {/* Conversation sidebar */}
-            {sidebarOpen && (
+            {state.sidebarOpen && (
               <div style={{
                 width: 260, flexShrink: 0,
                 borderRight: "2px solid var(--border)",
@@ -294,14 +313,14 @@ export function ChatWidget({ brandId }: { brandId: string }) {
                       style={{
                         padding: "8px 12px",
                         cursor: "pointer",
-                        background: conv.id === activeConvId ? "var(--primary)" : "transparent",
-                        borderLeft: conv.id === activeConvId ? "3px solid var(--border)" : "3px solid transparent",
+                        background: conv.id === state.activeConvId ? "var(--primary)" : "transparent",
+                        borderLeft: conv.id === state.activeConvId ? "3px solid var(--border)" : "3px solid transparent",
                         display: "flex", alignItems: "center", justifyContent: "space-between",
                         gap: 8,
                       }}
                     >
                       <span style={{
-                        fontSize: 13, fontWeight: conv.id === activeConvId ? 700 : 400,
+                        fontSize: 13, fontWeight: conv.id === state.activeConvId ? 700 : 400,
                         overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                         flex: 1, minWidth: 0,
                       }}>
@@ -328,7 +347,6 @@ export function ChatWidget({ brandId }: { brandId: string }) {
               </div>
             )}
 
-            {/* Messages */}
             <div style={{ flex: 1, overflow: "auto", padding: "16px", display: "flex", flexDirection: "column", gap: 12 }}>
               {messages.length === 0 && (
                 <div style={{ textAlign: "center", padding: "40px 20px", position: "relative" }}>
@@ -442,13 +460,13 @@ export function ChatWidget({ brandId }: { brandId: string }) {
                         msg.content
                       )}
                     </div>
-                    {msg.role === "assistant" && i === messages.length - 1 && streaming && (
+                    {msg.role === "assistant" && i === messages.length - 1 && state.streaming && (
                       <span style={{ display: "inline-block", width: 6, height: 14, background: "var(--text)", opacity: 0.4, marginLeft: 2, animation: "blink 1s infinite" }} />
                     )}
                   </div>
                 </div>
               ))}
-              {thinking && (
+              {state.thinking && (
                 <div style={{ display: "flex", justifyContent: "flex-start" }}>
                   <div style={{
                     padding: "10px 14px", fontSize: 13,
@@ -469,14 +487,12 @@ export function ChatWidget({ brandId }: { brandId: string }) {
             </div>
           </div>
 
-          {/* Error */}
-          {error && (
+          {state.error && (
             <div style={{ padding: "8px 16px", fontSize: 12, color: "var(--red)", fontWeight: 600, borderTop: "1px solid var(--border)" }}>
-              {error}
+              {state.error}
             </div>
           )}
 
-          {/* Input area */}
           <div style={{
             borderTop: "2px solid var(--border)",
             background: "#FFF9DB", position: "relative",
@@ -488,7 +504,6 @@ export function ChatWidget({ brandId }: { brandId: string }) {
               <line x1="40" y1="0" x2="40" y2="100" stroke="#EF4444" strokeWidth="0.5" />
             </svg>
 
-            {/* Toolbar */}
             <div style={{
               display: "flex", gap: 2, padding: "6px 12px 4px 48px",
               borderBottom: "1px solid rgba(0,0,0,0.06)", position: "relative", zIndex: 1,
@@ -510,20 +525,20 @@ export function ChatWidget({ brandId }: { brandId: string }) {
                     if (!ta) return;
                     const start = ta.selectionStart;
                     const end = ta.selectionEnd;
-                    const selected = input.substring(start, end);
+                    const selected = state.input.substring(start, end);
                     let newText: string;
                     let newCursor: number;
                     if (btn.wrap && selected) {
-                      newText = input.substring(0, start) + btn.insert + selected + btn.insert + input.substring(end);
+                      newText = state.input.substring(0, start) + btn.insert + selected + btn.insert + state.input.substring(end);
                       newCursor = start + btn.insert.length + selected.length + btn.insert.length;
                     } else if (btn.wrap) {
-                      newText = input.substring(0, start) + btn.insert + btn.insert + input.substring(end);
+                      newText = state.input.substring(0, start) + btn.insert + btn.insert + state.input.substring(end);
                       newCursor = start + btn.insert.length;
                     } else {
-                      newText = input.substring(0, start) + btn.insert + input.substring(end);
+                      newText = state.input.substring(0, start) + btn.insert + state.input.substring(end);
                       newCursor = start + btn.insert.length;
                     }
-                    setInput(newText);
+                    set("input", newText);
                     setTimeout(() => { ta.selectionStart = ta.selectionEnd = newCursor; ta.focus(); }, 0);
                   }}
                   style={{
@@ -543,22 +558,21 @@ export function ChatWidget({ brandId }: { brandId: string }) {
               ))}
             </div>
 
-            {/* Textarea + send */}
             <div style={{ display: "flex", gap: 8, alignItems: "flex-end", padding: "6px 12px 10px 48px", position: "relative", zIndex: 1 }}>
               <textarea
                 ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
+                value={state.input}
+                onChange={(e) => set("input", e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
-                    send(input);
+                    send(state.input);
                   }
                   if (e.key === "Tab") {
                     e.preventDefault();
                     const ta = e.currentTarget;
                     const start = ta.selectionStart;
-                    setInput(input.substring(0, start) + "  " + input.substring(ta.selectionEnd));
+                    set("input", state.input.substring(0, start) + "  " + state.input.substring(ta.selectionEnd));
                     setTimeout(() => { ta.selectionStart = ta.selectionEnd = start + 2; }, 0);
                   }
                 }}
@@ -571,11 +585,11 @@ export function ChatWidget({ brandId }: { brandId: string }) {
                   background: "transparent", color: "var(--text)",
                   minHeight: 36, maxHeight: 120,
                 }}
-                disabled={streaming}
+                disabled={state.streaming}
               />
               <button
-                onClick={() => send(input)}
-                disabled={!input.trim() || streaming}
+                onClick={() => send(state.input)}
+                disabled={!state.input.trim() || state.streaming}
                 style={{
                   height: 34, padding: "0 14px", flexShrink: 0,
                   background: "var(--primary)", color: "#1A1A1A",
@@ -584,7 +598,7 @@ export function ChatWidget({ brandId }: { brandId: string }) {
                   fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 14, fontWeight: 700,
                 }}
               >
-                {streaming ? "..." : "send"}
+                {state.streaming ? "..." : "send"}
               </button>
             </div>
           </div>
@@ -592,12 +606,12 @@ export function ChatWidget({ brandId }: { brandId: string }) {
       )}
 
       <ConfirmDialog
-        open={!!deleteTarget}
+        open={!!state.deleteTarget}
         title="Delete conversation"
         confirmLabel="Delete"
         destructive
         onConfirm={confirmDelete}
-        onCancel={() => setDeleteTarget(null)}
+        onCancel={() => set("deleteTarget", null)}
         loading={deleteConv.isPending}
       >
         This will permanently delete this conversation and all its messages. This cannot be undone.

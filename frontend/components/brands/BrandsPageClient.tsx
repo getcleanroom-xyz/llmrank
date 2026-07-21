@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useReducer, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
@@ -15,6 +15,38 @@ const BRAND_CARD_COLORS = [
   { bg: "#F3E8FF", acc: "#A855F7", rot: "0.5deg" },
 ];
 
+interface State {
+  success: string | null;
+  brandError: string | null;
+  searchInput: string;
+  showModal: boolean;
+  deleteConfirm: string | null;
+}
+
+type Action =
+  | { type: "success"; value: string | null }
+  | { type: "brandError"; value: string | null }
+  | { type: "searchInput"; value: string }
+  | { type: "showModal"; value: boolean }
+  | { type: "deleteConfirm"; value: string | null };
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case "success":
+      return { ...state, success: action.value };
+    case "brandError":
+      return { ...state, brandError: action.value };
+    case "searchInput":
+      return { ...state, searchInput: action.value };
+    case "showModal":
+      return { ...state, showModal: action.value };
+    case "deleteConfirm":
+      return { ...state, deleteConfirm: action.value };
+    default:
+      return state;
+  }
+}
+
 function BrandsPageInner() {
   const { user, openAuthModal } = useAuth();
   const router = useRouter();
@@ -26,12 +58,16 @@ function BrandsPageInner() {
   const createBrand = useCreateBrand();
   const deleteBrand = useDeleteBrand();
 
-  const [success, setSuccess] = useState<string | null>(null);
-  const [brandError, setBrandError] = useState<string | null>(null);
-  const [searchInput, setSearchInput] = useState(search);
+  const [state, dispatch] = useReducer(reducer, {
+    success: null,
+    brandError: null,
+    searchInput: search,
+    showModal: false,
+    deleteConfirm: null,
+  });
 
-  const [showModal, setShowModal] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const set = <K extends keyof State>(field: K, value: State[K]) =>
+    dispatch({ type: field, value } as Action);
 
   const navigate = useCallback((p: Record<string, string>) => {
     const sp = new URLSearchParams(searchParams.toString());
@@ -43,29 +79,29 @@ function BrandsPageInner() {
     router.replace(`/brands${sp.toString() ? `?${sp.toString()}` : ""}`);
   }, [searchParams, router]);
 
-  const handleSearch = () => navigate({ search: searchInput.trim(), page: "1" });
+  const handleSearch = () => navigate({ search: state.searchInput.trim(), page: "1" });
 
   const handleCreate = async (name: string, domain: string, competitors: string[]) => {
     try {
       await createBrand.mutateAsync({ name, domain, competitors });
-      setShowModal(false);
-      setSuccess(`${name} created`);
-      setTimeout(() => setSuccess(null), 3000);
+      set("showModal", false);
+      set("success", `${name} created`);
+      setTimeout(() => set("success", null), 3000);
     } catch (err) {
-      setSuccess(null);
-      setBrandError(err instanceof Error ? err.message : "Failed to create brand");
+      set("success", null);
+      set("brandError", err instanceof Error ? err.message : "Failed to create brand");
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
       await deleteBrand.mutateAsync(id);
-      setDeleteConfirm(null);
-      setSuccess("Brand deleted");
-      setTimeout(() => setSuccess(null), 3000);
+      set("deleteConfirm", null);
+      set("success", "Brand deleted");
+      setTimeout(() => set("success", null), 3000);
     } catch (err) {
-      setSuccess(null);
-      setBrandError(err instanceof Error ? err.message : "Failed to delete brand");
+      set("success", null);
+      set("brandError", err instanceof Error ? err.message : "Failed to delete brand");
     }
   };
 
@@ -81,7 +117,7 @@ function BrandsPageInner() {
       />
       <PageHeader>
         {user && (
-          <button onClick={() => setShowModal(true)} className="btn btn-primary btn-sm" style={{ marginLeft: "auto" }}>+ New brand</button>
+          <button onClick={() => set("showModal", true)} className="btn btn-primary btn-sm" style={{ marginLeft: "auto" }}>+ New brand</button>
         )}
       </PageHeader>
 
@@ -106,8 +142,8 @@ function BrandsPageInner() {
           <div style={{ marginBottom: 16, display: "flex", gap: 8 }}>
             <input
               className="input"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
+              value={state.searchInput}
+              onChange={(e) => set("searchInput", e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
               placeholder="Search brands..."
               style={{ flex: 1, minWidth: 0 }}
@@ -121,7 +157,7 @@ function BrandsPageInner() {
             </button>
             {search && (
               <button
-                onClick={() => { setSearchInput(""); navigate({ search: "" }); }}
+                onClick={() => { set("searchInput", ""); navigate({ search: "" }); }}
                 className="btn btn-ghost btn-sm"
                 style={{ flexShrink: 0 }}
               >
@@ -136,14 +172,14 @@ function BrandsPageInner() {
             {error}
           </div>
         )}
-        {brandError && (
+        {state.brandError && (
           <div className="card" style={{ background: "#FEE2E2", borderColor: "var(--red)", padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#991B1B", fontWeight: 600 }}>
-            {brandError}
-            <button onClick={() => setBrandError(null)} style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer", fontWeight: 700, color: "#991B1B" }}>x</button>
+            {state.brandError}
+            <button onClick={() => set("brandError", null)} style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer", fontWeight: 700, color: "#991B1B" }}>x</button>
           </div>
         )}
-        {success && (
-          <div className="card" style={{ background: "#DCFCE7", borderColor: "var(--green)", padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#166534", fontWeight: 600 }}>{success}</div>
+        {state.success && (
+          <div className="card" style={{ background: "#DCFCE7", borderColor: "var(--green)", padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#166534", fontWeight: 600 }}>{state.success}</div>
         )}
 
         {isLoading ? (
@@ -158,12 +194,12 @@ function BrandsPageInner() {
         ) : brands.length === 0 && !search ? (
           <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
             <div style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 14, fontWeight: 600 }}>You haven&apos;t added any brands yet.</div>
-            <button onClick={() => setShowModal(true)} className="btn btn-primary">Add your first brand</button>
+            <button onClick={() => set("showModal", true)} className="btn btn-primary">Add your first brand</button>
           </div>
         ) : brands.length === 0 && search ? (
           <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
             <div style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 14, fontWeight: 600 }}>No brands match &quot;{search}&quot;</div>
-            <button onClick={() => { setSearchInput(""); navigate({ search: "" }); }} className="btn btn-ghost">Clear search</button>
+            <button onClick={() => { set("searchInput", ""); navigate({ search: "" }); }} className="btn btn-ghost">Clear search</button>
           </div>
         ) : (
           <>
@@ -223,14 +259,14 @@ function BrandsPageInner() {
                   </div>
 
                   <div style={{ display: "flex", gap: 4, flexShrink: 0, alignItems: "center" }}>
-                    {deleteConfirm === b.id ? (
+                    {state.deleteConfirm === b.id ? (
                       <>
                         <button onClick={(e) => { e.preventDefault(); handleDelete(b.id); }} disabled={deleteBrand.isPending} className="btn btn-danger btn-sm">{deleteBrand.isPending ? "..." : "Yes"}</button>
-                        <button onClick={(e) => { e.preventDefault(); setDeleteConfirm(null); }} className="btn btn-sm btn-ghost">No</button>
+                        <button onClick={(e) => { e.preventDefault(); set("deleteConfirm", null); }} className="btn btn-sm btn-ghost">No</button>
                       </>
                     ) : (
                       <>
-                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteConfirm(b.id); }} className="btn btn-sm btn-ghost" style={{ color: "var(--red)" }}>Del</button>
+                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); set("deleteConfirm", b.id); }} className="btn btn-sm btn-ghost" style={{ color: "var(--red)" }}>Del</button>
                       </>
                     )}
                   </div>
@@ -261,8 +297,8 @@ function BrandsPageInner() {
         )}
       </div>
 
-      {showModal && (
-        <BrandWizard open={showModal} onClose={() => setShowModal(false)} onCreated={handleCreate} creating={createBrand.isPending} />
+      {state.showModal && (
+        <BrandWizard open={state.showModal} onClose={() => set("showModal", false)} onCreated={handleCreate} creating={createBrand.isPending} />
       )}
     </div>
   );

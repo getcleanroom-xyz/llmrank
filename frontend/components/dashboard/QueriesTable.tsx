@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useReducer, useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   useQueriesTable, useAddQuery, useDeleteQuery,
@@ -31,6 +31,57 @@ function useIsMobile(breakpoint = 640) {
   return isMobile;
 }
 
+interface State {
+  page: number;
+  input: string;
+  showSuggest: boolean;
+  keywords: string;
+  suggestions: string[];
+  error: string | null;
+  deleteTarget: { id: string; text: string } | null;
+  bulkDeleteConfirm: boolean;
+  selected: Set<string>;
+  lastClicked: string | null;
+  filters: FilterState;
+}
+
+type Action = { type: "SET"; field: keyof State; value: unknown };
+
+const initialState: State = {
+  page: 1,
+  input: "",
+  showSuggest: false,
+  keywords: "",
+  suggestions: [],
+  error: null,
+  deleteTarget: null,
+  bulkDeleteConfirm: false,
+  selected: new Set(),
+  lastClicked: null,
+  filters: {
+    dateRange: "30d",
+    scoreMin: "",
+    scoreMax: "",
+    search: "",
+    status: "all",
+  },
+};
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case "SET": {
+      const currentValue = state[action.field];
+      const newValue =
+        typeof action.value === "function"
+          ? (action.value as (prev: State[keyof State]) => State[keyof State])(currentValue)
+          : (action.value as State[keyof State]);
+      return { ...state, [action.field]: newValue };
+    }
+    default:
+      return state;
+  }
+}
+
 export function QueriesTable({
   brandId,
   brandName,
@@ -42,30 +93,18 @@ export function QueriesTable({
 }) {
   const router = useRouter();
   const isMobile = useIsMobile();
-  const [page, setPage] = useState(1);
-  const [input, setInput] = useState("");
-  const [showSuggest, setShowSuggest] = useState(false);
-  const [keywords, setKeywords] = useState("");
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; text: string } | null>(null);
-  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [state, dispatch] = useReducer(reducer, initialState);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [lastClicked, setLastClicked] = useState<string | null>(null);
+  const set = useCallback(
+    (field: keyof State, value: State[keyof State] | ((prev: State[keyof State]) => State[keyof State])) =>
+      dispatch({ type: "SET", field, value }),
+    [],
+  );
 
-  const [filters, setFilters] = useState<FilterState>({
-    dateRange: "30d",
-    scoreMin: "",
-    scoreMax: "",
-    search: "",
-    status: "all",
-  });
-
-  const debouncedSearch = useDebounce(filters.search, 300);
-  const { data, isLoading } = useQueriesTable(brandId, page, 20, debouncedSearch);
-  const { data: trendData } = useQueryTrend(brandId, filters.dateRange === "all" ? 365 : parseInt(filters.dateRange) || 30);
+  const debouncedSearch = useDebounce(state.filters.search, 300);
+  const { data, isLoading } = useQueriesTable(brandId, state.page, 20, debouncedSearch);
+  const { data: trendData } = useQueryTrend(brandId, state.filters.dateRange === "all" ? 365 : parseInt(state.filters.dateRange) || 30);
   const addQuery = useAddQuery();
   const deleteQuery = useDeleteQuery();
   const suggestQueries = useSuggestQueries();
@@ -73,46 +112,46 @@ export function QueriesTable({
 
   const handleAdd = useCallback(async (text: string) => {
     if (!text.trim()) return;
-    setError(null);
+    set("error", null);
     try {
       await addQuery.mutateAsync({ brandId, query_text: text.trim() });
-      setInput("");
-      setSuggestions((prev) => prev.filter((s) => s !== text));
-      setPage(1);
+      set("input", "");
+      set("suggestions", (prev: string[]) => prev.filter((s) => s !== text));
+      set("page", 1);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to add query");
+      set("error", e instanceof Error ? e.message : "Failed to add query");
     }
-  }, [brandId, addQuery]);
+  }, [brandId, addQuery, set]);
 
   const handleDelete = useCallback(async () => {
-    if (!deleteTarget) return;
-    setError(null);
+    if (!state.deleteTarget) return;
+    set("error", null);
     try {
-      await deleteQuery.mutateAsync({ brandId, queryId: deleteTarget.id });
-      setDeleteTarget(null);
+      await deleteQuery.mutateAsync({ brandId, queryId: state.deleteTarget.id });
+      set("deleteTarget", null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete query");
+      set("error", e instanceof Error ? e.message : "Failed to delete query");
     }
-  }, [brandId, deleteQuery, deleteTarget]);
+  }, [brandId, deleteQuery, state.deleteTarget, set]);
 
   const handleSuggest = useCallback(async () => {
-    setError(null);
+    set("error", null);
     try {
-      const kws = keywords.split(",").map((k) => k.trim()).filter(Boolean);
+      const kws = state.keywords.split(",").map((k) => k.trim()).filter(Boolean);
       const existing = new Set(data?.items.map((q) => q.query_text.toLowerCase()) ?? []);
       const res = await suggestQueries.mutateAsync({ brandId, brand_name: brandName, domain, keywords: kws });
-      setSuggestions(res.suggested_queries.filter((s) => !existing.has(s.toLowerCase())));
+      set("suggestions", res.suggested_queries.filter((s) => !existing.has(s.toLowerCase())));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to generate suggestions");
+      set("error", e instanceof Error ? e.message : "Failed to generate suggestions");
     }
-  }, [brandId, brandName, domain, keywords, suggestQueries, data]);
+  }, [brandId, brandName, domain, state.keywords, suggestQueries, data, set]);
 
   const toggleSelect = useCallback((id: string, shiftKey: boolean) => {
-    setSelected((prev) => {
+    set("selected", (prev: Set<string>) => {
       const next = new Set(prev);
-      if (shiftKey && lastClicked) {
+      if (shiftKey && state.lastClicked) {
         const items = data?.items ?? [];
-        const startIdx = items.findIndex((q) => q.id === lastClicked);
+        const startIdx = items.findIndex((q) => q.id === state.lastClicked);
         const endIdx = items.findIndex((q) => q.id === id);
         if (startIdx !== -1 && endIdx !== -1) {
           const [from, to] = startIdx < endIdx ? [startIdx, endIdx] : [endIdx, startIdx];
@@ -124,25 +163,25 @@ export function QueriesTable({
       }
       return next;
     });
-    setLastClicked(id);
-  }, [lastClicked, data]);
+    set("lastClicked", id);
+  }, [state.lastClicked, data, set]);
 
   const toggleSelectAll = useCallback(() => {
     const items = data?.items ?? [];
-    if (selected.size === items.length) setSelected(new Set());
-    else setSelected(new Set(items.map((q) => q.id)));
-  }, [data, selected.size]);
+    if (state.selected.size === items.length) set("selected", new Set());
+    else set("selected", new Set(items.map((q) => q.id)));
+  }, [data, state.selected.size, set]);
 
   const handleBulkAction = useCallback(async (action: "activate" | "deactivate" | "delete") => {
-    if (selected.size === 0) return;
-    setError(null);
+    if (state.selected.size === 0) return;
+    set("error", null);
     try {
-      await bulkUpdate.mutateAsync({ brandId, action, queryIds: Array.from(selected) });
-      setSelected(new Set());
+      await bulkUpdate.mutateAsync({ brandId, action, queryIds: Array.from(state.selected) });
+      set("selected", new Set());
     } catch (e) {
-      setError(e instanceof Error ? e.message : `Failed to ${action} queries`);
+      set("error", e instanceof Error ? e.message : `Failed to ${action} queries`);
     }
-  }, [brandId, selected, bulkUpdate]);
+  }, [brandId, state.selected, bulkUpdate, set]);
 
   const items = useMemo(() => data?.items ?? [], [data]);
   const total = data?.total ?? 0;
@@ -151,24 +190,24 @@ export function QueriesTable({
 
   const filteredItems = useMemo(() => {
     return items.filter((q) => {
-      if (filters.status === "active" && !q.is_active) return false;
-      if (filters.status === "inactive" && q.is_active) return false;
-      if (filters.status === "scanned" && q.result_count === 0) return false;
-      if (filters.status === "unscanned" && q.result_count > 0) return false;
-      if (filters.scoreMin && (q.query_score ?? 0) < parseInt(filters.scoreMin)) return false;
-      if (filters.scoreMax && (q.query_score ?? 0) > parseInt(filters.scoreMax)) return false;
+      if (state.filters.status === "active" && !q.is_active) return false;
+      if (state.filters.status === "inactive" && q.is_active) return false;
+      if (state.filters.status === "scanned" && q.result_count === 0) return false;
+      if (state.filters.status === "unscanned" && q.result_count > 0) return false;
+      if (state.filters.scoreMin && (q.query_score ?? 0) < parseInt(state.filters.scoreMin)) return false;
+      if (state.filters.scoreMax && (q.query_score ?? 0) > parseInt(state.filters.scoreMax)) return false;
       return true;
     });
-  }, [items, filters]);
+  }, [items, state.filters]);
 
-  const allSelected = filteredItems.length > 0 && filteredItems.every((q) => selected.has(q.id));
+  const allSelected = filteredItems.length > 0 && filteredItems.every((q) => state.selected.has(q.id));
 
   return (
     <div>
-      {error && (
+      {state.error && (
         <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "8px 12px", marginBottom: 12, fontSize: 12, color: "#991B1B", display: "flex", justifyContent: "space-between", alignItems: "center", fontWeight: 600 }}>
-          <span>{error}</span>
-          <button onClick={() => setError(null)} style={{ background: "none", border: "none", color: "#991B1B", cursor: "pointer", fontSize: 16, lineHeight: 1 }}>x</button>
+          <span>{state.error}</span>
+          <button onClick={() => set("error", null)} style={{ background: "none", border: "none", color: "#991B1B", cursor: "pointer", fontSize: 16, lineHeight: 1 }}>x</button>
         </div>
       )}
 
@@ -205,9 +244,9 @@ export function QueriesTable({
         <div style={{ display: "flex", gap: 8 }}>
           <input
             ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAdd(input)}
+            value={state.input}
+            onChange={(e) => set("input", e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleAdd(state.input)}
             placeholder="Add a query..."
             style={{
               flex: 1, minWidth: 0,
@@ -217,8 +256,8 @@ export function QueriesTable({
             }}
           />
           <button
-            onClick={() => handleAdd(input)}
-            disabled={addQuery.isPending || !input.trim()}
+            onClick={() => handleAdd(state.input)}
+            disabled={addQuery.isPending || !state.input.trim()}
             className="btn btn-primary btn-sm"
           >
             {addQuery.isPending ? "..." : "Add"}
@@ -227,19 +266,19 @@ export function QueriesTable({
 
         <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
           <button
-            onClick={() => setShowSuggest((s) => !s)}
+            onClick={() => set("showSuggest", (s: boolean) => !s)}
             style={{
               fontWeight: 600, background: "none", border: "none", cursor: "pointer",
               color: "var(--text-secondary)", fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 16,
             }}
           >
-            {showSuggest ? "hide AI suggestions" : "+ AI suggestions"}
+            {state.showSuggest ? "hide AI suggestions" : "+ AI suggestions"}
           </button>
-          {showSuggest && (
+          {state.showSuggest && (
             <>
               <input
-                value={keywords}
-                onChange={(e) => setKeywords(e.target.value)}
+                value={state.keywords}
+                onChange={(e) => set("keywords", e.target.value)}
                 placeholder="keywords, comma separated"
                 style={{
                   flex: 1, minWidth: 120,
@@ -255,9 +294,9 @@ export function QueriesTable({
           )}
         </div>
 
-        {suggestions.length > 0 && (
+        {state.suggestions.length > 0 && (
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8, paddingTop: 8, borderTop: "2px dashed var(--border)" }}>
-            {suggestions.map((s) => (
+            {state.suggestions.map((s) => (
               <button
                 key={s}
                 onClick={() => handleAdd(s)}
@@ -280,8 +319,8 @@ export function QueriesTable({
 
       {/* Filter bar */}
       <FilterBar
-        filters={filters}
-        onChange={setFilters}
+        filters={state.filters}
+        onChange={(f) => set("filters", f)}
         showStatus={true}
         showScore={true}
         statusOptions={[
@@ -294,21 +333,21 @@ export function QueriesTable({
       />
 
       {/* Bulk action bar */}
-      {selected.size > 0 && (
+      {state.selected.size > 0 && (
         <div className="queries-bulk-bar" style={{
           padding: "8px 12px", marginBottom: 12,
           background: "#DBEAFF", border: "2px solid var(--border)",
           borderRadius: "var(--radius)", boxShadow: "2px 2px 0 #1A1A1A",
         }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: "#1E40AF" }}>
-            {selected.size} selected
+            {state.selected.size} selected
           </span>
           <div className="bulk-actions-row" style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             <button onClick={() => handleBulkAction("activate")} disabled={bulkUpdate.isPending} className="btn btn-sm" style={{ fontSize: 11 }}>Activate</button>
             <button onClick={() => handleBulkAction("deactivate")} disabled={bulkUpdate.isPending} className="btn btn-sm" style={{ fontSize: 11 }}>Deactivate</button>
-            <button onClick={() => setBulkDeleteConfirm(true)} disabled={bulkUpdate.isPending} className="btn btn-sm btn-danger" style={{ fontSize: 11 }}>Delete</button>
+            <button onClick={() => set("bulkDeleteConfirm", true)} disabled={bulkUpdate.isPending} className="btn btn-sm btn-danger" style={{ fontSize: 11 }}>Delete</button>
           </div>
-          <button onClick={() => setSelected(new Set())} className="btn btn-sm btn-ghost" style={{ fontSize: 11, marginLeft: isMobile ? 0 : "auto" }}>Clear selection</button>
+          <button onClick={() => set("selected", new Set())} className="btn btn-sm btn-ghost" style={{ fontSize: 11, marginLeft: isMobile ? 0 : "auto" }}>Clear selection</button>
         </div>
       )}
 
@@ -318,10 +357,10 @@ export function QueriesTable({
       ) : filteredItems.length === 0 ? (
         <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
           <div style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 24, color: "var(--text-muted)", marginBottom: 4 }}>
-            {filters.search || filters.status !== "all" ? "Nothing found" : "No queries yet"}
+            {state.filters.search || state.filters.status !== "all" ? "Nothing found" : "No queries yet"}
           </div>
           <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
-            {filters.search || filters.status !== "all" ? "Try adjusting your filters." : "Add your first query above."}
+            {state.filters.search || state.filters.status !== "all" ? "Try adjusting your filters." : "Add your first query above."}
           </p>
         </div>
       ) : (
@@ -357,7 +396,7 @@ export function QueriesTable({
           {filteredItems.map((q, i) => {
             const trendPoints = trendData?.[q.id] ?? [];
             const trendScores = trendPoints.map((t) => t.score);
-            const isSelected = selected.has(q.id);
+            const isSelected = state.selected.has(q.id);
 
             return (
               <div
@@ -438,7 +477,7 @@ export function QueriesTable({
                 {/* Actions */}
                 <div className="queries-col-actions" style={{ justifyContent: isMobile ? "flex-end" : "center" }}>
                   <button
-                    onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: q.id, text: q.query_text }); }}
+                    onClick={(e) => { e.stopPropagation(); set("deleteTarget", { id: q.id, text: q.query_text }); }}
                     title="Delete"
                     style={{
                       width: 24, height: 24,
@@ -462,48 +501,48 @@ export function QueriesTable({
       {/* Pagination */}
       {pages > 1 && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 16 }}>
-          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}
-            className="btn btn-sm btn-ghost" style={{ opacity: page <= 1 ? 0.3 : 1, cursor: page <= 1 ? "not-allowed" : "pointer" }}>Prev</button>
+          <button onClick={() => set("page", (p: number) => Math.max(1, p - 1))} disabled={state.page <= 1}
+            className="btn btn-sm btn-ghost" style={{ opacity: state.page <= 1 ? 0.3 : 1, cursor: state.page <= 1 ? "not-allowed" : "pointer" }}>Prev</button>
           {Array.from({ length: Math.min(pages, 7) }, (_, i) => {
             let n: number;
             if (pages <= 7) n = i + 1;
-            else if (page <= 4) n = i + 1;
-            else if (page >= pages - 3) n = pages - 6 + i;
-            else n = page - 3 + i;
+            else if (state.page <= 4) n = i + 1;
+            else if (state.page >= pages - 3) n = pages - 6 + i;
+            else n = state.page - 3 + i;
             return (
-              <button key={n} onClick={() => setPage(n)} className="btn btn-sm"
-                style={{ minWidth: 32, fontWeight: n === page ? 800 : 500, background: n === page ? "var(--primary)" : "var(--bg-dark)", color: n === page ? "#0A0A0B" : "var(--text)" }}>
+              <button key={n} onClick={() => set("page", n)} className="btn btn-sm"
+                style={{ minWidth: 32, fontWeight: n === state.page ? 800 : 500, background: n === state.page ? "var(--primary)" : "var(--bg-dark)", color: n === state.page ? "#0A0A0B" : "var(--text)" }}>
                 {n}
               </button>
             );
           })}
-          <button onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={page >= pages}
-            className="btn btn-sm btn-ghost" style={{ opacity: page >= pages ? 0.3 : 1, cursor: page >= pages ? "not-allowed" : "pointer" }}>Next</button>
+          <button onClick={() => set("page", (p: number) => Math.min(pages, p + 1))} disabled={state.page >= pages}
+            className="btn btn-sm btn-ghost" style={{ opacity: state.page >= pages ? 0.3 : 1, cursor: state.page >= pages ? "not-allowed" : "pointer" }}>Next</button>
         </div>
       )}
 
       <ConfirmDialog
-        open={deleteTarget !== null}
+        open={state.deleteTarget !== null}
         title="Delete query"
         confirmLabel="Delete"
         destructive
         loading={deleteQuery.isPending}
         onConfirm={handleDelete}
-        onCancel={() => setDeleteTarget(null)}
+        onCancel={() => set("deleteTarget", null)}
       >
-        Delete <strong>&quot;{deleteTarget?.text}&quot;</strong>? This will also remove all scan results for this query. This cannot be undone.
+        Delete <strong>&quot;{state.deleteTarget?.text}&quot;</strong>? This will also remove all scan results for this query. This cannot be undone.
       </ConfirmDialog>
 
       <ConfirmDialog
-        open={bulkDeleteConfirm}
+        open={state.bulkDeleteConfirm}
         title="Delete queries"
         confirmLabel="Delete"
         destructive
         loading={bulkUpdate.isPending}
-        onConfirm={() => { setBulkDeleteConfirm(false); handleBulkAction("delete"); }}
-        onCancel={() => setBulkDeleteConfirm(false)}
+        onConfirm={() => { set("bulkDeleteConfirm", false); handleBulkAction("delete"); }}
+        onCancel={() => set("bulkDeleteConfirm", false)}
       >
-        Delete <strong>{selected.size} queries</strong>? This will also remove all scan results for these queries. This cannot be undone.
+        Delete <strong>{state.selected.size} queries</strong>? This will also remove all scan results for these queries. This cannot be undone.
       </ConfirmDialog>
     </div>
   );

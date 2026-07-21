@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useReducer, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
@@ -17,6 +17,54 @@ interface Passkey {
   device_name: string;
   created_at: string;
   last_used_at: string;
+}
+
+interface AccountState {
+  passkeys: Passkey[];
+  loading: boolean;
+  adding: boolean;
+  deleting: string | null;
+  error: string;
+  success: string;
+}
+
+type AccountAction =
+  | { type: "SET_PASSKEYS"; passkeys: Passkey[] }
+  | { type: "SET_LOADING"; loading: boolean }
+  | { type: "SET_ADDING"; adding: boolean }
+  | { type: "SET_DELETING"; deleting: string | null }
+  | { type: "SET_ERROR"; error: string }
+  | { type: "SET_SUCCESS"; success: string }
+  | { type: "CLEAR_MESSAGES" };
+
+const initialState: AccountState = {
+  passkeys: [],
+  loading: true,
+  adding: false,
+  deleting: null,
+  error: "",
+  success: "",
+};
+
+function accountReducer(state: AccountState, action: AccountAction): AccountState {
+  switch (action.type) {
+    case "SET_PASSKEYS":
+      return { ...state, passkeys: action.passkeys };
+    case "SET_LOADING":
+      return { ...state, loading: action.loading };
+    case "SET_ADDING":
+      return { ...state, adding: action.adding };
+    case "SET_DELETING":
+      return { ...state, deleting: action.deleting };
+    case "SET_ERROR":
+      return { ...state, error: action.error, loading: false, adding: false, deleting: null };
+    case "SET_SUCCESS":
+      return { ...state, success: action.success, error: "", loading: false, adding: false, deleting: null };
+    case "CLEAR_MESSAGES":
+      return { ...state, error: "", success: "" };
+    default:
+      return state;
+  }
 }
 
 function getDeviceName(): string {
@@ -53,12 +101,19 @@ function bufferToBase64url(buffer: ArrayBuffer): string {
 export function AccountSettings() {
   const { user } = useAuth();
   const router = useRouter();
-  const [passkeys, setPasskeys] = useState<Passkey[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [adding, setAdding] = useState(false);
-  const [deleting, setDeleting] = useState<string | null>(null);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [state, dispatch] = useReducer(accountReducer, initialState);
+
+  const loadPasskeys = async () => {
+    try {
+      dispatch({ type: "SET_LOADING", loading: true });
+      const data = await authListPasskeys();
+      dispatch({ type: "SET_PASSKEYS", passkeys: data });
+    } catch (err) {
+      dispatch({ type: "SET_ERROR", error: err instanceof Error ? err.message : "Failed to load passkeys" });
+    } finally {
+      dispatch({ type: "SET_LOADING", loading: false });
+    }
+  };
 
   useEffect(() => {
     if (!user) {
@@ -68,22 +123,9 @@ export function AccountSettings() {
     loadPasskeys();
   }, [user, router]);
 
-  const loadPasskeys = async () => {
-    try {
-      setLoading(true);
-      const data = await authListPasskeys();
-      setPasskeys(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load passkeys");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleAddPasskey = async () => {
-    setError("");
-    setSuccess("");
-    setAdding(true);
+    dispatch({ type: "CLEAR_MESSAGES" });
+    dispatch({ type: "SET_ADDING", adding: true });
     try {
       const device_name = getDeviceName();
       const { challenge, rp_id, user_id } = await authAddPasskeyStart(device_name);
@@ -131,32 +173,27 @@ export function AccountSettings() {
       };
 
       await authAddPasskeyFinish(cred, device_name);
-      setSuccess(`Passkey "${device_name}" added successfully`);
+      dispatch({ type: "SET_SUCCESS", success: `Passkey "${device_name}" added successfully` });
       await loadPasskeys();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to add passkey";
-      if (msg.includes("cancelled")) {
-        setError("Setup cancelled.");
-      } else {
-        setError(msg);
-      }
+      dispatch({ type: "SET_ERROR", error: msg.includes("cancelled") ? "Setup cancelled." : msg });
     } finally {
-      setAdding(false);
+      dispatch({ type: "SET_ADDING", adding: false });
     }
   };
 
   const handleDeletePasskey = async (id: string) => {
-    setError("");
-    setSuccess("");
-    setDeleting(id);
+    dispatch({ type: "CLEAR_MESSAGES" });
+    dispatch({ type: "SET_DELETING", deleting: id });
     try {
       await authDeletePasskey(id);
-      setSuccess("Passkey removed");
+      dispatch({ type: "SET_SUCCESS", success: "Passkey removed" });
       await loadPasskeys();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete passkey");
+      dispatch({ type: "SET_ERROR", error: err instanceof Error ? err.message : "Failed to delete passkey" });
     } finally {
-      setDeleting(null);
+      dispatch({ type: "SET_DELETING", deleting: null });
     }
   };
 
@@ -177,7 +214,6 @@ export function AccountSettings() {
       />
 
       <div style={{ flex: 1, maxWidth: 560, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
-        {/* Account info */}
         <div className="card" style={{ padding: "16px 20px", marginBottom: "var(--gap)" }}>
           <div className="section-label" style={{ marginBottom: 10 }}>Account</div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
@@ -196,16 +232,15 @@ export function AccountSettings() {
           </div>
         </div>
 
-        {/* Passkeys */}
         <div className="card" style={{ padding: "16px 20px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
             <div className="section-label">Passkeys</div>
             <button
               onClick={handleAddPasskey}
-              disabled={adding}
+              disabled={state.adding}
               className="btn btn-sm btn-primary"
             >
-              {adding ? "Adding..." : "+ Add passkey"}
+              {state.adding ? "Adding..." : "+ Add passkey"}
             </button>
           </div>
 
@@ -213,22 +248,22 @@ export function AccountSettings() {
             Passkeys let you sign in with your fingerprint, Face ID, or security key — no password needed.
           </div>
 
-          {error && (
-            <div style={{ fontSize: 12, color: "var(--red)", marginBottom: 10, fontWeight: 600 }}>{error}</div>
+          {state.error && (
+            <div style={{ fontSize: 12, color: "var(--red)", marginBottom: 10, fontWeight: 600 }}>{state.error}</div>
           )}
-          {success && (
-            <div style={{ fontSize: 12, color: "var(--green)", marginBottom: 10, fontWeight: 600 }}>{success}</div>
+          {state.success && (
+            <div style={{ fontSize: 12, color: "var(--green)", marginBottom: 10, fontWeight: 600 }}>{state.success}</div>
           )}
 
-          {loading ? (
+          {state.loading ? (
             <div style={{ fontSize: 12, color: "var(--text-muted)", padding: "12px 0" }}>Loading...</div>
-          ) : passkeys.length === 0 ? (
+          ) : state.passkeys.length === 0 ? (
             <div style={{ fontSize: 12, color: "var(--text-muted)", padding: "12px 0" }}>
               No passkeys registered. Add one above for passwordless sign-in.
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {passkeys.map((pk) => (
+              {state.passkeys.map((pk) => (
                 <div
                   key={pk.id}
                   style={{
@@ -250,12 +285,12 @@ export function AccountSettings() {
                   </div>
                   <button
                     onClick={() => handleDeletePasskey(pk.id)}
-                    disabled={deleting === pk.id || passkeys.length <= 1}
+                    disabled={state.deleting === pk.id || state.passkeys.length <= 1}
                     className="btn btn-sm btn-ghost"
                     style={{ color: "var(--red)", fontSize: 11 }}
-                    title={passkeys.length <= 1 ? "Can't delete your last passkey" : "Remove passkey"}
+                    title={state.passkeys.length <= 1 ? "Can't delete your last passkey" : "Remove passkey"}
                   >
-                    {deleting === pk.id ? "..." : "Remove"}
+                    {state.deleting === pk.id ? "..." : "Remove"}
                   </button>
                 </div>
               ))}

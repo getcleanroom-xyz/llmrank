@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useReducer, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEditor, EditorContent } from "@tiptap/react";
@@ -102,6 +102,42 @@ function RadioGroup<T extends string>({
 
 // ─── TemplateVarManager ─────────────────────────────────────────────────────
 
+interface TemplateVarManagerState {
+  editing: TemplateVar | null;
+  key: string;
+  label: string;
+  defaultVal: string;
+  removeTarget: string | null;
+}
+
+type TemplateVarManagerAction =
+  | { type: "SET_KEY"; value: string }
+  | { type: "SET_LABEL"; value: string }
+  | { type: "SET_DEFAULT_VAL"; value: string }
+  | { type: "SET_REMOVE_TARGET"; value: string | null }
+  | { type: "START_ADD" }
+  | { type: "START_EDIT"; value: TemplateVar }
+  | { type: "CANCEL_EDIT" };
+
+function templateVarReducer(state: TemplateVarManagerState, action: TemplateVarManagerAction): TemplateVarManagerState {
+  switch (action.type) {
+    case "SET_KEY":
+      return { ...state, key: action.value };
+    case "SET_LABEL":
+      return { ...state, label: action.value };
+    case "SET_DEFAULT_VAL":
+      return { ...state, defaultVal: action.value };
+    case "SET_REMOVE_TARGET":
+      return { ...state, removeTarget: action.value };
+    case "START_ADD":
+      return { editing: { key: "", label: "", default_value: "" }, key: "", label: "", defaultVal: "", removeTarget: null };
+    case "START_EDIT":
+      return { editing: action.value, key: action.value.key, label: action.value.label, defaultVal: action.value.default_value || "", removeTarget: null };
+    case "CANCEL_EDIT":
+      return { ...state, editing: null, key: "", label: "", defaultVal: "" };
+  }
+}
+
 function TemplateVarManager({
   vars,
   onChange,
@@ -113,59 +149,43 @@ function TemplateVarManager({
   disabled: boolean;
   onInsert: (key: string) => void;
 }) {
-  const [editing, setEditing] = useState<TemplateVar | null>(null);
-  const [key, setKey] = useState("");
-  const [label, setLabel] = useState("");
-  const [defaultVal, setDefaultVal] = useState("");
-  const [removeTarget, setRemoveTarget] = useState<string | null>(null);
+  const [state, dispatch] = useReducer(templateVarReducer, {
+    editing: null,
+    key: "",
+    label: "",
+    defaultVal: "",
+    removeTarget: null,
+  });
 
-  const startAdd = () => {
-    setEditing({ key: "", label: "", default_value: "" });
-    setKey("");
-    setLabel("");
-    setDefaultVal("");
-  };
-
-  const startEdit = (v: TemplateVar) => {
-    setEditing(v);
-    setKey(v.key);
-    setLabel(v.label);
-    setDefaultVal(v.default_value || "");
-  };
-
-  const cancelEdit = () => {
-    setEditing(null);
-    setKey("");
-    setLabel("");
-    setDefaultVal("");
-  };
+  const set = <K extends keyof TemplateVarManagerState>(field: K, value: TemplateVarManagerState[K]) =>
+    dispatch({ type: `SET_${field.toUpperCase()}` as TemplateVarManagerAction["type"], value } as TemplateVarManagerAction);
 
   const saveVar = () => {
-    const trimmedKey = key.trim();
-    if (!trimmedKey || !label.trim()) return;
-    const updated: TemplateVar = { key: trimmedKey, label: label.trim(), default_value: defaultVal.trim() || undefined };
-    if (editing && vars.find((v) => v.key === editing.key)) {
-      onChange(vars.map((v) => (v.key === editing.key ? updated : v)));
+    const trimmedKey = state.key.trim();
+    if (!trimmedKey || !state.label.trim()) return;
+    const updated: TemplateVar = { key: trimmedKey, label: state.label.trim(), default_value: state.defaultVal.trim() || undefined };
+    if (state.editing && vars.find((v) => v.key === state.editing!.key)) {
+      onChange(vars.map((v) => (v.key === state.editing!.key ? updated : v)));
     } else {
       onChange([...vars, updated]);
     }
-    cancelEdit();
+    dispatch({ type: "CANCEL_EDIT" });
   };
 
   const removeVar = (k: string) => {
     onChange(vars.filter((v) => v.key !== k));
-    if (editing?.key === k) cancelEdit();
+    if (state.editing?.key === k) dispatch({ type: "CANCEL_EDIT" });
   };
 
-  const editingNow = editing !== null;
-  const canSave = key.trim().length > 0 && label.trim().length > 0;
+  const editingNow = state.editing !== null;
+  const canSave = state.key.trim().length > 0 && state.label.trim().length > 0;
 
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
         <div className="section-label">Template Variables</div>
         {!disabled && !editingNow && (
-          <button onClick={startAdd} className="btn btn-sm btn-ghost" type="button" style={{ fontSize: 11 }}>
+          <button onClick={() => dispatch({ type: "START_ADD" })} className="btn btn-sm btn-ghost" type="button" style={{ fontSize: 11 }}>
             + Add
           </button>
         )}
@@ -188,7 +208,7 @@ function TemplateVarManager({
               padding: "6px 8px",
               background: "var(--bg-dark)",
               borderRadius: "var(--radius)",
-              border: editing?.key === v.key ? "2px solid var(--primary)" : "1.5px solid transparent",
+              border: state.editing?.key === v.key ? "2px solid var(--primary)" : "1.5px solid transparent",
               fontSize: 12,
             }}
           >
@@ -209,7 +229,7 @@ function TemplateVarManager({
                   Insert
                 </button>
                 <button
-                  onClick={() => startEdit(v)}
+                  onClick={() => dispatch({ type: "START_EDIT", value: v })}
                   className="btn btn-sm btn-ghost"
                   type="button"
                   title="Edit"
@@ -218,7 +238,7 @@ function TemplateVarManager({
                   Edit
                 </button>
                 <button
-                  onClick={() => setRemoveTarget(v.key)}
+                  onClick={() => set("removeTarget", v.key)}
                   className="btn btn-sm btn-ghost"
                   type="button"
                   title="Remove"
@@ -249,23 +269,23 @@ function TemplateVarManager({
             <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 2 }}>Variable key</div>
             <input
               type="text"
-              value={key}
-              onChange={(e) => setKey(e.target.value.replace(/[^a-zA-Z0-9_]/g, ""))}
+              value={state.key}
+              onChange={(e) => set("key", e.target.value.replace(/[^a-zA-Z0-9_]/g, ""))}
               className="input"
               placeholder="e.g. name"
               style={{ fontSize: 12, padding: "5px 8px" }}
               autoFocus
             />
             <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>
-              Use <code>{`{{${key || "key"}}}`}</code> in your email body
+              Use <code>{`{{${state.key || "key"}}}`}</code> in your email body
             </div>
           </div>
           <div>
             <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 2 }}>Label</div>
             <input
               type="text"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
+              value={state.label}
+              onChange={(e) => set("label", e.target.value)}
               className="input"
               placeholder="e.g. User Name"
               style={{ fontSize: 12, padding: "5px 8px" }}
@@ -275,31 +295,31 @@ function TemplateVarManager({
             <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 2 }}>Default value (fallback if no data)</div>
             <input
               type="text"
-              value={defaultVal}
-              onChange={(e) => setDefaultVal(e.target.value)}
+              value={state.defaultVal}
+              onChange={(e) => set("defaultVal", e.target.value)}
               className="input"
               placeholder="e.g. there"
               style={{ fontSize: 12, padding: "5px 8px" }}
             />
           </div>
           <div style={{ display: "flex", gap: 4, justifyContent: "flex-end", marginTop: 2 }}>
-            <button onClick={cancelEdit} className="btn btn-sm btn-ghost" type="button">Cancel</button>
+            <button onClick={() => dispatch({ type: "CANCEL_EDIT" })} className="btn btn-sm btn-ghost" type="button">Cancel</button>
             <button onClick={saveVar} disabled={!canSave} className="btn btn-sm btn-primary" type="button">
-              {editing?.key && vars.find((v) => v.key === editing.key) ? "Update" : "Add"}
+              {state.editing?.key && vars.find((v) => v.key === state.editing!.key) ? "Update" : "Add"}
             </button>
           </div>
         </div>
       )}
 
       <ConfirmDialog
-        open={removeTarget !== null}
+        open={state.removeTarget !== null}
         title="Remove template variable"
         confirmLabel="Remove"
         destructive
-        onConfirm={() => { if (removeTarget) { removeVar(removeTarget); setRemoveTarget(null); } }}
-        onCancel={() => setRemoveTarget(null)}
+        onConfirm={() => { if (state.removeTarget) { removeVar(state.removeTarget); set("removeTarget", null); } }}
+        onCancel={() => set("removeTarget", null)}
       >
-        Are you sure you want to remove the template variable <strong>{`{{${removeTarget}}}`}</strong>? Any references to this variable in your email body will become broken when the campaign is saved.
+        Are you sure you want to remove the template variable <strong>{`{{${state.removeTarget}}}`}</strong>? Any references to this variable in your email body will become broken when the campaign is saved.
       </ConfirmDialog>
     </div>
   );
@@ -355,6 +375,136 @@ function RenderPreview({
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
+interface CampaignEditorState {
+  name: string;
+  subject: string;
+  fromEmail: string;
+  audienceType: string;
+  signedUpAfter: string;
+  signedUpBefore: string;
+  scheduleType: string;
+  cronExpr: string;
+  scheduledAt: string;
+  templateVars: TemplateVar[];
+  error: string;
+  success: string;
+  selectedUserIds: string[];
+  manualEmails: string[];
+  showSource: boolean;
+  sourceHtml: string;
+  showPreview: boolean;
+  previewHtml: string;
+  showConfirm: boolean;
+  showLinkDialog: boolean;
+  linkUrl: string;
+  linkLabel: string;
+  campaignId: string | null;
+}
+
+type CampaignEditorAction =
+  | { type: "SET_NAME"; value: string }
+  | { type: "SET_SUBJECT"; value: string }
+  | { type: "SET_FROM_EMAIL"; value: string }
+  | { type: "SET_AUDIENCE_TYPE"; value: string }
+  | { type: "SET_SIGNED_UP_AFTER"; value: string }
+  | { type: "SET_SIGNED_UP_BEFORE"; value: string }
+  | { type: "SET_SCHEDULE_TYPE"; value: string }
+  | { type: "SET_CRON_EXPR"; value: string }
+  | { type: "SET_SCHEDULED_AT"; value: string }
+  | { type: "SET_TEMPLATE_VARS"; value: TemplateVar[] }
+  | { type: "SET_ERROR"; value: string }
+  | { type: "SET_SUCCESS"; value: string }
+  | { type: "SET_SELECTED_USER_IDS"; value: string[] }
+  | { type: "SET_MANUAL_EMAILS"; value: string[] }
+  | { type: "SET_SHOW_SOURCE"; value: boolean }
+  | { type: "SET_SOURCE_HTML"; value: string }
+  | { type: "SET_SHOW_PREVIEW"; value: boolean }
+  | { type: "SET_PREVIEW_HTML"; value: string }
+  | { type: "SET_SHOW_CONFIRM"; value: boolean }
+  | { type: "SET_SHOW_LINK_DIALOG"; value: boolean }
+  | { type: "SET_LINK_URL"; value: string }
+  | { type: "SET_LINK_LABEL"; value: string }
+  | { type: "SET_CAMPAIGN_ID"; value: string | null };
+
+function campaignReducer(state: CampaignEditorState, action: CampaignEditorAction): CampaignEditorState {
+  switch (action.type) {
+    case "SET_NAME":
+      return { ...state, name: action.value };
+    case "SET_SUBJECT":
+      return { ...state, subject: action.value };
+    case "SET_FROM_EMAIL":
+      return { ...state, fromEmail: action.value };
+    case "SET_AUDIENCE_TYPE":
+      return { ...state, audienceType: action.value };
+    case "SET_SIGNED_UP_AFTER":
+      return { ...state, signedUpAfter: action.value };
+    case "SET_SIGNED_UP_BEFORE":
+      return { ...state, signedUpBefore: action.value };
+    case "SET_SCHEDULE_TYPE":
+      return { ...state, scheduleType: action.value };
+    case "SET_CRON_EXPR":
+      return { ...state, cronExpr: action.value };
+    case "SET_SCHEDULED_AT":
+      return { ...state, scheduledAt: action.value };
+    case "SET_TEMPLATE_VARS":
+      return { ...state, templateVars: action.value };
+    case "SET_ERROR":
+      return { ...state, error: action.value };
+    case "SET_SUCCESS":
+      return { ...state, success: action.value };
+    case "SET_SELECTED_USER_IDS":
+      return { ...state, selectedUserIds: action.value };
+    case "SET_MANUAL_EMAILS":
+      return { ...state, manualEmails: action.value };
+    case "SET_SHOW_SOURCE":
+      return { ...state, showSource: action.value };
+    case "SET_SOURCE_HTML":
+      return { ...state, sourceHtml: action.value };
+    case "SET_SHOW_PREVIEW":
+      return { ...state, showPreview: action.value };
+    case "SET_PREVIEW_HTML":
+      return { ...state, previewHtml: action.value };
+    case "SET_SHOW_CONFIRM":
+      return { ...state, showConfirm: action.value };
+    case "SET_SHOW_LINK_DIALOG":
+      return { ...state, showLinkDialog: action.value };
+    case "SET_LINK_URL":
+      return { ...state, linkUrl: action.value };
+    case "SET_LINK_LABEL":
+      return { ...state, linkLabel: action.value };
+    case "SET_CAMPAIGN_ID":
+      return { ...state, campaignId: action.value };
+  }
+}
+
+function buildInitialState(existing?: AdminCampaignDetail): CampaignEditorState {
+  return {
+    name: existing?.name || "",
+    subject: existing?.subject || "",
+    fromEmail: existing?.from_email || "",
+    audienceType: existing?.audience_type || "all_users",
+    signedUpAfter: "",
+    signedUpBefore: "",
+    scheduleType: "now",
+    cronExpr: "",
+    scheduledAt: "",
+    templateVars: existing?.template_vars || [],
+    error: "",
+    success: "",
+    selectedUserIds: (existing?.audience_config?.user_ids as string[]) || [],
+    manualEmails: (existing?.audience_config?.emails as string[]) || [],
+    showSource: false,
+    sourceHtml: existing?.html_body || "",
+    showPreview: false,
+    previewHtml: "",
+    showConfirm: false,
+    showLinkDialog: false,
+    linkUrl: "",
+    linkLabel: "",
+    campaignId: existing?.id || null,
+  };
+}
+
 export function CampaignEditor({ existing }: CampaignEditorProps) {
   const { user } = useAuth();
   const router = useRouter();
@@ -366,33 +516,9 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
   const buildAudience = useAdminBuildAudience();
   const { data: users = [] } = useAdminUsers("");
 
-  const [name, setName] = useState(existing?.name || "");
-  const [subject, setSubject] = useState(existing?.subject || "");
-  const [fromEmail, setFromEmail] = useState(existing?.from_email || "");
-  const [audienceType, setAudienceType] = useState(existing?.audience_type || "all_users");
-  const [signedUpAfter, setSignedUpAfter] = useState("");
-  const [signedUpBefore, setSignedUpBefore] = useState("");
-  const [scheduleType, setScheduleType] = useState("now");
-  const [cronExpr, setCronExpr] = useState("");
-  const [scheduledAt, setScheduledAt] = useState("");
-  const [templateVars, setTemplateVars] = useState<TemplateVar[]>(existing?.template_vars || []);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [selectedUserIds, setSelectedUserIds] = useState<string[]>(
-    (existing?.audience_config?.user_ids as string[]) || []
-  );
-  const [manualEmails, setManualEmails] = useState<string[]>(
-    (existing?.audience_config?.emails as string[]) || []
-  );
-  const [showSource, setShowSource] = useState(false);
-  const [sourceHtml, setSourceHtml] = useState(existing?.html_body || "");
-  const [showPreview, setShowPreview] = useState(false);
-  const [previewHtml, setPreviewHtml] = useState("");
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [showLinkDialog, setShowLinkDialog] = useState(false);
-  const [linkUrl, setLinkUrl] = useState("");
-  const [linkLabel, setLinkLabel] = useState("");
-  const [campaignId, setCampaignId] = useState<string | null>(existing?.id || null);
+  const [state, dispatch] = useReducer(campaignReducer, existing, buildInitialState);
+  const set = <K extends keyof CampaignEditorState>(field: K, value: CampaignEditorState[K]) =>
+    dispatch({ type: `SET_${field.toUpperCase()}` as CampaignEditorAction["type"], value } as CampaignEditorAction);
 
   const saving = createCampaign.isPending || updateCampaign.isPending || scheduleCampaign.isPending || buildAudience.isPending;
 
@@ -412,89 +538,88 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
   });
 
   const getHtmlBody = useCallback(() => {
-    if (showSource) return sourceHtml;
+    if (state.showSource) return state.sourceHtml;
     return editor?.getHTML() || "";
-  }, [showSource, sourceHtml, editor]);
+  }, [state.showSource, state.sourceHtml, editor]);
 
   const buildPayload = useCallback(() => {
     let audience_config: Record<string, unknown> | undefined;
-    if (audienceType === "segment") {
-      audience_config = { signed_up_after: signedUpAfter || undefined, signed_up_before: signedUpBefore || undefined };
-    } else if (audienceType === "selected") {
-      audience_config = { user_ids: selectedUserIds, emails: manualEmails };
+    if (state.audienceType === "segment") {
+      audience_config = { signed_up_after: state.signedUpAfter || undefined, signed_up_before: state.signedUpBefore || undefined };
+    } else if (state.audienceType === "selected") {
+      audience_config = { user_ids: state.selectedUserIds, emails: state.manualEmails };
     }
     return {
-      name,
-      subject,
+      name: state.name,
+      subject: state.subject,
       html_body: getHtmlBody(),
-      from_email: fromEmail || undefined,
-      audience_type: audienceType,
+      from_email: state.fromEmail || undefined,
+      audience_type: state.audienceType,
       audience_config,
-      template_vars: templateVars.length > 0 ? templateVars : undefined,
+      template_vars: state.templateVars.length > 0 ? state.templateVars : undefined,
     };
-  }, [name, subject, getHtmlBody, fromEmail, audienceType, signedUpAfter, signedUpBefore, selectedUserIds, manualEmails, templateVars]);
+  }, [state.name, state.subject, getHtmlBody, state.fromEmail, state.audienceType, state.signedUpAfter, state.signedUpBefore, state.selectedUserIds, state.manualEmails, state.templateVars]);
 
   const saveDraft = async () => {
-    setError("");
-    setSuccess("");
+    set("error", "");
+    set("success", "");
     try {
       const payload = buildPayload();
-      if (campaignId) {
-        await updateCampaign.mutateAsync({ id: campaignId, data: payload as any });
-        setSuccess("Campaign saved as draft");
+      if (state.campaignId) {
+        await updateCampaign.mutateAsync({ id: state.campaignId, data: payload as any });
+        set("success", "Campaign saved as draft");
       } else {
         const c = await createCampaign.mutateAsync(payload as any);
-        setCampaignId(c.id);
-        setSuccess("Campaign saved as draft");
+        set("campaignId", c.id);
+        set("success", "Campaign saved as draft");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      set("error", err instanceof Error ? err.message : "Save failed");
     }
   };
 
   const scheduleAndSend = async () => {
-    setError("");
+    set("error", "");
     try {
-      let id = campaignId;
+      let id = state.campaignId;
       if (!id) {
         const c = await createCampaign.mutateAsync(buildPayload() as any);
         id = c.id;
-        setCampaignId(id);
+        set("campaignId", id);
       } else {
         await updateCampaign.mutateAsync({ id, data: buildPayload() as any });
       }
 
-      // Build audience first (needs draft status), then schedule
       await buildAudience.mutateAsync(id);
 
       await scheduleCampaign.mutateAsync({
         id,
         data: {
-          schedule_type: scheduleType,
-          cron_expr: scheduleType === "recurring" ? cronExpr : undefined,
-          scheduled_at: scheduleType === "once" ? scheduledAt : undefined,
+          schedule_type: state.scheduleType,
+          cron_expr: state.scheduleType === "recurring" ? state.cronExpr : undefined,
+          scheduled_at: state.scheduleType === "once" ? state.scheduledAt : undefined,
         },
       });
 
       router.push("/admin");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Schedule failed");
-      setShowConfirm(false);
+      set("error", err instanceof Error ? err.message : "Schedule failed");
+      set("showConfirm", false);
     }
   };
 
   const handlePreview = async () => {
-    if (!existing && !campaignId) {
-      setError("Save the campaign as draft first before sending a preview");
+    if (!existing && !state.campaignId) {
+      set("error", "Save the campaign as draft first before sending a preview");
       return;
     }
-    const id = campaignId || existing?.id;
+    const id = state.campaignId || existing?.id;
     if (!id) return;
     try {
       const result = await previewCampaign.mutateAsync(id);
-      setSuccess(result.message);
+      set("success", result.message);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Preview failed");
+      set("error", err instanceof Error ? err.message : "Preview failed");
     }
   };
 
@@ -505,7 +630,7 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
       email: user?.email || "jane@example.com",
       name: user?.display_name || "Jane Doe",
     };
-    for (const v of templateVars) {
+    for (const v of state.templateVars) {
       if (!sampleVars[v.key]) {
         sampleVars[v.key] = v.default_value || `[${v.label}]`;
       }
@@ -514,26 +639,26 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
     for (const [key, val] of Object.entries(sampleVars)) {
       rendered = rendered.replace(new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, "g"), val);
     }
-    setPreviewHtml(rendered);
-    setShowPreview(true);
+    set("previewHtml", rendered);
+    set("showPreview", true);
   };
 
   const insertVariable = (key: string) => {
-    if (!editor || showSource) return;
+    if (!editor || state.showSource) return;
     editor.chain().focus().insertContent(`{{ ${key} }}`).run();
   };
 
   const toggleSource = () => {
-    if (!showSource) {
-      setSourceHtml(editor?.getHTML() || "");
+    if (!state.showSource) {
+      set("sourceHtml", editor?.getHTML() || "");
     }
-    setShowSource(!showSource);
+    set("showSource", !state.showSource);
   };
 
   const handleInsertLink = () => {
-    if (!editor || !linkUrl.trim()) return;
-    const url = linkUrl.trim();
-    const label = linkLabel.trim();
+    if (!editor || !state.linkUrl.trim()) return;
+    const url = state.linkUrl.trim();
+    const label = state.linkLabel.trim();
     const safeUrl = /^(https?:\/\/|mailto:)/i.test(url) ? url : `https://${url}`;
     const { from, to } = editor.state.selection;
     if (from !== to && from >= 0 && to >= 0) {
@@ -541,9 +666,9 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
     } else if (label) {
       editor.chain().focus().insertContent(`<a href="${safeUrl}">${label}</a>`).run();
     }
-    setShowLinkDialog(false);
-    setLinkUrl("");
-    setLinkLabel("");
+    set("showLinkDialog", false);
+    set("linkUrl", "");
+    set("linkLabel", "");
   };
 
   const editable = !existing || ["draft", "scheduled", "cancelled"].includes(existing.status);
@@ -573,14 +698,14 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
         <button onClick={saveDraft} disabled={saving || !editable} className="btn btn-sm">
           {saving ? "Saving..." : "Save Draft"}
         </button>
-        {campaignId && (!existing || ["draft", "scheduled", "cancelled"].includes(existing.status)) && (
+        {state.campaignId && (!existing || ["draft", "scheduled", "cancelled"].includes(existing.status)) && (
           <button onClick={handlePreview} disabled={saving} className="btn btn-sm">
             Send Preview
           </button>
         )}
         <button
-          onClick={() => setShowConfirm(true)}
-          disabled={saving || !editable || !name.trim() || !subject.trim()}
+          onClick={() => set("showConfirm", true)}
+          disabled={saving || !editable || !state.name.trim() || !state.subject.trim()}
           className="btn btn-sm btn-primary"
         >
           {saving ? "Saving..." : "Schedule & Send"}
@@ -588,16 +713,16 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
       </PageHeader>
 
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
-        {error && (
+        {state.error && (
           <div className="card" style={{ marginBottom: "var(--gap)", color: "var(--red)", fontSize: 12, fontWeight: 600, padding: "10px 14px" }}>
-            {error}
-            <button onClick={() => setError("")} style={{ float: "right", background: "none", border: "none", cursor: "pointer", color: "var(--red)", fontSize: 14 }}>✕</button>
+            {state.error}
+            <button onClick={() => set("error", "")} style={{ float: "right", background: "none", border: "none", cursor: "pointer", color: "var(--red)", fontSize: 14 }}>✕</button>
           </div>
         )}
-        {success && (
+        {state.success && (
           <div className="card" style={{ marginBottom: "var(--gap)", color: "var(--green)", fontSize: 12, fontWeight: 600, padding: "10px 14px" }}>
-            {success}
-            <button onClick={() => setSuccess("")} style={{ float: "right", background: "none", border: "none", cursor: "pointer", color: "var(--green)", fontSize: 14 }}>✕</button>
+            {state.success}
+            <button onClick={() => set("success", "")} style={{ float: "right", background: "none", border: "none", cursor: "pointer", color: "var(--green)", fontSize: 14 }}>✕</button>
           </div>
         )}
 
@@ -609,8 +734,8 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
                   <div className="section-label" style={{ marginBottom: 6 }}>Campaign Name</div>
                   <input
                     type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    value={state.name}
+                    onChange={(e) => set("name", e.target.value)}
                     className="input"
                     placeholder="e.g. Weekly Newsletter"
                     disabled={!editable}
@@ -621,8 +746,8 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
                   <div className="section-label" style={{ marginBottom: 6 }}>Email Subject</div>
                   <input
                     type="text"
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
+                    value={state.subject}
+                    onChange={(e) => set("subject", e.target.value)}
                     className="input"
                     placeholder="Subject line"
                     disabled={!editable}
@@ -633,8 +758,8 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
                   <div className="section-label" style={{ marginBottom: 6 }}>From Email</div>
                   <input
                     type="email"
-                    value={fromEmail}
-                    onChange={(e) => setFromEmail(e.target.value)}
+                    value={state.fromEmail}
+                    onChange={(e) => set("fromEmail", e.target.value)}
                     className="input"
                     placeholder="marketing@emails.getcleanroom.xyz"
                     disabled={!editable}
@@ -652,12 +777,12 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
                     Preview
                   </button>
                   <button onClick={toggleSource} className="btn btn-sm btn-ghost" type="button">
-                    {showSource ? "Editor" : "Source"}
+                    {state.showSource ? "Editor" : "Source"}
                   </button>
                 </div>
               </div>
 
-              {!showSource ? (
+              {!state.showSource ? (
                 <>
                   {editor && (
                     <div style={{ marginBottom: 8, display: "flex", gap: 4, flexWrap: "wrap" }}>
@@ -736,16 +861,16 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
                           const { from, to } = editor.state.selection;
                           const selected = from !== to ? editor.state.doc.textBetween(from, to, " ").trim() : "";
                           const existingHref = editor.getAttributes("link").href || "";
-                          setLinkLabel(selected);
-                          setLinkUrl(existingHref);
-                          setShowLinkDialog(true);
+                          set("linkLabel", selected);
+                          set("linkUrl", existingHref);
+                          set("showLinkDialog", true);
                         }}
                         className={`btn btn-sm ${editor.isActive("link") ? "btn-primary" : "btn-ghost"}`}
                         type="button"
                       >
                         Link
                       </button>
-                      {templateVars.length > 0 && (
+                      {state.templateVars.length > 0 && (
                         <>
                           <span style={{ width: 1, background: "var(--text-muted)", margin: "4px 2px" }} />
                           <div style={{ position: "relative", display: "inline-block" }}>
@@ -779,7 +904,7 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
                               }}
                             >
                               <div style={{ fontSize: 10, color: "var(--text-muted)", padding: "4px 6px", marginBottom: 2 }}>Insert variable</div>
-                              {templateVars.map((v) => (
+                              {state.templateVars.map((v) => (
                                 <button
                                   key={v.key}
                                   onClick={() => {
@@ -806,8 +931,8 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
               ) : (
                 <textarea
                   className="input"
-                  value={sourceHtml}
-                  onChange={(e) => setSourceHtml(e.target.value)}
+                  value={state.sourceHtml}
+                  onChange={(e) => set("sourceHtml", e.target.value)}
                   style={{ minHeight: 300, fontSize: 12, fontFamily: "var(--font-mono)", lineHeight: 1.5, resize: "vertical" }}
                   disabled={!editable}
                   placeholder="<html>..."
@@ -821,32 +946,32 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
               <div className="section-label" style={{ marginBottom: 10 }}>Audience</div>
               <RadioGroup
                 options={AUDIENCE_OPTIONS}
-                value={audienceType as typeof AUDIENCE_OPTIONS[number]["value"]}
-                onChange={setAudienceType}
+                value={state.audienceType as typeof AUDIENCE_OPTIONS[number]["value"]}
+                onChange={(v) => set("audienceType", v)}
                 disabled={!editable}
               />
 
-              {audienceType === "segment" && (
+              {state.audienceType === "segment" && (
                 <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1.5px solid var(--bg-dark)", display: "flex", flexDirection: "column", gap: 6 }}>
                   <div>
                     <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>Signed up after</div>
-                    <input type="date" value={signedUpAfter} onChange={(e) => setSignedUpAfter(e.target.value)} className="input" disabled={!editable} />
+                    <input type="date" value={state.signedUpAfter} onChange={(e) => set("signedUpAfter", e.target.value)} className="input" disabled={!editable} />
                   </div>
                   <div>
                     <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>Signed up before</div>
-                    <input type="date" value={signedUpBefore} onChange={(e) => setSignedUpBefore(e.target.value)} className="input" disabled={!editable} />
+                    <input type="date" value={state.signedUpBefore} onChange={(e) => set("signedUpBefore", e.target.value)} className="input" disabled={!editable} />
                   </div>
                 </div>
               )}
 
-              {audienceType === "selected" && (
+              {state.audienceType === "selected" && (
                 <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1.5px solid var(--bg-dark)" }}>
                   <MultiUserSelect
                     users={users}
-                    selectedIds={selectedUserIds}
-                    onChange={setSelectedUserIds}
-                    manualEmails={manualEmails}
-                    onManualEmailsChange={setManualEmails}
+                    selectedIds={state.selectedUserIds}
+                    onChange={(v) => set("selectedUserIds", v)}
+                    manualEmails={state.manualEmails}
+                    onManualEmailsChange={(v) => set("manualEmails", v)}
                     disabled={!editable}
                   />
                 </div>
@@ -857,24 +982,24 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
               <div className="section-label" style={{ marginBottom: 10 }}>Schedule</div>
               <RadioGroup
                 options={SCHEDULE_OPTIONS}
-                value={scheduleType as typeof SCHEDULE_OPTIONS[number]["value"]}
-                onChange={setScheduleType}
+                value={state.scheduleType as typeof SCHEDULE_OPTIONS[number]["value"]}
+                onChange={(v) => set("scheduleType", v)}
                 disabled={!editable}
               />
 
-              {scheduleType === "once" && (
+              {state.scheduleType === "once" && (
                 <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1.5px solid var(--bg-dark)" }}>
-                  <input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} className="input" disabled={!editable} />
+                  <input type="datetime-local" value={state.scheduledAt} onChange={(e) => set("scheduledAt", e.target.value)} className="input" disabled={!editable} />
                 </div>
               )}
 
-              {scheduleType === "recurring" && (
+              {state.scheduleType === "recurring" && (
                 <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1.5px solid var(--bg-dark)" }}>
                   <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>Cron expression</div>
                   <input
                     type="text"
-                    value={cronExpr}
-                    onChange={(e) => setCronExpr(e.target.value)}
+                    value={state.cronExpr}
+                    onChange={(e) => set("cronExpr", e.target.value)}
                     className="input"
                     placeholder='e.g. "0 9 * * 1"'
                     disabled={!editable}
@@ -888,8 +1013,8 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
 
             <div className="card" style={{ padding: "14px 16px" }}>
               <TemplateVarManager
-                vars={templateVars}
-                onChange={setTemplateVars}
+                vars={state.templateVars}
+                onChange={(v) => set("templateVars", v)}
                 disabled={!editable}
                 onInsert={insertVariable}
               />
@@ -932,32 +1057,32 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
       </div>
 
       <ConfirmDialog
-        open={showConfirm}
+        open={state.showConfirm}
         title="Schedule & Send Campaign"
-        confirmLabel={scheduleType === "now" ? "Send Now" : "Schedule"}
+        confirmLabel={state.scheduleType === "now" ? "Send Now" : "Schedule"}
         onConfirm={scheduleAndSend}
-        onCancel={() => setShowConfirm(false)}
+        onCancel={() => set("showConfirm", false)}
         loading={saving}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <div><strong>Campaign:</strong> {name || "Untitled"}</div>
-          <div><strong>Subject:</strong> {subject || "No subject"}</div>
-          <div><strong>Audience:</strong> {AUDIENCE_OPTIONS.find((o) => o.value === audienceType)?.label}</div>
+          <div><strong>Campaign:</strong> {state.name || "Untitled"}</div>
+          <div><strong>Subject:</strong> {state.subject || "No subject"}</div>
+          <div><strong>Audience:</strong> {AUDIENCE_OPTIONS.find((o) => o.value === state.audienceType)?.label}</div>
           <div>
             <strong>Schedule:</strong>{" "}
-            {scheduleType === "now" ? "Immediately" : scheduleType === "once" ? scheduledAt || "Not set" : `Recurring: ${cronExpr || "Not set"}`}
+            {state.scheduleType === "now" ? "Immediately" : state.scheduleType === "once" ? state.scheduledAt || "Not set" : `Recurring: ${state.cronExpr || "Not set"}`}
           </div>
-          {templateVars.length > 0 && (
-            <div><strong>Template vars:</strong> {templateVars.map((v) => `{{${v.key}}}`).join(", ")}</div>
+          {state.templateVars.length > 0 && (
+            <div><strong>Template vars:</strong> {state.templateVars.map((v) => `{{${v.key}}}`).join(", ")}</div>
           )}
         </div>
       </ConfirmDialog>
 
-      {showPreview && (
-        <RenderPreview html={previewHtml} onClose={() => setShowPreview(false)} />
+      {state.showPreview && (
+        <RenderPreview html={state.previewHtml} onClose={() => set("showPreview", false)} />
       )}
 
-      {showLinkDialog && (
+      {state.showLinkDialog && (
         <div
           style={{
             position: "fixed",
@@ -969,7 +1094,7 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
             justifyContent: "center",
             padding: 16,
           }}
-          onClick={() => setShowLinkDialog(false)}
+          onClick={() => set("showLinkDialog", false)}
         >
           <div
             className="card"
@@ -984,8 +1109,8 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
                 <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>Label</div>
                 <input
                   type="text"
-                  value={linkLabel}
-                  onChange={(e) => setLinkLabel(e.target.value)}
+                  value={state.linkLabel}
+                  onChange={(e) => set("linkLabel", e.target.value)}
                   className="input"
                   placeholder="Display text"
                   autoFocus
@@ -996,8 +1121,8 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
                 <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>URL</div>
                 <input
                   type="url"
-                  value={linkUrl}
-                  onChange={(e) => setLinkUrl(e.target.value)}
+                  value={state.linkUrl}
+                  onChange={(e) => set("linkUrl", e.target.value)}
                   className="input"
                   placeholder="https://example.com"
                   style={{ fontSize: 13 }}
@@ -1009,7 +1134,7 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
               <button
-                onClick={() => { setShowLinkDialog(false); setLinkUrl(""); setLinkLabel(""); }}
+                onClick={() => { set("showLinkDialog", false); set("linkUrl", ""); set("linkLabel", ""); }}
                 className="btn btn-sm btn-ghost"
                 type="button"
               >
@@ -1017,7 +1142,7 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
               </button>
               <button
                 onClick={handleInsertLink}
-                disabled={!linkUrl.trim()}
+                disabled={!state.linkUrl.trim()}
                 className="btn btn-sm btn-primary"
                 type="button"
               >

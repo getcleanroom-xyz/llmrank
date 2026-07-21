@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useReducer } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
@@ -32,6 +32,39 @@ type ConfirmAction =
   | { type: "cancel"; id: string; name: string }
   | null;
 
+interface State {
+  search: string;
+  statusFilter: string;
+  confirmAction: ConfirmAction;
+  blogMessage: string | null;
+}
+
+type Action =
+  | { type: "setSearch"; value: string }
+  | { type: "setStatusFilter"; value: string }
+  | { type: "setConfirmAction"; value: ConfirmAction }
+  | { type: "setBlogMessage"; value: string | null };
+
+const initialState: State = {
+  search: "",
+  statusFilter: "",
+  confirmAction: null,
+  blogMessage: null,
+};
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case "setSearch":
+      return { ...state, search: action.value };
+    case "setStatusFilter":
+      return { ...state, statusFilter: action.value };
+    case "setConfirmAction":
+      return { ...state, confirmAction: action.value };
+    case "setBlogMessage":
+      return { ...state, blogMessage: action.value };
+  }
+}
+
 export function AdminDashboard() {
   const { user } = useAuth();
   const router = useRouter();
@@ -44,31 +77,30 @@ export function AdminDashboard() {
   const { data: blogCalendar } = useAdminBlogCalendar();
   const generateBlog = useAdminGenerateBlog();
 
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
-  const [blogMessage, setBlogMessage] = useState<string | null>(null);
+  const [state, dispatch] = useReducer(reducer, initialState);
+  const set = (field: keyof State, value: State[keyof State]) =>
+    dispatch({ type: `set${field.charAt(0).toUpperCase() + field.slice(1)}` as Action["type"], value } as Action);
 
   const error = loadError ? (loadError instanceof Error ? loadError.message : "Failed to load") : null;
 
   const handleDeleteConfirm = async () => {
-    if (!confirmAction || confirmAction.type !== "delete") return;
+    if (!state.confirmAction || state.confirmAction.type !== "delete") return;
     try {
-      await deleteCampaign.mutateAsync(confirmAction.id);
+      await deleteCampaign.mutateAsync(state.confirmAction.id);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Delete failed");
     }
-    setConfirmAction(null);
+    set("confirmAction", null);
   };
 
   const handleCancelConfirm = async () => {
-    if (!confirmAction || confirmAction.type !== "cancel") return;
+    if (!state.confirmAction || state.confirmAction.type !== "cancel") return;
     try {
-      await cancelCampaign.mutateAsync(confirmAction.id);
+      await cancelCampaign.mutateAsync(state.confirmAction.id);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Cancel failed");
     }
-    setConfirmAction(null);
+    set("confirmAction", null);
   };
 
   const handleClone = async (id: string) => {
@@ -81,8 +113,8 @@ export function AdminDashboard() {
   };
 
   const filtered = campaigns.filter((c) => {
-    if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.subject.toLowerCase().includes(search.toLowerCase())) return false;
-    if (statusFilter && c.status !== statusFilter) return false;
+    if (state.search && !c.name.toLowerCase().includes(state.search.toLowerCase()) && !c.subject.toLowerCase().includes(state.search.toLowerCase())) return false;
+    if (state.statusFilter && c.status !== state.statusFilter) return false;
     return true;
   });
 
@@ -189,8 +221,8 @@ export function AdminDashboard() {
             <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
               <input
                 type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={state.search}
+                onChange={(e) => set("search", e.target.value)}
                 placeholder="Search campaigns..."
                 style={{
                   fontSize: 11,
@@ -204,8 +236,8 @@ export function AdminDashboard() {
               />
               <div style={{ width: 120 }}>
                 <Select
-                  value={statusFilter}
-                  onChange={setStatusFilter}
+                  value={state.statusFilter}
+                  onChange={(v) => set("statusFilter", v)}
                   options={[
                     { value: "", label: "All status" },
                     ...Object.entries(STATUS_LABELS).map(([k, v]) => ({ value: k, label: v })),
@@ -318,7 +350,7 @@ export function AdminDashboard() {
                         </button>
                         {(c.status === "scheduled" || c.status === "sending") && (
                           <button
-                            onClick={() => setConfirmAction({ type: "cancel", id: c.id, name: c.name })}
+                            onClick={() => set("confirmAction", { type: "cancel", id: c.id, name: c.name })}
                             className="btn btn-sm btn-ghost"
                             style={{ color: "var(--orange)" }}
                           >
@@ -327,7 +359,7 @@ export function AdminDashboard() {
                         )}
                         {(c.status === "draft" || c.status === "cancelled") && (
                           <button
-                            onClick={() => setConfirmAction({ type: "delete", id: c.id, name: c.name })}
+                            onClick={() => set("confirmAction", { type: "delete", id: c.id, name: c.name })}
                             className="btn btn-sm btn-ghost"
                             style={{ color: "var(--red)" }}
                           >
@@ -356,12 +388,12 @@ export function AdminDashboard() {
             </div>
             <button
               onClick={async () => {
-                setBlogMessage(null);
+                set("blogMessage", null);
                 try {
                   const result = await generateBlog.mutateAsync();
-                  setBlogMessage(`Generated "${result.title}"${result.pr_url ? ` — PR: ${result.pr_url}` : " (saved locally)"}`);
+                  set("blogMessage", `Generated "${result.title}"${result.pr_url ? ` — PR: ${result.pr_url}` : " (saved locally)"}`);
                 } catch (err) {
-                  setBlogMessage(err instanceof Error ? err.message : "Generation failed");
+                  set("blogMessage", err instanceof Error ? err.message : "Generation failed");
                 }
               }}
               disabled={generateBlog.isPending}
@@ -371,9 +403,9 @@ export function AdminDashboard() {
             </button>
           </div>
 
-          {blogMessage && (
-            <div style={{ padding: "10px 16px", fontSize: 12, fontWeight: 600, background: blogMessage.includes("failed") || blogMessage.includes("Error") ? "#FEE2E2" : "#E6F9ED", borderBottom: "1px solid var(--border)" }}>
-              {blogMessage}
+          {state.blogMessage && (
+            <div style={{ padding: "10px 16px", fontSize: 12, fontWeight: 600, background: state.blogMessage.includes("failed") || state.blogMessage.includes("Error") ? "#FEE2E2" : "#E6F9ED", borderBottom: "1px solid var(--border)" }}>
+              {state.blogMessage}
             </div>
           )}
 
@@ -424,16 +456,16 @@ export function AdminDashboard() {
       </div>
 
       <ConfirmDialog
-        open={confirmAction?.type === "delete"}
+        open={state.confirmAction?.type === "delete"}
         title="Delete Campaign"
         confirmLabel="Delete"
         destructive
         onConfirm={handleDeleteConfirm}
-        onCancel={() => setConfirmAction(null)}
+        onCancel={() => set("confirmAction", null)}
         loading={deleteCampaign.isPending}
       >
         <p>
-          Are you sure you want to delete <strong>{confirmAction?.name}</strong>?
+          Are you sure you want to delete <strong>{state.confirmAction?.name}</strong>?
         </p>
         <p style={{ marginTop: 8, color: "var(--red)", fontWeight: 600 }}>
           This action cannot be undone.
@@ -441,16 +473,16 @@ export function AdminDashboard() {
       </ConfirmDialog>
 
       <ConfirmDialog
-        open={confirmAction?.type === "cancel"}
+        open={state.confirmAction?.type === "cancel"}
         title="Cancel Campaign"
         confirmLabel="Cancel Campaign"
         destructive
         onConfirm={handleCancelConfirm}
-        onCancel={() => setConfirmAction(null)}
+        onCancel={() => set("confirmAction", null)}
         loading={cancelCampaign.isPending}
       >
         <p>
-          Are you sure you want to cancel <strong>{confirmAction?.name}</strong>?
+          Are you sure you want to cancel <strong>{state.confirmAction?.name}</strong>?
         </p>
         <p style={{ marginTop: 8 }}>
           Scheduled sends will be stopped and the campaign will be marked as cancelled.
