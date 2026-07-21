@@ -397,14 +397,14 @@ async def get_competitor_drilldown(
                         break
             historical_trend.append({
                 "date": (prev_scan.completed_at or prev_scan.started_at).isoformat(),
-                "mention_pct": round(prev_comp / prev_total * 100, 1) if prev_total > 0 else 0,
+                "mention_pct": min(round(prev_comp / prev_total * 100, 1), 100) if prev_total > 0 else 0,
                 "appearances": prev_comp,
                 "total_queries": prev_total,
             })
         # Add current scan
         historical_trend.append({
             "date": (latest_scan.completed_at or latest_scan.started_at).isoformat(),
-            "mention_pct": round(len(comp_results) / total_queries * 100, 1) if total_queries > 0 else 0,
+            "mention_pct": min(round(len(comp_results) / total_queries * 100, 1), 100) if total_queries > 0 else 0,
             "appearances": len(comp_results),
             "total_queries": total_queries,
         })
@@ -451,7 +451,7 @@ async def get_competitor_drilldown(
         logo_url=comp_logo,
         insight=comp_insight,
         scanned_at=latest_scan.completed_at or latest_scan.started_at,
-        mention_pct=round(len(comp_results) / len(all_results) * 100, 1) if all_results else 0,
+        mention_pct=min(round(len(comp_results) / len(all_results) * 100, 1), 100) if all_results else 0,
         total_appearances=len(comp_results),
         total_queries=total_queries,
         beats_brand_count=beats_count,
