@@ -374,7 +374,7 @@ async def get_competitor_drilldown(
         except Exception as e:
             logger.debug("Failed to fill domain for %s: %s", competitor_name, e)
 
-    # Historical trend: query last 5 scans for this competitor's mention rate
+    # Historical trend: query last 5 scans with per-LLM breakdowns
     historical_trend = []
     try:
         prev_scans_result = await db.execute(
@@ -390,23 +390,66 @@ async def get_competitor_drilldown(
             )).scalars().all()
             prev_total = len({r.query_id for r in prev_results})
             prev_comp = 0
+            prev_brand = 0
+            per_llm: dict[str, dict] = {}
             for r in prev_results:
-                for c in (r.competitors_mentioned or []):
-                    if _normalize_competitor(c.get("name", "")) == normalized_target:
-                        prev_comp += 1
-                        break
+                is_comp = any(
+                    _normalize_competitor(c.get("name", "")) == normalized_target
+                    for c in (r.competitors_mentioned or [])
+                )
+                is_brand = r.mentioned
+                if is_comp:
+                    prev_comp += 1
+                if is_brand:
+                    prev_brand += 1
+                llm = r.llm_name
+                if llm not in per_llm:
+                    per_llm[llm] = {"comp": 0, "brand": 0, "total": 0}
+                per_llm[llm]["total"] += 1
+                if is_comp:
+                    per_llm[llm]["comp"] += 1
+                if is_brand:
+                    per_llm[llm]["brand"] += 1
+            # Normalize per-LLM to percentages
+            per_llm_pct = {}
+            for llm_name, stats in per_llm.items():
+                t = stats["total"]
+                per_llm_pct[llm_name] = {
+                    "mention_pct": min(round(stats["comp"] / t * 100, 1), 100) if t > 0 else 0,
+                    "brand_pct": min(round(stats["brand"] / t * 100, 1), 100) if t > 0 else 0,
+                }
             historical_trend.append({
                 "date": (prev_scan.completed_at or prev_scan.started_at).isoformat(),
                 "mention_pct": min(round(prev_comp / prev_total * 100, 1), 100) if prev_total > 0 else 0,
+                "brand_mention_pct": min(round(prev_brand / prev_total * 100, 1), 100) if prev_total > 0 else 0,
                 "appearances": prev_comp,
+                "brand_appearances": prev_brand,
                 "total_queries": prev_total,
+                "per_llm": per_llm_pct,
             })
         # Add current scan
+        current_per_llm = {}
+        for llm_name, stats in llm_stats.items():
+            t = stats["total"]
+            current_per_llm[llm_name] = {
+                "mention_pct": min(round(len([1 for r, _ in comp_results if r.llm_name == llm_name]) / t * 100, 1), 100) if t > 0 else 0,
+                "brand_pct": min(round(stats["brand_wins"] + stats.get("brand_positions", []) and len(stats.get("brand_positions", [])) / t * 100, 1), 100) if t > 0 else 0,
+            }
+        # Simpler current per-LLM from existing llm_breakdown
+        current_per_llm = {}
+        for lb in llm_breakdown:
+            current_per_llm[lb.llm_name] = {
+                "mention_pct": lb.mention_pct,
+                "brand_pct": min(round((lb.brand_wins + (lb.total - lb.competitor_wins - lb.brand_wins) * 0) / lb.total * 100, 1), 100) if lb.total > 0 else 0,
+            }
         historical_trend.append({
             "date": (latest_scan.completed_at or latest_scan.started_at).isoformat(),
             "mention_pct": min(round(len(comp_results) / total_queries * 100, 1), 100) if total_queries > 0 else 0,
+            "brand_mention_pct": brand_mention_pct,
             "appearances": len(comp_results),
+            "brand_appearances": brand_mentioned_count,
             "total_queries": total_queries,
+            "per_llm": current_per_llm,
         })
     except Exception as e:
         logger.warning("Failed to build historical trend: %s", e)

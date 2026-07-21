@@ -234,6 +234,16 @@ class CompetitorLLMBreakdown(BaseModel):
     competitor_wins: int
 
 
+class CompetitorHistoricalPoint(BaseModel):
+    date: str
+    mention_pct: float
+    brand_mention_pct: float
+    appearances: int
+    brand_appearances: int
+    total_queries: int
+    per_llm: dict = Field(default_factory=dict)  # {"chatgpt": {"mention_pct": 50, "brand_pct": 30}, ...}
+
+
 class CompetitorDrilldownOut(BaseModel):
     competitor_name: str
     domain: str = ""
@@ -253,7 +263,7 @@ class CompetitorDrilldownOut(BaseModel):
     sentiment_summary: dict = Field(default_factory=dict)
     llm_breakdown: list[CompetitorLLMBreakdown] = Field(default_factory=list)
     competitor_profile: str = ""
-    historical_trend: list[dict] = Field(default_factory=list)
+    historical_trend: list[CompetitorHistoricalPoint] = Field(default_factory=list)
     queries: list[CompetitorQueryResult]
 
 

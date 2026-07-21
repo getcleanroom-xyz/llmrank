@@ -113,7 +113,7 @@ export interface CompetitorDrilldownData {
   sentiment_summary: Record<string, number>;
   llm_breakdown: CompetitorLLMBreakdownItem[];
   competitor_profile: string;
-  historical_trend: { date: string; mention_pct: number; appearances: number; total_queries: number }[];
+  historical_trend: { date: string; mention_pct: number; brand_mention_pct: number; appearances: number; brand_appearances: number; total_queries: number; per_llm: Record<string, { mention_pct: number; brand_pct: number }> }[];
   queries: CompetitorQueryResultItem[];
 }
 

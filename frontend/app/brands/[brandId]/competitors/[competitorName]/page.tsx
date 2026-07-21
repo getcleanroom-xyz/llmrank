@@ -14,6 +14,7 @@ export default function CompetitorDrilldownPage() {
 
   const [expandedResponses, setExpandedResponses] = useState<Record<string, boolean>>({});
   const [expandedProfile, setExpandedProfile] = useState(false);
+  const [trendTab, setTrendTab] = useState("all");
 
   const toggleResponse = (key: string) => setExpandedResponses((r) => ({ ...r, [key]: !r[key] }));
 
@@ -355,54 +356,139 @@ export default function CompetitorDrilldownPage() {
         {/* 7. HISTORICAL TREND */}
         {data.historical_trend && data.historical_trend.length > 1 && (() => {
           const trend = data.historical_trend;
-          const maxVal = Math.max(...trend.map((t) => t.mention_pct), 1);
-          const minVal = Math.min(...trend.map((t) => t.mention_pct), 0);
+          const availableLlms = Array.from(new Set(trend.flatMap((t) => Object.keys(t.per_llm || {})))).sort();
+          const showPerLlm = trendTab !== "all" && trend[0].per_llm?.[trendTab];
+
+          // Get the data series to plot
+          const compSeries = showPerLlm
+            ? trend.map((t) => t.per_llm?.[trendTab]?.mention_pct ?? 0)
+            : trend.map((t) => t.mention_pct);
+          const brandSeries = showPerLlm
+            ? trend.map((t) => t.per_llm?.[trendTab]?.brand_pct ?? 0)
+            : trend.map((t) => t.brand_mention_pct);
+
+          const maxVal = Math.max(...compSeries, ...brandSeries, 1);
+          const minVal = 0;
           const range = maxVal - minVal || 1;
           const chartW = 600;
-          const chartH = 140;
+          const chartH = 160;
           const padX = 40;
-          const padY = 16;
-          const points = trend.map((t, i) => {
-            const x = padX + (i / (trend.length - 1)) * (chartW - padX * 2);
-            const y = padY + (1 - (t.mention_pct - minVal) / range) * (chartH - padY * 2);
-            return { x, y, pct: t.mention_pct, date: t.date };
-          });
-          const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
-          const areaD = pathD + ` L${points[points.length - 1].x},${chartH - padY} L${points[0].x},${chartH - padY} Z`;
+          const padY = 20;
+          const plotW = chartW - padX * 2;
+          const plotH = chartH - padY * 2;
+
+          const toXY = (vals: number[]) => vals.map((v, i) => ({
+            x: padX + (i / (trend.length - 1)) * plotW,
+            y: padY + (1 - (v - minVal) / range) * plotH,
+            val: v,
+          }));
+          const compPoints = toXY(compSeries);
+          const brandPoints = toXY(brandSeries);
+
+          const makePath = (pts: { x: number; y: number }[]) => pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
+          const makeArea = (path: string, pts: { x: number; y: number }[]) =>
+            path + ` L${pts[pts.length - 1].x},${padY + plotH} L${pts[0].x},${padY + plotH} Z`;
+
+          const compPath = makePath(compPoints);
+          const brandPath = makePath(brandPoints);
+
+          const subtitle = showPerLlm
+            ? `${trendTab} only — competitor vs your brand mention rate per scan`
+            : "All models combined — competitor vs your brand mention rate per scan";
+
           return (
             <div className="card sketchy" style={{ padding: "16px 18px", transform: "rotate(-0.15deg)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                <div className="section-label" style={{ marginBottom: 0 }}>Historical trend</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <div className="section-label" style={{ marginBottom: 0 }}>Visibility over time</div>
                 <svg width="40" height="8" viewBox="0 0 40 8" fill="none"><path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5 Q35 7 40 4" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg>
               </div>
+              <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 10 }}>{subtitle}</div>
+
+              {/* Tabs */}
+              <div style={{ display: "flex", gap: 4, marginBottom: 12, flexWrap: "wrap" }}>
+                <button
+                  onClick={() => setTrendTab("all")}
+                  style={{
+                    padding: "4px 10px", fontSize: 11, fontWeight: 600, borderRadius: "var(--radius)",
+                    border: "1.5px solid var(--border)", cursor: "pointer",
+                    background: trendTab === "all" ? "var(--primary)" : "var(--surface)",
+                    color: trendTab === "all" ? "var(--black)" : "var(--text-muted)",
+                  }}
+                >All models</button>
+                {availableLlms.map((llm) => (
+                  <button
+                    key={llm}
+                    onClick={() => setTrendTab(llm)}
+                    style={{
+                      padding: "4px 10px", fontSize: 11, fontWeight: 600, borderRadius: "var(--radius)",
+                      border: "1.5px solid var(--border)", cursor: "pointer",
+                      background: trendTab === llm ? getLLMColor(llm) : "var(--surface)",
+                      color: trendTab === llm ? "#fff" : "var(--text-muted)",
+                    }}
+                  >{llm}</button>
+                ))}
+              </div>
+
+              {/* Legend */}
+              <div style={{ display: "flex", gap: 16, marginBottom: 8, fontSize: 11, fontWeight: 600 }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ width: 12, height: 3, background: "#EF4444", display: "inline-block", borderRadius: 1 }} />
+                  {decodedName}
+                </span>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ width: 12, height: 3, background: "#22C55E", display: "inline-block", borderRadius: 1 }} />
+                  You
+                </span>
+              </div>
+
+              {/* Chart */}
               <div style={{ overflowX: "auto" }}>
                 <svg viewBox={`0 0 ${chartW} ${chartH}`} style={{ width: "100%", height: chartH }}>
                   {/* Grid lines */}
                   {[0, 0.25, 0.5, 0.75, 1].map((pct) => {
-                    const y = padY + (1 - pct) * (chartH - padY * 2);
+                    const y = padY + (1 - pct) * plotH;
                     const val = Math.round(minVal + pct * range);
                     return (
                       <g key={pct}>
-                        <line x1={padX} y1={y} x2={chartW - padX} y2={y} stroke="var(--border)" strokeWidth="0.5" strokeDasharray="3,3" />
-                        <text x={padX - 2} y={y + 3} fontSize="7" fill="var(--text-muted)" textAnchor="end">{val}%</text>
+                        <line x1={padX} y1={y} x2={padX + plotW} y2={y} stroke="var(--border)" strokeWidth="0.5" strokeDasharray="3,3" />
+                        <text x={padX - 4} y={y + 3} fontSize="8" fill="var(--text-muted)" textAnchor="end">{val}%</text>
                       </g>
                     );
                   })}
-                  {/* Area fill */}
-                  <path d={areaD} fill="var(--primary)" fillOpacity="0.1" />
-                  {/* Line */}
-                  <path d={pathD} fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  {/* Data points */}
-                  {points.map((p, i) => (
-                    <g key={i}>
-                      <circle cx={p.x} cy={p.y} r="3" fill="var(--surface)" stroke="var(--primary)" strokeWidth="2" />
-                      <text x={p.x} y={p.y - 6} fontSize="7" fill="var(--text)" textAnchor="middle" fontWeight="700">{p.pct}%</text>
+                  {/* Brand area + line */}
+                  <path d={makeArea(brandPath, brandPoints)} fill="#22C55E" fillOpacity="0.08" />
+                  <path d={brandPath} fill="none" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  {/* Competitor area + line */}
+                  <path d={makeArea(compPath, compPoints)} fill="#EF4444" fillOpacity="0.08" />
+                  <path d={compPath} fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  {/* Data points — competitor */}
+                  {compPoints.map((p, i) => (
+                    <g key={`c-${i}`}>
+                      <circle cx={p.x} cy={p.y} r="3.5" fill="var(--surface)" stroke="#EF4444" strokeWidth="2" />
+                      <text x={p.x} y={p.y - 8} fontSize="8" fill="#991B1B" textAnchor="middle" fontWeight="700">{p.val}%</text>
                     </g>
                   ))}
+                  {/* Data points — brand */}
+                  {brandPoints.map((p, i) => (
+                    <g key={`b-${i}`}>
+                      <circle cx={p.x} cy={p.y} r="3.5" fill="var(--surface)" stroke="#22C55E" strokeWidth="2" />
+                      <text x={p.x} y={p.y + 14} fontSize="8" fill="#166534" textAnchor="middle" fontWeight="700">{p.val}%</text>
+                    </g>
+                  ))}
+                  {/* X-axis labels */}
+                  {trend.map((t, i) => {
+                    const x = padX + (i / (trend.length - 1)) * plotW;
+                    return (
+                      <text key={i} x={x} y={chartH - 2} fontSize="8" fill="var(--text-muted)" textAnchor="middle">{fmtDate(t.date)}</text>
+                    );
+                  })}
                 </svg>
               </div>
+
+              {/* Context */}
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 10, color: "var(--text-muted)" }}>
                 <span>{fmtDateFull(trend[0].date)}</span>
+                <span>{trend.length} scans · {trend[trend.length - 1].total_queries} queries each</span>
                 <span>{fmtDateFull(trend[trend.length - 1].date)}</span>
               </div>
             </div>
