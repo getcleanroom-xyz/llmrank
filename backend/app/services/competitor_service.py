@@ -175,7 +175,7 @@ def competitors_need_refresh(competitors: list[dict], ttl_days: int = 7) -> bool
     return False
 
 
-async def fill_missing_domains(competitors: list[dict]) -> list[dict]:
+async def fill_missing_domains(competitors: list[dict], industry: str = "") -> list[dict]:
     """Look up domains for competitors that don't have one via web search."""
     try:
         from ddgs import DDGS
@@ -189,17 +189,30 @@ async def fill_missing_domains(competitors: list[dict]) -> list[dict]:
         if not name:
             continue
         try:
+            # Use industry context to disambiguate common names
+            query = f"{name} {industry} official website".strip() if industry else f"{name} official website"
             with DDGS() as ddgs:
-                results = list(ddgs.text(f"{name} official website", max_results=3))
+                results = list(ddgs.text(query, max_results=5))
             for r in results:
                 href = r.get("href", "")
+                title = r.get("title", "").lower()
+                snippet = r.get("body", "").lower()
                 # Extract domain from URL
                 from urllib.parse import urlparse
                 parsed = urlparse(href)
                 domain = parsed.netloc.lower().replace("www.", "")
-                if domain and "." in domain and _is_valid_domain(domain):
-                    comp["domain"] = domain
-                    break
+                if not domain or "." not in domain or not _is_valid_domain(domain):
+                    continue
+                # Reject obviously wrong results (personal sites, Wikipedia, social media)
+                skip_domains = {"wikipedia.org", "linkedin.com", "twitter.com", "x.com",
+                                "facebook.com", "instagram.com", "youtube.com", "reddit.com"}
+                if any(skip in domain for skip in skip_domains):
+                    continue
+                # For ambiguous names, check if the result title mentions the competitor name
+                if name.lower() not in title and name.lower() not in snippet:
+                    continue
+                comp["domain"] = domain
+                break
         except Exception:
             continue
     return competitors
