@@ -42,9 +42,11 @@ function DoodleCircle({ color = "var(--primary)", style }: { color?: string; sty
 
 interface BrandDashboardClientProps {
   brandId: string;
+  initialData?: DashboardData | null;
+  initialQueries?: MonitoredQuery[];
 }
 
-function BrandDashboardPageInner({ brandId }: BrandDashboardClientProps) {
+function BrandDashboardPageInner({ brandId, initialData, initialQueries }: BrandDashboardClientProps) {
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const [tab, setTabState] = useState<Tab>((searchParams.get("tab") as Tab) ?? "overview");
@@ -77,8 +79,8 @@ function BrandDashboardPageInner({ brandId }: BrandDashboardClientProps) {
   const wasRunningRef = useRef(false);
 
   const freshData = dashResult?.dashboard ?? null;
-  const data: DashboardData | null = freshData ?? null;
-  const queries = dashResult?.queries ?? [];
+  const data: DashboardData | null = freshData ?? initialData ?? null;
+  const queries = dashResult?.queries ?? initialQueries ?? [];
   const isScanRunning = optimisticScanning || (data && (data.active_scan?.status === "pending" || data.active_scan?.status === "running"));
 
   useEffect(() => {
@@ -350,6 +352,6 @@ function BrandDashboardPageInner({ brandId }: BrandDashboardClientProps) {
   );
 }
 
-export function BrandDashboardClient({ brandId }: BrandDashboardClientProps) {
-  return <BrandDashboardPageInner brandId={brandId} />;
+export function BrandDashboardClient({ brandId, initialData, initialQueries }: BrandDashboardClientProps) {
+  return <BrandDashboardPageInner brandId={brandId} initialData={initialData} initialQueries={initialQueries} />;
 }

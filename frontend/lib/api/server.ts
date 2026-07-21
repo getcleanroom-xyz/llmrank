@@ -3,7 +3,7 @@ import { ApiError } from "./client";
 import type { AuthUser } from "./auth";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
-const DEFAULT_TIMEOUT_MS = 30_000;
+const DEFAULT_TIMEOUT_MS = 10_000;
 
 export async function serverFetch<T>(path: string, cookieHeader: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<T> {
   const controller = new AbortController();
@@ -16,6 +16,7 @@ export async function serverFetch<T>(path: string, cookieHeader: string, timeout
         Cookie: cookieHeader,
       },
       signal: controller.signal,
+      cache: "no-store",
     });
     if (!res.ok) {
       const body = await res.text();
@@ -36,7 +37,8 @@ export async function serverFetch<T>(path: string, cookieHeader: string, timeout
 export async function getServerSession(cookieHeader: string): Promise<AuthUser | null> {
   try {
     return await serverFetch<AuthUser>("/auth/me", cookieHeader);
-  } catch {
+  } catch (e) {
+    // Server-side auth is best-effort — client-side auth is the fallback
     return null;
   }
 }
