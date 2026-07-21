@@ -77,6 +77,29 @@ export function AuthButton({ credits, onBuyClick }: AuthButtonProps) {
             </div>
           )}
 
+          <Link
+            href="/account"
+            style={{
+              display: "block",
+              width: "100%",
+              padding: "6px 8px",
+              fontSize: 12,
+              fontWeight: 600,
+              textAlign: "left",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              borderRadius: "var(--radius)",
+              color: "var(--text)",
+              textDecoration: "none",
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = "var(--background)"}
+            onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+            onClick={() => setShowMenu(false)}
+          >
+            Account
+          </Link>
+
           {user.is_admin && (
             <Link
               href="/admin"
