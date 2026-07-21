@@ -2,10 +2,13 @@ import type { DashboardData, MonitoredQuery } from "@/types";
 import { ApiError } from "./client";
 import type { AuthUser } from "./auth";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 const DEFAULT_TIMEOUT_MS = 10_000;
 
 export async function serverFetch<T>(path: string, cookieHeader: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<T> {
+  // Skip server-side fetch if no API URL configured (e.g. Vercel without env var)
+  if (!BASE_URL) throw new Error("No API URL configured");
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
