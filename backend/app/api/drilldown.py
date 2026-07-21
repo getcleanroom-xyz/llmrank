@@ -1,6 +1,7 @@
 import uuid
 import logging
 import re
+from urllib.parse import unquote
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -213,6 +214,7 @@ async def get_competitor_drilldown(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    competitor_name = unquote(unquote(competitor_name))
     # Verify brand exists and not deleted
     brand_row = (await db.execute(
         Brand.active().where(Brand.id == brand_id, Brand.owner_id == user.id)
