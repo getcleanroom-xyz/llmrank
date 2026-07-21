@@ -344,7 +344,8 @@ async def get_competitor_drilldown(
     comp_logo = ""
     comp_profile = ""
     competitors_data = brand_row.competitors or []
-    for c in competitors_data:
+    comp_index = -1
+    for i, c in enumerate(competitors_data):
         if _normalize_competitor(c.get("name", "")) == normalized_target:
             stored = c.get("domain", "") or ""
             if _is_valid_domain(stored):
@@ -352,9 +353,26 @@ async def get_competitor_drilldown(
             comp_logo = c.get("logo_url", "") or ""
             crawled = c.get("crawled_content", "") or ""
             if crawled:
-                # Summarize the first 1500 chars of crawled content
                 comp_profile = crawled[:1500]
+            comp_index = i
             break
+
+    # Fill missing domain via web search if not found
+    if not comp_domain and competitor_name:
+        try:
+            from app.services.competitor_service import fill_missing_domains
+            temp = [{"name": competitor_name, "domain": ""}]
+            filled = await fill_missing_domains(temp)
+            if filled and filled[0].get("domain"):
+                comp_domain = filled[0]["domain"]
+                # Save back to brand's competitors list
+                if comp_index >= 0:
+                    competitors_data[comp_index]["domain"] = comp_domain
+                    brand_row.competitors = competitors_data
+                    await db.commit()
+                logger.info("Filled missing domain for %s: %s", competitor_name, comp_domain)
+        except Exception as e:
+            logger.debug("Failed to fill domain for %s: %s", competitor_name, e)
 
     # Historical trend: query last 5 scans for this competitor's mention rate
     historical_trend = []
@@ -423,6 +441,10 @@ async def get_competitor_drilldown(
         f"You could target their weaknesses in your content to improve your AI visibility."
     )
 
+    # Brand mention rate (how often YOUR brand appears across all results)
+    brand_mentioned_count = sum(1 for r in all_results if r.mentioned)
+    brand_mention_pct = round(brand_mentioned_count / len(all_results) * 100, 1) if all_results else 0
+
     return CompetitorDrilldownOut(
         competitor_name=competitor_name,
         domain=comp_domain,
@@ -434,6 +456,7 @@ async def get_competitor_drilldown(
         total_queries=total_queries,
         beats_brand_count=beats_count,
         brand_wins_count=brand_wins,
+        brand_mention_pct=brand_mention_pct,
         both_absent_count=neither_mentioned,
         avg_competitor_position=avg_comp_pos,
         avg_brand_position=avg_brand_pos,

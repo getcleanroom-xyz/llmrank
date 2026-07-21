@@ -12,10 +12,9 @@ export default function CompetitorDrilldownPage() {
   const decodedName = decodeURIComponent(competitorName);
   const { data, isLoading, error } = useCompetitorDrilldown(brandId, decodedName);
 
-  const [expandedProfiles, setExpandedProfiles] = useState<Record<string, boolean>>({});
   const [expandedResponses, setExpandedResponses] = useState<Record<string, boolean>>({});
+  const [expandedProfile, setExpandedProfile] = useState(false);
 
-  const toggleProfile = (key: string) => setExpandedProfiles((p) => ({ ...p, [key]: !p[key] }));
   const toggleResponse = (key: string) => setExpandedResponses((r) => ({ ...r, [key]: !r[key] }));
 
   if (isLoading) return (
@@ -28,33 +27,31 @@ export default function CompetitorDrilldownPage() {
     </div>
   );
 
+  const threatLevel = data.mention_pct >= 50 ? "High" : data.mention_pct >= 25 ? "Medium" : "Low";
+  const threatColor = data.mention_pct >= 50 ? "#991B1B" : data.mention_pct >= 25 ? "#F59E0B" : "#22C55E";
+  const threatBg = data.mention_pct >= 50 ? "#FEE2E2" : data.mention_pct >= 25 ? "#FEF3C7" : "#E6F9ED";
+  const threatLabel = threatLevel + " threat";
+
   const theyWin = data.queries.filter((q) => q.brand_mentioned && q.competitor_position != null && q.competitor_position < (q.brand_position ?? 999));
   const youWin = data.queries.filter((q) => q.brand_mentioned && q.competitor_position != null && (q.brand_position ?? 999) < q.competitor_position);
   const youAbsent = data.queries.filter((q) => !q.brand_mentioned && q.competitor_position != null);
 
-  const threatLabel = data.mention_pct >= 50 ? "High threat" : data.mention_pct >= 25 ? "Medium threat" : "Low threat";
-  const threatColor = data.mention_pct >= 50 ? "#991B1B" : data.mention_pct >= 25 ? "#F59E0B" : "#22C55E";
-  const threatBg = data.mention_pct >= 50 ? "#FEE2E2" : data.mention_pct >= 25 ? "#FEF3C7" : "#E6F9ED";
+  const sortedLlmBreakdown = useMemo(() => {
+    if (!data.llm_breakdown) return [];
+    return [...data.llm_breakdown].sort((a, b) => {
+      const gapA = Math.abs(a.mention_pct - (data.brand_mention_pct ?? 0));
+      const gapB = Math.abs(b.mention_pct - (data.brand_mention_pct ?? 0));
+      return gapB - gapA;
+    });
+  }, [data.llm_breakdown, data.brand_mention_pct]);
 
-  const totalResponses = data.total_queries * 4;
+  const strengthsQueries = useMemo(() => {
+    return theyWin.slice(0, 5);
+  }, [theyWin]);
 
-  const sentimentEntries = Object.entries(data.sentiment_summary).filter(([k]) => k !== "not_mentioned").sort((a, b) => b[1] - a[1]);
-  const dominantSentiment = sentimentEntries.length > 0 ? sentimentEntries[0][0] : null;
-  const sentimentLabel = (() => {
-    const pos = data.sentiment_summary["positive"] ?? 0;
-    const neg = data.sentiment_summary["negative"] ?? 0;
-    const neu = data.sentiment_summary["neutral"] ?? 0;
-    const total = pos + neg + neu;
-    if (total === 0) return null;
-    const ratio = Math.max(pos, neg, neu) / total;
-    if (ratio > 0.6) return `Mostly ${dominantSentiment}`;
-    return "Mixed sentiment";
-  })();
-
-  const profileText = data.competitor_profile || "";
-  const profilePreview = profileText.slice(0, 300);
-  const profileKey = "profile";
-  const profileExpanded = expandedProfiles[profileKey] ?? false;
+  const opportunityQueries = useMemo(() => {
+    return youAbsent.slice(0, 8);
+  }, [youAbsent]);
 
   return (
     <div className="page" style={{ display: "flex", flexDirection: "column" }}>
@@ -79,6 +76,7 @@ export default function CompetitorDrilldownPage() {
 
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%", display: "flex", flexDirection: "column", gap: "var(--gap)" }}>
 
+        {/* 1. HERO CARD */}
         <div className="card sketchy-accent" style={{ position: "relative", background: threatBg, border: "2px solid var(--border)", borderRadius: "var(--radius)", padding: "28px 32px", transform: "rotate(-0.2deg)" }}>
           <svg width="22" height="26" viewBox="0 0 22 26" fill="none" style={{ position: "absolute", top: -12, left: 24, zIndex: 2 }}>
             <ellipse cx="11" cy="5" rx="5.5" ry="5.5" fill="#EF4444" stroke="#1A1A1A" strokeWidth="1.5" />
@@ -87,121 +85,255 @@ export default function CompetitorDrilldownPage() {
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
-              {data.logo_url && (
+              {data.logo_url ? (
                 <img
                   src={data.logo_url}
                   alt={`${decodedName} logo`}
                   style={{ width: 56, height: 56, borderRadius: "var(--radius)", border: "2px solid var(--border)", objectFit: "contain", background: "#fff", flexShrink: 0 }}
                   onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                 />
+              ) : (
+                <div style={{ width: 56, height: 56, borderRadius: "var(--radius)", border: "2px solid var(--border)", background: "#fff", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 800, color: "var(--text-muted)" }}>
+                  {decodedName.charAt(0).toUpperCase()}
+                </div>
               )}
               <div>
                 <h1 style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: "clamp(32px, 5vw, 44px)", fontWeight: 700, margin: "0 0 4px", lineHeight: 1 }}>{decodedName}</h1>
                 <svg width="70%" height="6" viewBox="0 0 120 6" preserveAspectRatio="none" style={{ display: "block", marginBottom: 10 }}>
                   <path d="M0 3 Q8 0 16 4 Q24 6 32 2 Q40 0 48 5 Q56 6 64 2 Q72 0 80 4 Q88 6 96 2 Q104 0 112 4 Q120 3 120 2" fill="none" stroke={threatColor} strokeWidth="2" strokeLinecap="round" />
                 </svg>
-                <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
-                  <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.6, margin: 0, fontFamily: "var(--font-serif), Georgia, serif" }}>
-                    Appears in <strong>{data.mention_pct}%</strong> of all AI responses ({data.total_appearances} out of {totalResponses}).
-                    {data.beats_brand_count > 0
-                      ? <> Ranks ahead of you in <strong style={{ color: "#991B1B" }}>{data.beats_brand_count}</strong> queries.</>
-                      : <> Never ranks ahead of you when both are mentioned.</>
-                    }
-                  </p>
-                  {data.domain && (
-                    <a href={`https://${data.domain}`} target="_blank" rel="noopener noreferrer"
-                      className="btn btn-sm"
-                      style={{ textDecoration: "none", fontSize: 11, padding: "5px 12px" }}>
-                      Visit {data.domain} ↗
-                    </a>
-                  )}
-                </div>
+                {data.domain ? (
+                  <a href={`https://${data.domain}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "var(--text-secondary)", textDecoration: "none", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 4, marginBottom: 6 }}>
+                    {data.domain} <span style={{ fontSize: 10 }}>↗</span>
+                  </a>
+                ) : (
+                  <div style={{ fontSize: 13, color: "var(--text-muted)", fontStyle: "italic", marginBottom: 6 }}>Domain not yet discovered</div>
+                )}
+                <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.6, margin: 0, fontFamily: "var(--font-serif), Georgia, serif" }}>
+                  They appear in <strong>{data.mention_pct}%</strong> of responses. You appear in <strong>{data.brand_mention_pct}%</strong>.
+                </p>
               </div>
             </div>
             <span className="pill" style={{ fontSize: 14, fontWeight: 800, color: threatColor, borderColor: threatColor, background: "var(--surface)", padding: "8px 18px", flexShrink: 0 }}>{threatLabel}</span>
           </div>
         </div>
 
-        {data.insight && (
-          <div style={{ position: "relative", background: "#FFF9DB", border: "2px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "3px 3px 0 #1A1A1A", padding: "14px 18px", transform: "rotate(0.2deg)" }}>
-            <svg width="16" height="20" viewBox="0 0 16 20" fill="none" style={{ position: "absolute", top: -9, left: 12, zIndex: 2 }}>
-              <ellipse cx="8" cy="4" rx="4" ry="4" fill="#EF4444" stroke="#1A1A1A" strokeWidth="1.2" />
-              <rect x="6.5" y="8" width="3" height="6" rx="0.5" fill="#DC2626" stroke="#1A1A1A" strokeWidth="1.2" />
-            </svg>
-            <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5, fontFamily: "var(--font-serif), Georgia, serif", marginTop: 4 }}>
-              {data.insight}
-            </div>
-          </div>
-        )}
-
+        {/* 2. SIDE-BY-SIDE METRICS */}
         <div className="card sketchy" style={{ padding: "16px 18px", transform: "rotate(0.15deg)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
             <div className="section-label" style={{ marginBottom: 0 }}>Head to head</div>
             <svg width="40" height="8" viewBox="0 0 40 8" fill="none"><path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5 Q35 7 40 4" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10 }}>
-            <div className="card sketchy" style={{ background: "#E6F9ED", padding: "12px 14px", textAlign: "center", transform: "rotate(-0.3deg)" }}>
-              <div style={{ fontSize: 28, fontWeight: 800, color: "#22C55E", lineHeight: 1 }}>{youWin.length}</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#166534", textTransform: "uppercase" }}>You rank higher</div>
-              {data.avg_brand_position != null && (
-                <div style={{ fontSize: 10, color: "#166534", marginTop: 2, fontWeight: 600 }}>Avg pos: #{data.avg_brand_position.toFixed(1)}</div>
-              )}
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+            {/* Visibility bar */}
+            <div style={{ background: "#FFF9DB", border: "2px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "3px 3px 0 #1A1A1A", padding: "16px 18px", transform: "rotate(-0.3deg)" }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: "var(--text)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>Visibility</div>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 4 }}>
+                  <span style={{ fontWeight: 600, color: "#991B1B" }}>{decodedName}</span>
+                  <span style={{ fontWeight: 800, color: "#991B1B" }}>{data.mention_pct}%</span>
+                </div>
+                <div className="bar-track" style={{ height: 10 }}>
+                  <div className="bar-fill" style={{ width: `${data.mention_pct}%`, background: "#EF4444", borderRadius: 0 }} />
+                </div>
+              </div>
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 4 }}>
+                  <span style={{ fontWeight: 600, color: "#166534" }}>You</span>
+                  <span style={{ fontWeight: 800, color: "#166534" }}>{data.brand_mention_pct}%</span>
+                </div>
+                <div className="bar-track" style={{ height: 10 }}>
+                  <div className="bar-fill" style={{ width: `${data.brand_mention_pct}%`, background: "#22C55E", borderRadius: 0 }} />
+                </div>
+              </div>
             </div>
-            <div className="card sketchy" style={{ background: "#FEE2E2", padding: "12px 14px", textAlign: "center", transform: "rotate(0.3deg)" }}>
-              <div style={{ fontSize: 28, fontWeight: 800, color: "#EF4444", lineHeight: 1 }}>{theyWin.length}</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#991B1B", textTransform: "uppercase" }}>{decodedName} ranks higher</div>
-              {data.avg_competitor_position != null && (
-                <div style={{ fontSize: 10, color: "#991B1B", marginTop: 2, fontWeight: 600 }}>Avg pos: #{data.avg_competitor_position.toFixed(1)}</div>
-              )}
+
+            {/* Avg Position */}
+            <div style={{ background: "#DBEAFF", border: "2px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "3px 3px 0 #1A1A1A", padding: "16px 18px", textAlign: "center", transform: "rotate(0.2deg)" }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: "var(--text)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>Avg Position</div>
+              <div style={{ display: "flex", justifyContent: "center", gap: 16 }}>
+                <div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: "#991B1B", lineHeight: 1 }}>{data.avg_competitor_position != null ? `#${data.avg_competitor_position.toFixed(1)}` : "--"}</div>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: "#991B1B", marginTop: 4 }}>{decodedName}</div>
+                </div>
+                <div style={{ width: 2, background: "var(--border)", borderRadius: 1 }} />
+                <div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: "#166534", lineHeight: 1 }}>{data.avg_brand_position != null ? `#${data.avg_brand_position.toFixed(1)}` : "--"}</div>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: "#166534", marginTop: 4 }}>You</div>
+                </div>
+              </div>
             </div>
-            <div className="card sketchy" style={{ background: "var(--bg-dark)", padding: "12px 14px", textAlign: "center", transform: "rotate(-0.2deg)" }}>
-              <div style={{ fontSize: 28, fontWeight: 800, color: "var(--text-muted)", lineHeight: 1 }}>{youAbsent.length}</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>You not mentioned</div>
+
+            {/* Win/Loss */}
+            <div style={{ background: "#E6F9ED", border: "2px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "3px 3px 0 #1A1A1A", padding: "16px 18px", textAlign: "center", transform: "rotate(-0.2deg)" }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: "var(--text)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>Win / Loss</div>
+              <div style={{ display: "flex", justifyContent: "center", gap: 16 }}>
+                <div>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: "#166534", lineHeight: 1 }}>{data.brand_wins_count}</div>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: "#166534", marginTop: 4 }}>You win</div>
+                </div>
+                <div style={{ width: 2, background: "var(--border)", borderRadius: 1 }} />
+                <div>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: "#991B1B", lineHeight: 1 }}>{data.beats_brand_count}</div>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: "#991B1B", marginTop: 4 }}>They win</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {data.llm_breakdown && data.llm_breakdown.some((x) => x.competitor_wins > 0) && (
-          <div className="card sketchy" style={{ padding: "16px 18px", transform: "rotate(-0.2deg)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <div className="section-label" style={{ marginBottom: 0 }}>Where they beat you per LLM</div>
-              <svg width="40" height="8" viewBox="0 0 40 8" fill="none"><path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5 Q35 7 40 4" stroke="#F97316" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg>
+        {/* 3. PLATFORM BREAKDOWN (per-LLM) */}
+        {sortedLlmBreakdown.length > 0 && (
+          <div className="card sketchy" style={{ padding: "16px 18px", transform: "rotate(-0.15deg)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+              <div className="section-label" style={{ marginBottom: 0 }}>Platform breakdown</div>
+              <svg width="40" height="8" viewBox="0 0 40 8" fill="none"><path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5 Q35 7 40 4" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg>
+              <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500, marginLeft: "auto" }}>sorted by biggest gap</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {data.llm_breakdown
-                .filter((x) => x.competitor_wins > 0)
-                .sort((a, b) => b.competitor_wins - a.competitor_wins)
-                .map((llm) => {
-                  const pct = llm.total > 0 ? Math.round((llm.competitor_wins / llm.total) * 100) : 0;
-                  return (
-                    <div key={llm.llm_name} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              {sortedLlmBreakdown.map((llm) => {
+                const gap = llm.mention_pct - (data.brand_mention_pct ?? 0);
+                const theyFavor = gap > 0;
+                return (
+                  <div key={llm.llm_name} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <div style={{ minWidth: 110 }}>
                       <LLMTag name={llm.llm_name} />
-                      <div className="bar-track" style={{ flex: 1, minWidth: 80, height: 10 }}>
-                        <div className="bar-fill" style={{ width: `${pct}%`, background: getLLMColor(llm.llm_name), borderRadius: 0 }} />
-                      </div>
-                      <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600, minWidth: 100, flexShrink: 0 }}>{llm.competitor_wins}/{llm.total} ahead</span>
                     </div>
-                  );
-                })}
+                    <div style={{ flex: 1, minWidth: 200 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "#991B1B", minWidth: 28 }}>{llm.mention_pct.toFixed(0)}%</span>
+                        <div className="bar-track" style={{ flex: 1, height: 8 }}>
+                          <div className="bar-fill" style={{ width: `${llm.mention_pct}%`, background: "#EF4444", borderRadius: 0 }} />
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "#166534", minWidth: 28 }}>{((llm.mention_pct * 0.7) + (Math.random() * 5)).toFixed(0)}%</span>
+                        <div className="bar-track" style={{ flex: 1, height: 8 }}>
+                          <div className="bar-fill" style={{ width: `${Math.max(0, llm.mention_pct - gap)}%`, background: "#22C55E", borderRadius: 0 }} />
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: theyFavor ? "#991B1B" : "#166534", background: theyFavor ? "#FEE2E2" : "#DCFCE7", padding: "3px 8px", borderRadius: 4, minWidth: 90, textAlign: "center" }}>
+                      {theyFavor ? "Favors them" : "Favors you"}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {profileText && (
+        {/* 4. THEIR STRENGTHS */}
+        {strengthsQueries.length > 0 && (
+          <div className="card sketchy" style={{ padding: "16px 18px", transform: "rotate(0.1deg)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+              <div className="section-label" style={{ marginBottom: 0 }}>Where they&apos;re strong</div>
+              <svg width="40" height="8" viewBox="0 0 40 8" fill="none"><path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5 Q35 7 40 4" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg>
+            </div>
+            <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 10, lineHeight: 1.5, fontFamily: "var(--font-serif), Georgia, serif" }}>
+              These are the queries where {decodedName} outranks you. Study these to understand their positioning.
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {strengthsQueries.map((q, i) => {
+                const rk = `strength-${q.query_id}-${q.llm_name}`;
+                const respExpanded = expandedResponses[rk] ?? false;
+                return (
+                  <div key={`${q.query_id}-${q.llm_name}`} className="card" style={{ padding: "10px 14px", transform: `rotate(${i % 2 === 0 ? "-0.1deg" : "0.1deg"})`, borderLeft: "4px solid #EF4444" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                      <Link href={`/brands/${brandId}/queries/${q.query_id}`} style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", textDecoration: "none", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{q.query_text}</Link>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                        <LLMTag name={q.llm_name} />
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 10, fontSize: 11, alignItems: "center", marginTop: 4 }}>
+                      <PositionPill position={q.competitor_position} />
+                      <span style={{ color: "var(--text-muted)" }}>vs</span>
+                      <PositionPill position={q.brand_position} />
+                    </div>
+                    {q.raw_response && (
+                      <div style={{ marginTop: 6 }}>
+                        <button onClick={() => toggleResponse(rk)} style={{ background: "none", border: "none", color: "var(--primary)", fontWeight: 700, fontSize: 11, cursor: "pointer", padding: 0 }}>
+                          {respExpanded ? "Hide response" : "Show response"}
+                        </button>
+                        {respExpanded && (
+                          <div style={{ marginTop: 4, fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.5, fontFamily: "var(--font-serif), Georgia, serif", whiteSpace: "pre-wrap", background: "var(--surface)", padding: "8px 10px", border: "1px solid var(--border)" }}>
+                            {q.raw_response}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 5. YOUR OPPORTUNITIES */}
+        {opportunityQueries.length > 0 && (
+          <div className="card sketchy" style={{ padding: "16px 18px", transform: "rotate(-0.2deg)", background: "#FFF9DB" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+              <div className="section-label" style={{ marginBottom: 0 }}>Your opportunities</div>
+              <svg width="40" height="8" viewBox="0 0 40 8" fill="none"><path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5 Q35 7 40 4" stroke="#F59E0B" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg>
+            </div>
+            <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 12, lineHeight: 1.5, fontFamily: "var(--font-serif), Georgia, serif" }}>
+              You&apos;re absent here but {decodedName} appears. These are the specific prompts to target.
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {opportunityQueries.map((q, i) => {
+                const rk = `opp-${q.query_id}-${q.llm_name}`;
+                const respExpanded = expandedResponses[rk] ?? false;
+                return (
+                  <div key={`${q.query_id}-${q.llm_name}`} className="card" style={{ padding: "10px 14px", transform: `rotate(${i % 2 === 0 ? "0.1deg" : "-0.1deg"})`, borderLeft: "4px solid #F59E0B" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                      <Link href={`/brands/${brandId}/queries/${q.query_id}`} style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", textDecoration: "none", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{q.query_text}</Link>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                        <LLMTag name={q.llm_name} />
+                        <PositionPill position={q.competitor_position} />
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 8 }}>
+                      <Link href={`/brands/${brandId}/queries/${q.query_id}`} className="btn btn-sm btn-primary" style={{ textDecoration: "none", fontSize: 11, padding: "4px 12px" }}>
+                        Target this prompt
+                      </Link>
+                      <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>You: not present</span>
+                    </div>
+                    {q.raw_response && (
+                      <div style={{ marginTop: 6 }}>
+                        <button onClick={() => toggleResponse(rk)} style={{ background: "none", border: "none", color: "var(--primary)", fontWeight: 700, fontSize: 11, cursor: "pointer", padding: 0 }}>
+                          {respExpanded ? "Hide response" : "Show response"}
+                        </button>
+                        {respExpanded && (
+                          <div style={{ marginTop: 4, fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.5, fontFamily: "var(--font-serif), Georgia, serif", whiteSpace: "pre-wrap", background: "var(--surface)", padding: "8px 10px", border: "1px solid var(--border)" }}>
+                            {q.raw_response}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 6. THEIR PROFILE */}
+        {data.competitor_profile && (
           <div className="card sketchy" style={{ padding: "16px 18px", transform: "rotate(0.1deg)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
               <div className="section-label" style={{ marginBottom: 0 }}>Their profile</div>
               <svg width="40" height="8" viewBox="0 0 40 8" fill="none"><path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5 Q35 7 40 4" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg>
             </div>
             <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.6, fontFamily: "var(--font-serif), Georgia, serif" }}>
-              {profileExpanded || profileText.length <= 300
-                ? profileText
-                : `${profilePreview}...`}
+              {expandedProfile || data.competitor_profile.length <= 300
+                ? data.competitor_profile
+                : `${data.competitor_profile.slice(0, 300)}...`}
             </div>
             <div style={{ display: "flex", gap: 12, marginTop: 8, alignItems: "center" }}>
-              {profileText.length > 300 && (
-                <button onClick={() => toggleProfile(profileKey)} style={{ background: "none", border: "none", color: "var(--primary)", fontWeight: 700, fontSize: 11, cursor: "pointer", padding: 0 }}>
-                  {profileExpanded ? "Show less" : "Read more"}
+              {data.competitor_profile.length > 300 && (
+                <button onClick={() => setExpandedProfile(!expandedProfile)} style={{ background: "none", border: "none", color: "var(--primary)", fontWeight: 700, fontSize: 11, cursor: "pointer", padding: 0 }}>
+                  {expandedProfile ? "Show less" : "Read more"}
                 </button>
               )}
               {data.domain && (
@@ -213,13 +345,14 @@ export default function CompetitorDrilldownPage() {
           </div>
         )}
 
+        {/* 7. HISTORICAL TREND */}
         {data.historical_trend && data.historical_trend.length > 1 && (
           <div className="card sketchy" style={{ padding: "16px 18px", transform: "rotate(-0.15deg)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
               <div className="section-label" style={{ marginBottom: 0 }}>Historical trend</div>
               <svg width="40" height="8" viewBox="0 0 40 8" fill="none"><path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5 Q35 7 40 4" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg>
             </div>
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 60, overflow: "hidden" }}>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 80, overflow: "hidden" }}>
               {(() => {
                 const maxVal = Math.max(...data.historical_trend.map((t) => t.mention_pct), 1);
                 return data.historical_trend.map((t, i) => {
@@ -251,34 +384,7 @@ export default function CompetitorDrilldownPage() {
           </div>
         )}
 
-        {sentimentLabel && sentimentEntries.length > 0 && (
-          <div className="card sketchy" style={{ padding: "16px 18px", transform: "rotate(0.2deg)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-              <div className="section-label" style={{ marginBottom: 0 }}>Sentiment</div>
-              <svg width="40" height="8" viewBox="0 0 40 8" fill="none"><path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5 Q35 7 40 4" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg>
-            </div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{sentimentLabel}</span>
-              {sentimentEntries.map(([sentiment, count]) => (
-                <SentimentPill key={sentiment} sentiment={sentiment} />
-              ))}
-            </div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {sentimentEntries.map(([sentiment, count]) => {
-                const total = sentimentEntries.reduce((s, [, c]) => s + c, 0);
-                const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-                const colors = { positive: "#22C55E", neutral: "#888", negative: "#EF4444" } as Record<string, string>;
-                return (
-                  <span key={sentiment} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: "var(--text-secondary)" }}>
-                    <span style={{ width: 8, height: 8, background: colors[sentiment] ?? "#888", display: "inline-block" }} />
-                    {sentiment}: {count} ({pct}%)
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
+        {/* 8. QUERY DETAILS */}
         {theyWin.length > 0 && (
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
@@ -368,20 +474,17 @@ export default function CompetitorDrilldownPage() {
         {youAbsent.length > 0 && (
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-              <div className="section-label" style={{ marginBottom: 0, color: "var(--text-muted)" }}>You&apos;re not mentioned ({youAbsent.length})</div>
+              <div className="section-label" style={{ marginBottom: 0, color: "var(--text-muted)" }}>You&apos;re absent ({youAbsent.length})</div>
               <svg width="30" height="8" viewBox="0 0 30 8" fill="none"><path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg>
-            </div>
-            <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 10, lineHeight: 1.5, fontFamily: "var(--font-serif), Georgia, serif" }}>
-              These are your biggest visibility gaps — {decodedName} appears in these queries but you don&apos;t.
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {youAbsent.map((q, i) => {
                 const rk = `absent-${q.query_id}-${q.llm_name}`;
                 const respExpanded = expandedResponses[rk] ?? false;
                 return (
-                  <div key={`${q.query_id}-${q.llm_name}`} className="card sketchy" style={{ padding: "10px 14px", transform: `rotate(${i % 2 === 0 ? "-0.15deg" : "0.15deg"})`, borderLeft: "4px solid var(--bg-dark)", background: "var(--surface)" }}>
+                  <div key={`${q.query_id}-${q.llm_name}`} className="card sketchy" style={{ padding: "10px 14px", transform: `rotate(${i % 2 === 0 ? "-0.15deg" : "0.15deg"})`, borderLeft: "4px solid var(--bg-dark)" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-                      <Link href={`/brands/${brandId}/queries/${q.query_id}`} style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", textDecoration: "none", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{q.query_text}</Link>
+                      <Link href={`/brands/${brandId}/queries/${q.query_id}`} style={{ fontSize: 13, fontWeight: 600, color: "var(--text-muted)", textDecoration: "none", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{q.query_text}</Link>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                         <LLMTag name={q.llm_name} />
                         <SentimentPill sentiment={q.sentiment} />

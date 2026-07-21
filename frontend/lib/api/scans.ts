@@ -106,6 +106,7 @@ export interface CompetitorDrilldownData {
   total_queries: number;
   beats_brand_count: number;
   brand_wins_count: number;
+  brand_mention_pct: number;
   both_absent_count: number;
   avg_competitor_position: number | null;
   avg_brand_position: number | null;

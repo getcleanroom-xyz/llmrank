@@ -245,6 +245,8 @@ class CompetitorDrilldownOut(BaseModel):
     total_queries: int
     beats_brand_count: int
     brand_wins_count: int = 0
+    brand_mention_pct: float = 0
+    brand_avg_position: Optional[float] = None
     both_absent_count: int = 0
     avg_competitor_position: Optional[float] = None
     avg_brand_position: Optional[float] = None
