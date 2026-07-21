@@ -38,8 +38,8 @@ function topCompetitors(queries: { competitors_mentioned: { name: string }[] }[]
 
 function StatCard({ value, label, bg, accent }: { value: string; label: string; bg: string; accent: string }) {
   return (
-    <div style={{ background: bg, border: "2px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "3px 3px 0 #1A1A1A", padding: "10px 16px", display: "flex", alignItems: "baseline", gap: 6, flex: "1 1 auto", minWidth: 120 }}>
-      <span style={{ fontSize: 22, fontWeight: 800, color: accent }}>{value}</span>
+    <div style={{ background: bg, border: "2px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "3px 3px 0 #1A1A1A", padding: "10px 14px", display: "flex", alignItems: "baseline", gap: 6 }}>
+      <span style={{ fontSize: 20, fontWeight: 800, color: accent }}>{value}</span>
       <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>{label}</span>
     </div>
   );
@@ -158,32 +158,34 @@ export default function LLMDrilldownPage() {
             </div>
 
             {/* Stats */}
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: "var(--gap)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: "var(--gap)" }}>
               <StatCard value={`${data.visibility_pct}%`} label="visibility" bg="#FFF9DB" accent="var(--primary)" />
               <StatCard value={`${data.times_mentioned}/${data.total_queries}`} label="mentioned" bg="#DBEAFF" accent="#3B82F6" />
               <StatCard value={data.avg_position ? `#${data.avg_position}` : "-"} label="avg position" bg="#E6F9ED" accent="#22C55E" />
               <StatCard value={avgScore != null ? `${avgScore}` : "-"} label="avg score" bg="#F3E8FF" accent="#A855F7" />
             </div>
 
-            {/* Insights */}
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: "var(--gap)" }}>
-              {sentiment && (
-                <div className="card" style={{ padding: "10px 16px", display: "inline-flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-                  <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>Sentiment</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: sentiment.color, background: sentiment.bg, padding: "2px 10px", borderRadius: 6 }}>{sentiment.label}</span>
-                </div>
-              )}
-              {competitors.length > 0 && (
-                <div className="card" style={{ padding: "10px 16px", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", minWidth: 0, flex: "1 1 0" }}>
-                  <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", flexShrink: 0 }}>Appears alongside</span>
-                  {competitors.map(([name, count]) => (
-                    <Link key={name} href={`/brands/${brandId}/competitors/${encodeURIComponent(name)}`} style={{ textDecoration: "none" }}>
-                      <span className="pill pill-neu" style={{ fontSize: 10, cursor: "pointer" }}>{name} ({count})</span>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
+            {/* Insights — single card */}
+            {(sentiment || competitors.length > 0) && (
+              <div className="card" style={{ padding: "12px 16px", marginBottom: "var(--gap)", display: "flex", flexDirection: "column", gap: 8 }}>
+                {sentiment && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", flexShrink: 0 }}>Sentiment</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: sentiment.color, background: sentiment.bg, padding: "2px 8px", borderRadius: 6 }}>{sentiment.label}</span>
+                  </div>
+                )}
+                {competitors.length > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", flexShrink: 0 }}>Appears alongside</span>
+                    {competitors.map(([cName, count]) => (
+                      <Link key={cName} href={`/brands/${brandId}/competitors/${encodeURIComponent(cName)}`} style={{ textDecoration: "none" }}>
+                        <span className="pill pill-neu" style={{ fontSize: 10, cursor: "pointer" }}>{cName} ({count})</span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Divider */}
             <div style={{ textAlign: "center", margin: "4px 0 16px", opacity: 0.3 }}>
