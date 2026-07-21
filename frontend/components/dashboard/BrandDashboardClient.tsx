@@ -19,6 +19,7 @@ import { CompetitorsTab } from "@/components/dashboard/CompetitorsTab";
 import { ScoreHistoryChart } from "@/components/dashboard/ScoreHistoryChart";
 import { ScanHistory } from "@/components/dashboard/ScanHistory";
 import { ChatWidget } from "@/components/ChatWidget";
+import { DashboardSkeleton, KpiCardsSkeleton, TableSkeleton } from "@/components/dashboard/Skeletons";
 
 type Tab = "overview" | "queries" | "scans" | "competitors";
 
@@ -109,13 +110,13 @@ function BrandDashboardPageInner() {
     if (!authLoading && !user) window.location.href = "/brands";
   }, [user, authLoading]);
 
-  if (authLoading) return <div className="page" style={{ display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "var(--text-muted)", minHeight: "100vh" }}>Loading...</div>;
+  if (authLoading) return <DashboardSkeleton />;
   if (!user) return null;
 
   const queries = dashResult?.queries ?? [];
   const error = loadError ? (loadError instanceof Error ? loadError.message : "Failed to load") : null;
 
-  if (isLoading) return <div className="page" style={{ display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "var(--text-muted)" }}>Loading...</div>;
+  if (isLoading) return <DashboardSkeleton />;
   if (!data) return <div className="page" style={{ padding: "var(--page-px)" }}><div style={{ color: "var(--red)", fontWeight: 700, marginBottom: 8 }}>{error ?? "Brand not found."}</div></div>;
 
   const { brand, latest_scan, active_scan, visibility_score, mention_rate, llm_breakdown, competitor_share, query_summaries, score_history, top_competitor } = data;
