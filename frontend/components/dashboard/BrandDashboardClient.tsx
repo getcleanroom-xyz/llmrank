@@ -42,15 +42,11 @@ function DoodleCircle({ color = "var(--primary)", style }: { color?: string; sty
 
 interface BrandDashboardClientProps {
   brandId: string;
-  initialData: DashboardData | null;
-  initialQueries: MonitoredQuery[];
-  user: AuthUser | null;
 }
 
-function BrandDashboardPageInner({ brandId, initialData, initialQueries, user: serverUser }: BrandDashboardClientProps) {
+function BrandDashboardPageInner({ brandId }: BrandDashboardClientProps) {
   const searchParams = useSearchParams();
-  const { user: clientUser, loading: authLoading } = useAuth();
-  const user = serverUser ?? clientUser;
+  const { user, loading: authLoading } = useAuth();
   const [tab, setTabState] = useState<Tab>((searchParams.get("tab") as Tab) ?? "overview");
 
   const setTab = useCallback((t: Tab) => {
@@ -81,8 +77,8 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries, user: s
   const wasRunningRef = useRef(false);
 
   const freshData = dashResult?.dashboard ?? null;
-  const data: DashboardData | null = freshData ?? initialData;
-  const queries = dashResult?.queries ?? initialQueries;
+  const data: DashboardData | null = freshData ?? null;
+  const queries = dashResult?.queries ?? [];
   const isScanRunning = optimisticScanning || (data && (data.active_scan?.status === "pending" || data.active_scan?.status === "running"));
 
   useEffect(() => {
@@ -116,6 +112,7 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries, user: s
     if (!authLoading && !user) window.location.href = "/brands";
   }, [user, authLoading]);
 
+  if (authLoading) return <DashboardSkeleton />;
   if (!user) return null;
   if (!data) return <DashboardSkeleton />;
 
@@ -353,6 +350,6 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries, user: s
   );
 }
 
-export function BrandDashboardClient({ brandId, initialData, initialQueries, user }: BrandDashboardClientProps) {
-  return <BrandDashboardPageInner brandId={brandId} initialData={initialData} initialQueries={initialQueries} user={user} />;
+export function BrandDashboardClient({ brandId }: BrandDashboardClientProps) {
+  return <BrandDashboardPageInner brandId={brandId} />;
 }

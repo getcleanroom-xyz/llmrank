@@ -7,7 +7,7 @@ export function DashboardSkeleton() {
           <div className="skeleton" style={{ width: 80, height: 20 }} />
           <div className="skeleton" style={{ width: 40, height: 14 }} />
           <div style={{ flex: 1 }} />
-          <div className="skeleton" style={{ width: 60, height: 28, borderRadius: 14 }} />
+          <div className="skeleton" style={{ width: 60, height: 28 }} />
         </div>
       </div>
 
