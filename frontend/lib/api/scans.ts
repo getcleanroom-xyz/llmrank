@@ -80,6 +80,19 @@ export interface CompetitorQueryResultItem {
   brand_mentioned: boolean;
   brand_position: number | null;
   score: number | null;
+  sentiment: string;
+  raw_response: string;
+}
+
+export interface CompetitorLLMBreakdownItem {
+  llm_name: string;
+  mention_count: number;
+  total: number;
+  mention_pct: number;
+  avg_competitor_position: number | null;
+  avg_brand_position: number | null;
+  brand_wins: number;
+  competitor_wins: number;
 }
 
 export interface CompetitorDrilldownData {
@@ -92,6 +105,14 @@ export interface CompetitorDrilldownData {
   total_appearances: number;
   total_queries: number;
   beats_brand_count: number;
+  brand_wins_count: number;
+  both_absent_count: number;
+  avg_competitor_position: number | null;
+  avg_brand_position: number | null;
+  sentiment_summary: Record<string, number>;
+  llm_breakdown: CompetitorLLMBreakdownItem[];
+  competitor_profile: string;
+  historical_trend: { date: string; mention_pct: number; appearances: number; total_queries: number }[];
   queries: CompetitorQueryResultItem[];
 }
 

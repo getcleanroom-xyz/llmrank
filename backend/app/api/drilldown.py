@@ -214,10 +214,10 @@ async def get_competitor_drilldown(
     user: User = Depends(get_current_user),
 ):
     # Verify brand exists and not deleted
-    brand_result = await db.execute(
+    brand_row = (await db.execute(
         Brand.active().where(Brand.id == brand_id, Brand.owner_id == user.id)
-    )
-    if not brand_result.scalar_one_or_none():
+    )).scalar_one_or_none()
+    if not brand_row:
         raise HTTPException(404, "Brand not found")
 
     # Get latest completed scan
@@ -232,19 +232,17 @@ async def get_competitor_drilldown(
         raise HTTPException(404, "No completed scan found")
 
     # Get ALL results from the latest scan
-    all_results = await db.execute(
+    all_results = (await db.execute(
         select(QueryResult).where(QueryResult.scan_id == latest_scan.id)
-    )
-    all_results = all_results.scalars().all()
+    )).scalars().all()
 
     total_queries = len({r.query_id for r in all_results})
+    normalized_target = _normalize_competitor(competitor_name)
 
     # Filter to results where this competitor is mentioned
     comp_results = []
-    normalized_target = _normalize_competitor(competitor_name)
     for r in all_results:
-        comps = r.competitors_mentioned or []
-        for c in comps:
+        for c in (r.competitors_mentioned or []):
             if _normalize_competitor(c.get("name", "")) == normalized_target:
                 comp_results.append((r, c.get("position")))
                 break
@@ -259,17 +257,43 @@ async def get_competitor_drilldown(
     )
     query_map = {q.id: q for q in queries_query.scalars().all()}
 
+    # Compute head-to-head stats
     beats_count = 0
     brand_wins = 0
+    both_absent = 0
     queries_out = []
+    sentiments = {"positive": 0, "neutral": 0, "negative": 0}
+    llm_stats: dict[str, dict] = {}
+
     for r, comp_pos in comp_results:
         q = query_map.get(r.query_id)
         brand_pos = r.position if r.mentioned else None
+        sentiment = r.sentiment or "neutral"
+
         if r.mentioned and brand_pos is not None and comp_pos is not None:
             if comp_pos < brand_pos:
                 beats_count += 1
             elif comp_pos > brand_pos:
                 brand_wins += 1
+        elif not r.mentioned and comp_pos is None:
+            both_absent += 1
+
+        sentiments[sentiment] = sentiments.get(sentiment, 0) + 1
+
+        # Per-LLM aggregation
+        llm = r.llm_name
+        if llm not in llm_stats:
+            llm_stats[llm] = {"mention": 0, "comp_positions": [], "brand_positions": [], "brand_wins": 0, "comp_wins": 0, "total": 0}
+        llm_stats[llm]["total"] += 1
+        if comp_pos is not None:
+            llm_stats[llm]["comp_positions"].append(comp_pos)
+        if r.mentioned and brand_pos is not None:
+            llm_stats[llm]["brand_positions"].append(brand_pos)
+        if r.mentioned and brand_pos is not None and comp_pos is not None:
+            if comp_pos < brand_pos:
+                llm_stats[llm]["comp_wins"] += 1
+            elif comp_pos > brand_pos:
+                llm_stats[llm]["brand_wins"] += 1
 
         queries_out.append(CompetitorQueryResult(
             query_id=r.query_id,
@@ -279,56 +303,105 @@ async def get_competitor_drilldown(
             brand_mentioned=r.mentioned,
             brand_position=brand_pos,
             score=r.score,
+            sentiment=sentiment,
+            raw_response=r.raw_response[:500] if r.raw_response else "",
         ))
 
     queries_out.sort(key=lambda x: (x.competitor_position or 999))
 
-    # Look up domain from brand's competitors list
+    # Position averages
+    comp_positions = [p for _, p in comp_results if p is not None]
+    brand_positions = [r.position for r, _ in comp_results if r.mentioned and r.position is not None]
+    avg_comp_pos = round(sum(comp_positions) / len(comp_positions), 1) if comp_positions else None
+    avg_brand_pos = round(sum(brand_positions) / len(brand_positions), 1) if brand_positions else None
+
+    # Per-LLM breakdown
+    llm_breakdown = []
+    for llm_name, stats in sorted(llm_stats.items()):
+        total = stats["total"]
+        llm_breakdown.append(CompetitorLLMBreakdown(
+            llm_name=llm_name,
+            mention_count=total,
+            total=total_queries,
+            mention_pct=round(total / total_queries * 100, 1) if total_queries > 0 else 0,
+            avg_competitor_position=round(sum(stats["comp_positions"]) / len(stats["comp_positions"]), 1) if stats["comp_positions"] else None,
+            avg_brand_position=round(sum(stats["brand_positions"]) / len(stats["brand_positions"]), 1) if stats["brand_positions"] else None,
+            brand_wins=stats["brand_wins"],
+            competitor_wins=stats["comp_wins"],
+        ))
+
+    # Look up domain, logo, and crawled content from brand's competitors list
     comp_domain = ""
-    brand_result = await db.execute(select(Brand.competitors).where(Brand.id == brand_id, Brand.deleted_at.is_(None)))
-    competitors_data = brand_result.scalar_one_or_none()
-    if competitors_data:
-        for c in competitors_data:
-            if _normalize_competitor(c.get("name", "")) == _normalize_competitor(competitor_name):
-                stored = c.get("domain", "") or ""
-                if _is_valid_domain(stored):
-                    comp_domain = stored
-                break
-
-    # Generate competitive insight with richer data
-    brand_row = (await db.execute(Brand.active().where(Brand.id == brand_id))).scalar_one_or_none()
-    brand_name = brand_row.name if brand_row else ""
-
-    # Look up logo from brand's competitors list
     comp_logo = ""
-    if brand_row:
-        for c in (brand_row.competitors or []):
-            if _normalize_competitor(c.get("name", "")) == _normalize_competitor(competitor_name):
-                comp_logo = c.get("logo_url", "") or ""
-                break
+    comp_profile = ""
+    competitors_data = brand_row.competitors or []
+    for c in competitors_data:
+        if _normalize_competitor(c.get("name", "")) == normalized_target:
+            stored = c.get("domain", "") or ""
+            if _is_valid_domain(stored):
+                comp_domain = stored
+            comp_logo = c.get("logo_url", "") or ""
+            crawled = c.get("crawled_content", "") or ""
+            if crawled:
+                # Summarize the first 1500 chars of crawled content
+                comp_profile = crawled[:1500]
+            break
 
+    # Historical trend: query last 5 scans for this competitor's mention rate
+    historical_trend = []
+    try:
+        prev_scans_result = await db.execute(
+            select(Scan)
+            .where(Scan.brand_id == brand_id, Scan.status == ScanStatus.completed, Scan.id != latest_scan.id)
+            .order_by(desc(Scan.started_at))
+            .limit(5)
+        )
+        prev_scans = prev_scans_result.scalars().all()
+        for prev_scan in reversed(prev_scans):
+            prev_results = (await db.execute(
+                select(QueryResult).where(QueryResult.scan_id == prev_scan.id)
+            )).scalars().all()
+            prev_total = len({r.query_id for r in prev_results})
+            prev_comp = 0
+            for r in prev_results:
+                for c in (r.competitors_mentioned or []):
+                    if _normalize_competitor(c.get("name", "")) == normalized_target:
+                        prev_comp += 1
+                        break
+            historical_trend.append({
+                "date": (prev_scan.completed_at or prev_scan.started_at).isoformat(),
+                "mention_pct": round(prev_comp / prev_total * 100, 1) if prev_total > 0 else 0,
+                "appearances": prev_comp,
+                "total_queries": prev_total,
+            })
+        # Add current scan
+        historical_trend.append({
+            "date": (latest_scan.completed_at or latest_scan.started_at).isoformat(),
+            "mention_pct": round(len(comp_results) / total_queries * 100, 1) if total_queries > 0 else 0,
+            "appearances": len(comp_results),
+            "total_queries": total_queries,
+        })
+    except Exception as e:
+        logger.warning("Failed to build historical trend: %s", e)
+
+    # Generate insight
     comp_insight = ""
-    # Cache competitor insight to avoid repeated 15s LLM calls
-    insight_cache_key = f"comp_insight:{brand_id}:{latest_scan.id}:{_normalize_competitor(competitor_name)}"
+    insight_cache_key = f"comp_insight:{brand_id}:{latest_scan.id}:{normalized_target}"
     from app.services.cache import dashboard_cache
     cached_insight = dashboard_cache.get(insight_cache_key)
     if cached_insight is not None:
         comp_insight = cached_insight
     else:
         try:
-            top_queries = [q.query_text for q in [query_map.get(r.query_id) for r, _ in comp_results] if q]
-            brand_positions = [r.position for r, _ in comp_results if r.mentioned and r.position]
-            comp_positions = [p for _, p in comp_results if p is not None]
-            brand_avg_pos = round(sum(brand_positions) / len(brand_positions), 1) if brand_positions else None
-            comp_avg_pos = round(sum(comp_positions) / len(comp_positions), 1) if comp_positions else None
+            top_queries = [query_map.get(r.query_id).query_text for r, _ in comp_results if query_map.get(r.query_id)]
             comp_insight = await generate_competitor_insight(
-                brand_name, competitor_name,
+                brand_row.name, competitor_name,
                 round(len(comp_results) / len(all_results) * 100, 1) if all_results else 0,
                 brand_wins, beats_count,
-                len({r.query_id for r, _ in comp_results}) - beats_count - brand_wins,
+                both_absent,
                 branded_total=total_queries,
-                brand_position=brand_avg_pos,
-                competitor_position=comp_avg_pos,
+                brand_position=avg_brand_pos,
+                competitor_position=avg_comp_pos,
                 top_queries=top_queries,
             )
             if comp_insight:
@@ -351,5 +424,13 @@ async def get_competitor_drilldown(
         total_appearances=len(comp_results),
         total_queries=total_queries,
         beats_brand_count=beats_count,
+        brand_wins_count=brand_wins,
+        both_absent_count=both_absent,
+        avg_competitor_position=avg_comp_pos,
+        avg_brand_position=avg_brand_pos,
+        sentiment_summary=sentiments,
+        llm_breakdown=llm_breakdown,
+        competitor_profile=comp_profile,
+        historical_trend=historical_trend,
         queries=queries_out,
     )

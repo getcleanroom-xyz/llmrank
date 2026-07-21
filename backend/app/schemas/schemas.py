@@ -217,8 +217,21 @@ class CompetitorQueryResult(BaseModel):
     brand_mentioned: bool
     brand_position: Optional[int]
     score: Optional[float]
+    sentiment: str = "neutral"
+    raw_response: str = ""
 
     model_config = {"from_attributes": True}
+
+
+class CompetitorLLMBreakdown(BaseModel):
+    llm_name: str
+    mention_count: int
+    total: int
+    mention_pct: float
+    avg_competitor_position: Optional[float]
+    avg_brand_position: Optional[float]
+    brand_wins: int
+    competitor_wins: int
 
 
 class CompetitorDrilldownOut(BaseModel):
@@ -231,6 +244,14 @@ class CompetitorDrilldownOut(BaseModel):
     total_appearances: int
     total_queries: int
     beats_brand_count: int
+    brand_wins_count: int = 0
+    both_absent_count: int = 0
+    avg_competitor_position: Optional[float] = None
+    avg_brand_position: Optional[float] = None
+    sentiment_summary: dict = Field(default_factory=dict)
+    llm_breakdown: list[CompetitorLLMBreakdown] = Field(default_factory=list)
+    competitor_profile: str = ""
+    historical_trend: list[dict] = Field(default_factory=list)
     queries: list[CompetitorQueryResult]
 
 
