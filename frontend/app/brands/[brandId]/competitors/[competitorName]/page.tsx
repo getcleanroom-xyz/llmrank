@@ -17,6 +17,23 @@ export default function CompetitorDrilldownPage() {
 
   const toggleResponse = (key: string) => setExpandedResponses((r) => ({ ...r, [key]: !r[key] }));
 
+  // Hooks MUST be called before any early returns
+  const theyWin = data?.queries.filter((q) => q.brand_mentioned && q.competitor_position != null && q.competitor_position < (q.brand_position ?? 999)) ?? [];
+  const youWin = data?.queries.filter((q) => q.brand_mentioned && q.competitor_position != null && (q.brand_position ?? 999) < q.competitor_position) ?? [];
+  const youAbsent = data?.queries.filter((q) => !q.brand_mentioned && q.competitor_position != null) ?? [];
+
+  const sortedLlmBreakdown = useMemo(() => {
+    if (!data?.llm_breakdown) return [];
+    return [...data.llm_breakdown].sort((a, b) => {
+      const gapA = Math.abs(a.mention_pct - (data.brand_mention_pct ?? 0));
+      const gapB = Math.abs(b.mention_pct - (data.brand_mention_pct ?? 0));
+      return gapB - gapA;
+    });
+  }, [data?.llm_breakdown, data?.brand_mention_pct]);
+
+  const strengthsQueries = useMemo(() => theyWin.slice(0, 5), [theyWin]);
+  const opportunityQueries = useMemo(() => youAbsent.slice(0, 8), [youAbsent]);
+
   if (isLoading) return (
     <div className="page" style={{ display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "var(--text-muted)" }}>Loading...</div>
   );
@@ -32,26 +49,7 @@ export default function CompetitorDrilldownPage() {
   const threatBg = data.mention_pct >= 50 ? "#FEE2E2" : data.mention_pct >= 25 ? "#FEF3C7" : "#E6F9ED";
   const threatLabel = threatLevel + " threat";
 
-  const theyWin = data.queries.filter((q) => q.brand_mentioned && q.competitor_position != null && q.competitor_position < (q.brand_position ?? 999));
-  const youWin = data.queries.filter((q) => q.brand_mentioned && q.competitor_position != null && (q.brand_position ?? 999) < q.competitor_position);
-  const youAbsent = data.queries.filter((q) => !q.brand_mentioned && q.competitor_position != null);
-
-  const sortedLlmBreakdown = useMemo(() => {
-    if (!data.llm_breakdown) return [];
-    return [...data.llm_breakdown].sort((a, b) => {
-      const gapA = Math.abs(a.mention_pct - (data.brand_mention_pct ?? 0));
-      const gapB = Math.abs(b.mention_pct - (data.brand_mention_pct ?? 0));
-      return gapB - gapA;
-    });
-  }, [data.llm_breakdown, data.brand_mention_pct]);
-
-  const strengthsQueries = useMemo(() => {
-    return theyWin.slice(0, 5);
-  }, [theyWin]);
-
-  const opportunityQueries = useMemo(() => {
-    return youAbsent.slice(0, 8);
-  }, [youAbsent]);
+  const sentimentEntries = Object.entries(data.sentiment_summary).filter(([k]) => k !== "not_mentioned").sort((a, b) => b[1] - a[1]);
 
   return (
     <div className="page" style={{ display: "flex", flexDirection: "column" }}>
