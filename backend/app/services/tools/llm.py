@@ -40,8 +40,8 @@ async def call_llm(messages: list[dict], model_key: str = "chatgpt",
     }
     headers = {
         "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
-        "HTTP-Referer": "https://llmrank.dev",
-        "X-Title": "LLMRank",
+        "HTTP-Referer": "https://llmranked.org",
+        "X-Title": "LLMRanked",
         "Content-Type": "application/json",
     }
 
@@ -93,8 +93,8 @@ async def stream_llm(messages: list[dict], model_key: str = "claude",
     }
     headers = {
         "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
-        "HTTP-Referer": "https://llmrank.dev",
-        "X-Title": "LLMRank",
+        "HTTP-Referer": "https://llmranked.org",
+        "X-Title": "LLMRanked",
         "Content-Type": "application/json",
     }
 

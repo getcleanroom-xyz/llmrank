@@ -92,15 +92,15 @@ async def lifespan(app: FastAPI):
     from app.services.chat_persistence import init_chat_persistence
     init_chat_persistence()
 
-    logger.info("LLMRank API started (CORS: %s)", settings.cors_origins_list)
+    logger.info("LLMRanked API started (CORS: %s)", settings.cors_origins_list)
     yield
 
     await shutdown_scheduler()
-    logger.info("LLMRank API shutting down")
+    logger.info("LLMRanked API shutting down")
 
 
 app = FastAPI(
-    title="LLMRank API",
+    title="LLMRanked API",
     description="AI SEO visibility tracking — see how LLMs rank your brand",
     version="1.0.0",
     lifespan=lifespan,
@@ -138,4 +138,4 @@ app.include_router(conversations_router, prefix="/api/v1")
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "llmrank-api"}
+    return {"status": "ok", "service": "llmranked-api"}

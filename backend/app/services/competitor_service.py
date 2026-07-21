@@ -115,7 +115,7 @@ async def discover_competitors_by_category(classification: dict, client) -> list
 async def crawl_competitor_sites(competitors: list[dict], max_sites: int = 5) -> list[dict]:
     from urllib.parse import urljoin
     results = []
-    async with httpx.AsyncClient(timeout=10, follow_redirects=True, headers={"User-Agent": "LLMRank/1.0"}) as client:
+    async with httpx.AsyncClient(timeout=10, follow_redirects=True, headers={"User-Agent": "LLMRanked/1.0"}) as client:
         for comp in competitors[:max_sites]:
             domain = comp.get("domain", "")
             if not domain:

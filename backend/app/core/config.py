@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     FLW_SANDBOX: bool = False  # Set true for sandbox mode
     RESEND_API_KEY: str = ""
     ADMIN_EMAILS: str = ""
-    CAMPAIGN_FROM_EMAIL: str = "marketing@emails.getcleanroom.xyz"
+    CAMPAIGN_FROM_EMAIL: str = "marketing@llmranked.org"
     NEW_USER_CREDITS: int = 500
 
     @property

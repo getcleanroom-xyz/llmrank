@@ -1,4 +1,4 @@
-# LLMRank — AI SEO Visibility Tool
+# LLMRanked — AI SEO Visibility Tool
 
 Track exactly how ChatGPT, Gemini, Llama, Claude, DeepSeek, and more rank your brand when users ask the questions that matter.
 
@@ -8,7 +8,7 @@ Track exactly how ChatGPT, Gemini, Llama, Claude, DeepSeek, and more rank your b
 
 1. **Add a brand** — name + domain (e.g. Notion, notion.so)
 2. **Add queries** — the questions your target users ask LLMs ("best note-taking app for teams") — or let the AI auto-suggest them
-3. **Run a scan** — LLMRank fires your queries at all connected LLMs concurrently
+3. **Run a scan** — LLMRanked fires your queries at all connected LLMs concurrently
 4. **See results** — visibility score, LLM breakdown, competitor share of voice, per-query annotated responses
 5. **Get insights** — specific, actionable recommendations tied to your actual ranking gaps
 

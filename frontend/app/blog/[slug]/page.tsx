@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const post = getBlogPost(slug);
   if (!post) return { title: "Not Found" };
   return {
-    title: `${post.title} | LLMRank`,
+    title: `${post.title} | LLMRanked`,
     description: post.summary,
     openGraph: {
       title: post.title,

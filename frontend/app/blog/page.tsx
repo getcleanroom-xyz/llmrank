@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { getAllBlogPosts } from "@/lib/blog";
 
 export const metadata: Metadata = {
-  title: "Blog | LLMRank",
+  title: "Blog | LLMRanked",
   description:
     "Notes on AI visibility, generative engine optimization, and how brands show up in ChatGPT, Gemini, and other AI models.",
 };

@@ -209,7 +209,7 @@ async def generate_query_suggestions(brand_name: str, domain: str, keywords: lis
         return urls
 
     try:
-        async with _httpx.AsyncClient(timeout=8, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0 (compatible; LLMRank/1.0)"}) as client:
+        async with _httpx.AsyncClient(timeout=8, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0 (compatible; LLMRanked/1.0)"}) as client:
             to_visit = [BASE_URL.rstrip("/")]
             all_links: list[str] = []
 

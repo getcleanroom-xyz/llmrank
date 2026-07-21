@@ -1,7 +1,7 @@
 [
   {
     "topic": "How we increased a SaaS brand's ChatGPT visibility from 15% to 62% in 2 weeks",
-    "angle": "Step-by-step case study with real numbers from LLMRank user data",
+    "angle": "Step-by-step case study with real numbers from LLMRanked user data",
     "keywords": ["ChatGPT visibility", "SaaS AI optimization", "case study"],
     "category": "case-study",
     "target_audience": "SaaS founders"
@@ -22,7 +22,7 @@
   },
   {
     "topic": "We analyzed 500 brand scans. Here's what the most visible brands have in common.",
-    "angle": "Data-driven post using anonymized LLMRank scan data. Patterns across industries.",
+    "angle": "Data-driven post using anonymized LLMRanked scan data. Patterns across industries.",
     "keywords": ["AI visibility data", "brand mentions", "LLM optimization"],
     "category": "data",
     "target_audience": "marketing teams"

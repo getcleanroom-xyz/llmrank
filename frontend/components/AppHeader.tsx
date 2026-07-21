@@ -29,7 +29,7 @@ function HeaderDrawer({ open, onClose, children }: { open: boolean; onClose: () 
       <div className="header-drawer" onClick={(e) => e.stopPropagation()}>
         <div className="header-drawer-header">
           <Link href="/" style={{ fontSize: 14, fontWeight: 800, color: "var(--text)", textDecoration: "none", lineHeight: 1 }}>
-            llm<span style={{ background: "var(--primary)", padding: "0 4px", border: "2px solid var(--border)" }}>rank</span>
+            llm<span style={{ background: "var(--primary)", padding: "0 4px", border: "2px solid var(--border)" }}>ranked</span>
           </Link>
           <button onClick={onClose} className="btn btn-ghost btn-sm" style={{ fontSize: 14, lineHeight: 1 }}>✕</button>
         </div>
@@ -69,7 +69,7 @@ export function AppHeader({ breadcrumb }: { breadcrumb?: React.ReactNode }) {
             href={user ? "/brands" : "/"}
             style={{ fontSize: 14, fontWeight: 800, color: "var(--text)", textDecoration: "none", flexShrink: 0, lineHeight: 1 }}
           >
-            llm<span style={{ background: "var(--primary)", padding: "0 4px", border: "2px solid var(--border)" }}>rank</span>
+            llm<span style={{ background: "var(--primary)", padding: "0 4px", border: "2px solid var(--border)" }}>ranked</span>
           </Link>
 
           {breadcrumb && (

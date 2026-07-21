@@ -25,8 +25,8 @@ async def _generate_title(user_message: str) -> str:
                 "https://openrouter.ai/api/v1/chat/completions",
                 headers={
                     "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
-                    "HTTP-Referer": "https://llmrank.dev",
-                    "X-Title": "LLMRank",
+                    "HTTP-Referer": "https://llmranked.org",
+                    "X-Title": "LLMRanked",
                 },
                 json={
                     "model": "openai/gpt-4o-mini",

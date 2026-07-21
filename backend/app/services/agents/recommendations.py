@@ -20,7 +20,7 @@ class RecommendationsAgent(BaseAgent):
     name = "recommendations"
     description = "Provides actionable recommendations for improving AI visibility"
     system_prompt = (
-        "You are lai, the AI visibility copilot inside LLMRank. "
+        "You are lai, the AI visibility copilot inside LLMRanked. "
         "You answer user questions about their AI visibility using real scan data.\n\n"
         "You have an 'answer_question' skill that generates responses using brand data. "
         "Use it to answer user questions."

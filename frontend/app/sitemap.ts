@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { getAllBlogPosts } from "@/lib/blog";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://llmrank.getcleanroom.xyz";
+  const baseUrl = "https://llmranked.org";
 
   const blogPosts = getAllBlogPosts().map((post) => ({
     url: `${baseUrl}/blog/${post.slug}`,

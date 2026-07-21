@@ -64,7 +64,7 @@ async def _call_openrouter(messages: list[dict], model_key: str, client, tempera
         raise ValueError("OPENROUTER_API_KEY not configured")
     model = MODEL_REGISTRY[model_key]
     payload = {"model": model["id"], "messages": messages, "temperature": temperature, "max_tokens": max_tokens}
-    headers = {"Authorization": f"Bearer {settings.OPENROUTER_API_KEY}", "HTTP-Referer": "https://llmrank.dev", "X-Title": "LLMRank", "Content-Type": "application/json"}
+    headers = {"Authorization": f"Bearer {settings.OPENROUTER_API_KEY}", "HTTP-Referer": "https://llmranked.org", "X-Title": "LLMRanked", "Content-Type": "application/json"}
     resp = await client.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
     resp.raise_for_status()
     data = resp.json()

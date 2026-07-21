@@ -6,6 +6,6 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
     },
-    sitemap: "https://llmrank.getcleanroom.xyz/sitemap.xml",
+    sitemap: "https://llmranked.org/sitemap.xml",
   };
 }

@@ -180,7 +180,7 @@ async def schedule_campaign(campaign_id: uuid.UUID, body: ScheduleRequest, admin
     await db.commit()
     await db.refresh(campaign)
 
-    base_url = settings.cors_origins_list[0] if settings.cors_origins_list else "https://llmrank.getcleanroom.xyz"
+    base_url = settings.cors_origins_list[0] if settings.cors_origins_list else "https://llmranked.org"
     job_id = f"campaign_{campaign.id}"
     try:
         if scheduler.get_job(job_id):

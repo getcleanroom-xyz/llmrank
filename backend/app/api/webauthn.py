@@ -44,7 +44,7 @@ async def register_start(body: RegisterStartRequest, request: Request, response:
 
         options = webauthn.generate_registration_options(
             rp_id=settings.RP_ID,
-            rp_name="LLMRank",
+            rp_name="LLMRanked",
             user_id=temp_id.encode(),
             user_name=body.email,
             user_display_name=body.display_name,

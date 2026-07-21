@@ -40,7 +40,7 @@ export function LandingHeader() {
             href="/"
             style={{ fontSize: 14, fontWeight: 800, color: "var(--text)", textDecoration: "none", flexShrink: 0, lineHeight: 1 }}
           >
-            llm<span style={{ background: "var(--primary)", padding: "0 4px", border: "2px solid var(--border)" }}>rank</span>
+            llm<span style={{ background: "var(--primary)", padding: "0 4px", border: "2px solid var(--border)" }}>ranked</span>
           </Link>
 
           <div style={{ flex: 1, minWidth: 0 }} />

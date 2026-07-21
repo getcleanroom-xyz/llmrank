@@ -75,7 +75,7 @@ async def crawl_website(domain: str, max_pages: int = MAX_PAGES) -> str:
     try:
         async with httpx.AsyncClient(
             timeout=10, follow_redirects=True,
-            headers={"User-Agent": "Mozilla/5.0 (compatible; LLMRank/1.0)"}
+            headers={"User-Agent": "Mozilla/5.0 (compatible; LLMRanked/1.0)"}
         ) as client:
             to_visit = [base_url.rstrip("/")]
             all_links = []

@@ -354,7 +354,7 @@ async function createPasskeyCredential(
     publicKey: {
       challenge: base64urlToBuffer(challenge),
       rp: {
-        name: "LLMRank",
+        name: "LLMRanked",
         id: rpId,
       },
       user: {

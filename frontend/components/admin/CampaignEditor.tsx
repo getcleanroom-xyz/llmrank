@@ -636,7 +636,7 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
                     value={fromEmail}
                     onChange={(e) => setFromEmail(e.target.value)}
                     className="input"
-                    placeholder="marketing@emails.getcleanroom.xyz"
+                    placeholder="marketing@llmranked.org"
                     disabled={!editable}
                     style={{ fontSize: 13 }}
                   />

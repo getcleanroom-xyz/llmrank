@@ -7,8 +7,8 @@ import Link from "next/link";
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://llmrank.getcleanroom.xyz"),
-  title: "LLMRank | Track How AI Models Rank Your Brand",
+  metadataBase: new URL("https://llmranked.org"),
+  title: "LLMRanked | Track How AI Models Rank Your Brand",
   description:
     "See exactly how your brand appears in ChatGPT, Gemini, Claude, and other AI models. Free visibility tracking, competitor monitoring, and actionable insights to rank higher in AI search results.",
   keywords: [
@@ -22,17 +22,17 @@ export const metadata: Metadata = {
     "AI search optimization",
   ],
   openGraph: {
-    title: "LLMRank | Track How AI Models Rank Your Brand",
+    title: "LLMRanked | Track How AI Models Rank Your Brand",
     description:
       "See exactly how your brand appears in ChatGPT, Gemini, Claude, and more. Know what AI tells people about your company.",
-    url: "https://llmrank.getcleanroom.xyz",
-    siteName: "LLMRank",
+    url: "https://llmranked.org",
+    siteName: "LLMRanked",
     locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "LLMRank | Track How AI Models Rank Your Brand",
+    title: "LLMRanked | Track How AI Models Rank Your Brand",
     description:
       "See exactly how your brand appears in ChatGPT, Gemini, Claude, and more. Free to start.",
   },
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
     "max-image-preview": "large",
   },
   alternates: {
-    canonical: "https://llmrank.getcleanroom.xyz",
+    canonical: "https://llmranked.org",
   },
 };
 
@@ -151,7 +151,7 @@ const faqStructuredData = {
 const structuredData = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "LLMRank",
+  name: "LLMRanked",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   description:
@@ -206,7 +206,7 @@ function DashboardPreview() {
         <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#FBBF24", border: "1.5px solid #1A1A1A" }} />
         <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#22C55E", border: "1.5px solid #1A1A1A" }} />
         <div style={{ flex: 1, height: 16, borderRadius: 4, background: "var(--surface)", border: "1.5px solid var(--border)", marginLeft: 8, display: "flex", alignItems: "center", paddingLeft: 8, fontSize: 9, color: "var(--text-muted)", fontWeight: 600 }}>
-          llmrank.getcleanroom.xyz/brands/abc123
+          llmranked.org/brands/abc123
         </div>
       </div>
 
@@ -607,9 +607,9 @@ export default function HomePage() {
             <rect x="6.5" y="8" width="3" height="6" rx="0.5" fill="#DC2626" stroke="#1A1A1A" strokeWidth="1.2" />
           </svg>
           <span style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 14, fontWeight: 700, lineHeight: 1 }}>Featured on</span>
-          <a href="https://www.producthunt.com/products/llmrank?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-llmrank" target="_blank" rel="noopener noreferrer" style={{ display: "block", lineHeight: 0 }}>
+          <a href="https://www.producthunt.com/products/llmranked?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-llmranked" target="_blank" rel="noopener noreferrer" style={{ display: "block", lineHeight: 0 }}>
             <Image
-              alt="LLMRank on Product Hunt"
+              alt="LLMRanked on Product Hunt"
               width={200}
               height={43}
               src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1192976&theme=light&t=1783692046158"
@@ -624,7 +624,7 @@ export default function HomePage() {
             Blog
           </Link>
         </div>
-        llm<span style={{ color: "var(--primary)" }}>rank</span> · AI visibility tracking
+        llm<span style={{ color: "var(--primary)" }}>ranked</span> · AI visibility tracking
       </footer>
     </main>
   );

@@ -26,7 +26,7 @@ const caveat = Caveat({
 });
 
 export const metadata: Metadata = {
-  title: "LLMRank",
+  title: "LLMRanked",
   description: "Track how AI models rank your brand.",
   icons: { icon: "/favicon.svg" },
 };
