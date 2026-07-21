@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/lib/auth";
 import { useDashboard, useCredits } from "@/lib/hooks";
 import { queryKeys } from "@/lib/query-keys";
 import type { DashboardData, MonitoredQuery } from "@/types";
@@ -43,11 +44,13 @@ interface BrandDashboardClientProps {
   brandId: string;
   initialData: DashboardData | null;
   initialQueries: MonitoredQuery[];
-  user: AuthUser;
+  user: AuthUser | null;
 }
 
-function BrandDashboardPageInner({ brandId, initialData, initialQueries, user }: BrandDashboardClientProps) {
+function BrandDashboardPageInner({ brandId, initialData, initialQueries, user: serverUser }: BrandDashboardClientProps) {
   const searchParams = useSearchParams();
+  const { user: clientUser, loading: authLoading } = useAuth();
+  const user = serverUser ?? clientUser;
   const [tab, setTabState] = useState<Tab>((searchParams.get("tab") as Tab) ?? "overview");
 
   const setTab = useCallback((t: Tab) => {
@@ -108,6 +111,12 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries, user }:
     return () => clearInterval(interval);
   }, [isScanRunning, brandId, qc]);
 
+  // Redirect if not authenticated (client-side fallback)
+  useEffect(() => {
+    if (!authLoading && !user) window.location.href = "/brands";
+  }, [user, authLoading]);
+
+  if (!user) return null;
   if (!data) return <DashboardSkeleton />;
 
   const error = loadError ? (loadError instanceof Error ? loadError.message : "Failed to load") : null;

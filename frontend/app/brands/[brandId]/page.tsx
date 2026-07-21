@@ -1,5 +1,4 @@
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { getServerSession, getServerDashboard, getServerQueries } from "@/lib/api/server";
 import { DashboardSkeleton } from "@/components/dashboard/Skeletons";
@@ -18,13 +17,13 @@ export default async function BrandDashboardPage({
   params: Promise<{ brandId: string }>;
 }) {
   const { brandId } = await params;
-  const cookieHeader = (await cookies()).toString();
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
 
+  // Server-side auth check — if it fails, pass null and let client handle redirect
   const user = await getServerSession(cookieHeader);
-  if (!user) {
-    redirect("/brands");
-  }
 
+  // Fetch dashboard data server-side (passes even if auth fails — client will refetch)
   const [dashboardData, queriesData] = await Promise.all([
     getServerDashboard(brandId, cookieHeader),
     getServerQueries(brandId, cookieHeader),
