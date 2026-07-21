@@ -2,13 +2,13 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/lib/auth";
 import { useDashboard, useCredits } from "@/lib/hooks";
 import { queryKeys } from "@/lib/query-keys";
-import type { DashboardData } from "@/types";
-import { KpiCard, ScoreRing, InsightRow } from "@/components/ui";
+import type { DashboardData, MonitoredQuery } from "@/types";
+import type { AuthUser } from "@/lib/api/auth";
+import { ScoreRing, InsightRow } from "@/components/ui";
 import { AppHeader, PageHeader } from "@/components/AppHeader";
 import { ScanControls } from "@/components/dashboard/DashboardHeader";
 import { LLMBreakdownTable } from "@/components/dashboard/LLMBreakdownTable";
@@ -19,7 +19,7 @@ import { CompetitorsTab } from "@/components/dashboard/CompetitorsTab";
 import { ScoreHistoryChart } from "@/components/dashboard/ScoreHistoryChart";
 import { ScanHistory } from "@/components/dashboard/ScanHistory";
 import { ChatWidget } from "@/components/ChatWidget";
-import { DashboardSkeleton, KpiCardsSkeleton, TableSkeleton } from "@/components/dashboard/Skeletons";
+import { DashboardSkeleton } from "@/components/dashboard/Skeletons";
 
 type Tab = "overview" | "queries" | "scans" | "competitors";
 
@@ -39,13 +39,17 @@ function DoodleCircle({ color = "var(--primary)", style }: { color?: string; sty
   );
 }
 
-function BrandDashboardPageInner() {
-  const { brandId } = useParams<{ brandId: string }>();
+interface BrandDashboardClientProps {
+  brandId: string;
+  initialData: DashboardData | null;
+  initialQueries: MonitoredQuery[];
+  user: AuthUser;
+}
+
+function BrandDashboardPageInner({ brandId, initialData, initialQueries, user }: BrandDashboardClientProps) {
   const searchParams = useSearchParams();
-  const { user, loading: authLoading } = useAuth();
   const [tab, setTabState] = useState<Tab>((searchParams.get("tab") as Tab) ?? "overview");
 
-  // Sync tab state with URL without triggering navigation
   const setTab = useCallback((t: Tab) => {
     setTabState(t);
     const url = new URL(window.location.href);
@@ -53,7 +57,6 @@ function BrandDashboardPageInner() {
     window.history.pushState({}, "", url.toString());
   }, []);
 
-  // Handle browser back/forward
   useEffect(() => {
     const handler = () => {
       const params = new URLSearchParams(window.location.search);
@@ -66,7 +69,7 @@ function BrandDashboardPageInner() {
     return () => window.removeEventListener("popstate", handler);
   }, []);
 
-  const { data: dashResult, isLoading, error: loadError, refetch } = useDashboard(brandId);
+  const { data: dashResult, error: loadError, refetch } = useDashboard(brandId);
   const { data: credits } = useCredits();
   const qc = useQueryClient();
   const [scanError, setScanError] = useState<string | null>(null);
@@ -74,11 +77,11 @@ function BrandDashboardPageInner() {
   const [optimisticScanning, setOptimisticScanning] = useState(false);
   const wasRunningRef = useRef(false);
 
-  // Poll for scan completion
-  const data: DashboardData | null = dashResult?.dashboard ?? null;
+  const freshData = dashResult?.dashboard ?? null;
+  const data: DashboardData | null = freshData ?? initialData;
+  const queries = dashResult?.queries ?? initialQueries;
   const isScanRunning = optimisticScanning || (data && (data.active_scan?.status === "pending" || data.active_scan?.status === "running"));
 
-  // Clear optimistic state once dashboard confirms scan is running
   useEffect(() => {
     if (optimisticScanning && data?.active_scan) {
       setOptimisticScanning(false);
@@ -91,7 +94,6 @@ function BrandDashboardPageInner() {
   useEffect(() => {
     if (!isScanRunning) {
       if (wasRunningRef.current) {
-        // Scan just finished
         setScanComplete(true);
         qc.invalidateQueries({ queryKey: queryKeys.dashboard(brandId) });
         setTimeout(() => setScanComplete(false), 10000);
@@ -106,18 +108,9 @@ function BrandDashboardPageInner() {
     return () => clearInterval(interval);
   }, [isScanRunning, brandId, qc]);
 
-  useEffect(() => {
-    if (!authLoading && !user) window.location.href = "/brands";
-  }, [user, authLoading]);
+  if (!data) return <DashboardSkeleton />;
 
-  if (authLoading) return <DashboardSkeleton />;
-  if (!user) return null;
-
-  const queries = dashResult?.queries ?? [];
   const error = loadError ? (loadError instanceof Error ? loadError.message : "Failed to load") : null;
-
-  if (isLoading) return <DashboardSkeleton />;
-  if (!data) return <div className="page" style={{ padding: "var(--page-px)" }}><div style={{ color: "var(--red)", fontWeight: 700, marginBottom: 8 }}>{error ?? "Brand not found."}</div></div>;
 
   const { brand, latest_scan, active_scan, visibility_score, mention_rate, llm_breakdown, competitor_share, query_summaries, score_history, top_competitor } = data;
   const prev = score_history.length >= 2 ? score_history[score_history.length - 2] : null;
@@ -166,7 +159,6 @@ function BrandDashboardPageInner() {
       <div style={{ flex: 1, padding: "var(--gap) var(--page-px)", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
         {error && data && <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "8px 12px", marginBottom: 12, fontSize: 13, color: "#991B1B", fontWeight: 600 }}>{error}</div>}
 
-        {/* Tab bar with handwriting accent */}
         <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", gap: 6, flexWrap: "wrap" }}>
           <div style={{ fontSize: "clamp(22px, 3vw, 28px)", fontFamily: "var(--font-hand), Caveat, cursive", fontWeight: 700, color: "var(--text)", transform: "rotate(-0.5deg)", lineHeight: 1 }}>
             {brand.name}
@@ -183,7 +175,6 @@ function BrandDashboardPageInner() {
 
         {tab === "overview" && (
           <>
-            {/* Empty state onboarding */}
             {!hasScan && queries.length === 0 && (
               <div className="card" style={{ textAlign: "center", padding: "48px 24px", marginBottom: "var(--gap)", background: "#FFF9DB", border: "2px solid var(--border)", boxShadow: "3px 3px 0 #1A1A1A", transform: "rotate(-0.3deg)" }}>
                 <svg width="22" height="26" viewBox="0 0 22 26" fill="none" style={{ display: "block", margin: "0 auto 12px" }}>
@@ -199,7 +190,6 @@ function BrandDashboardPageInner() {
               </div>
             )}
 
-            {/* Hero score card */}
             {hasScan && (
               <div
                 className="card sketchy-accent"
@@ -217,13 +207,11 @@ function BrandDashboardPageInner() {
                   transform: "rotate(-0.2deg)",
                 }}
               >
-                {/* Pushpin */}
                 <svg width="22" height="26" viewBox="0 0 22 26" fill="none" style={{ position: "absolute", top: -12, left: 24, zIndex: 2 }}>
                   <ellipse cx="11" cy="5" rx="5.5" ry="5.5" fill="#EF4444" stroke="#1A1A1A" strokeWidth="1.5" />
                   <rect x="9" y="10" width="4" height="10" rx="1" fill="#DC2626" stroke="#1A1A1A" strokeWidth="1.5" />
                 </svg>
 
-                {/* Doodle circle behind score */}
                 <DoodleCircle color="var(--primary)" style={{ position: "absolute", right: 30, bottom: 20 }} />
 
                 <div style={{ flexShrink: 0 }}>
@@ -247,14 +235,13 @@ function BrandDashboardPageInner() {
               </div>
             )}
 
-            {/* Stat pills row — colored like sticky notes */}
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: "var(--gap)" }}>
               {[
                 { val: `${mention_rate}%`, label: "mention rate", bg: "#FFF9DB", acc: "var(--primary)", rot: "-0.3deg" },
                 { val: data.queries_monitored, label: "queries", bg: "#DBEAFF", acc: "#3B82F6", rot: "0.4deg" },
                 { val: top_competitor ?? "none", label: "top competitor", bg: top_competitor ? "#FEE2E2" : "#E6F9ED", acc: top_competitor ? "#991B1B" : "#22C55E", rot: "-0.4deg" },
                 { val: llm_breakdown.length || "-", label: "LLMs tracked", bg: "#F3E8FF", acc: "#A855F7", rot: "0.3deg" },
-              ].map((s, i) => (
+              ].map((s) => (
                 <div
                   key={s.label}
                   className="card sketchy"
@@ -276,7 +263,6 @@ function BrandDashboardPageInner() {
               ))}
             </div>
 
-            {/* Analysis grid */}
             <div className="grid-2" style={{ marginBottom: "var(--gap)" }}>
               <div className="card" style={{ position: "relative", transform: "rotate(-0.15deg)", borderTop: "4px solid var(--primary)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
@@ -295,11 +281,9 @@ function BrandDashboardPageInner() {
               </div>
             </div>
 
-            {/* Doodle animal divider */}
             <div style={{ textAlign: "center", margin: "10px 0 8px", opacity: 0.3 }}>
               <svg width="180" height="28" viewBox="0 0 180 28" fill="none">
                 <path d="M10 14 Q20 8 35 14 Q50 20 65 14 Q80 8 95 14 Q110 20 125 14 Q140 8 155 14 Q165 18 175 14" stroke="var(--primary)" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-                {/* tiny bird */}
                 <path d="M42 6 Q46 2 50 6 Q54 2 58 6" stroke="#3B82F6" strokeWidth="1.5" fill="none" strokeLinecap="round" />
                 <path d="M85 8 L88 4 M85 8 L82 6" stroke="#22C55E" strokeWidth="1.5" fill="none" strokeLinecap="round" />
                 <circle cx="128" cy="8" r="3" stroke="#A855F7" strokeWidth="1.5" fill="none" />
@@ -307,7 +291,6 @@ function BrandDashboardPageInner() {
               </svg>
             </div>
 
-            {/* Bottom row: queries + chart + insights */}
             <div className="dashboard-bottom-grid" style={{ marginBottom: "var(--gap)" }}>
               <div className="card dashboard-bottom-queries" style={{ position: "relative", transform: "rotate(-0.15deg)", borderTop: "4px solid #22C55E" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
@@ -361,6 +344,6 @@ function BrandDashboardPageInner() {
   );
 }
 
-export function BrandDashboardClient() {
-  return <BrandDashboardPageInner />;
+export function BrandDashboardClient({ brandId, initialData, initialQueries, user }: BrandDashboardClientProps) {
+  return <BrandDashboardPageInner brandId={brandId} initialData={initialData} initialQueries={initialQueries} user={user} />;
 }
