@@ -358,10 +358,10 @@ export default function CompetitorDrilldownPage() {
           const maxVal = Math.max(...trend.map((t) => t.mention_pct), 1);
           const minVal = Math.min(...trend.map((t) => t.mention_pct), 0);
           const range = maxVal - minVal || 1;
-          const padX = 8;
-          const padY = 10;
-          const chartW = 400;
-          const chartH = 80;
+          const chartW = 600;
+          const chartH = 140;
+          const padX = 40;
+          const padY = 16;
           const points = trend.map((t, i) => {
             const x = padX + (i / (trend.length - 1)) * (chartW - padX * 2);
             const y = padY + (1 - (t.mention_pct - minVal) / range) * (chartH - padY * 2);
@@ -376,7 +376,7 @@ export default function CompetitorDrilldownPage() {
                 <svg width="40" height="8" viewBox="0 0 40 8" fill="none"><path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5 Q35 7 40 4" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg>
               </div>
               <div style={{ overflowX: "auto" }}>
-                <svg viewBox={`0 0 ${chartW} ${chartH}`} style={{ width: "100%", minWidth: 200, height: chartH }}>
+                <svg viewBox={`0 0 ${chartW} ${chartH}`} style={{ width: "100%", height: chartH }}>
                   {/* Grid lines */}
                   {[0, 0.25, 0.5, 0.75, 1].map((pct) => {
                     const y = padY + (1 - pct) * (chartH - padY * 2);
