@@ -17,6 +17,15 @@ export default function CompetitorDrilldownPage() {
 
   const toggleResponse = (key: string) => setExpandedResponses((r) => ({ ...r, [key]: !r[key] }));
 
+  const fmtDate = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+  const fmtDateFull = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  };
+
   // Hooks MUST be called before any early returns
   const theyWin = data?.queries.filter((q) => q.brand_mentioned && q.competitor_position != null && q.competitor_position < (q.brand_position ?? 999)) ?? [];
   const youWin = data?.queries.filter((q) => q.brand_mentioned && q.competitor_position != null && (q.brand_position ?? 999) < q.competitor_position) ?? [];
@@ -344,43 +353,61 @@ export default function CompetitorDrilldownPage() {
         )}
 
         {/* 7. HISTORICAL TREND */}
-        {data.historical_trend && data.historical_trend.length > 1 && (
-          <div className="card sketchy" style={{ padding: "16px 18px", transform: "rotate(-0.15deg)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <div className="section-label" style={{ marginBottom: 0 }}>Historical trend</div>
-              <svg width="40" height="8" viewBox="0 0 40 8" fill="none"><path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5 Q35 7 40 4" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg>
+        {data.historical_trend && data.historical_trend.length > 1 && (() => {
+          const trend = data.historical_trend;
+          const maxVal = Math.max(...trend.map((t) => t.mention_pct), 1);
+          const minVal = Math.min(...trend.map((t) => t.mention_pct), 0);
+          const range = maxVal - minVal || 1;
+          const padX = 8;
+          const padY = 10;
+          const chartW = 400;
+          const chartH = 80;
+          const points = trend.map((t, i) => {
+            const x = padX + (i / (trend.length - 1)) * (chartW - padX * 2);
+            const y = padY + (1 - (t.mention_pct - minVal) / range) * (chartH - padY * 2);
+            return { x, y, pct: t.mention_pct, date: t.date };
+          });
+          const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
+          const areaD = pathD + ` L${points[points.length - 1].x},${chartH - padY} L${points[0].x},${chartH - padY} Z`;
+          return (
+            <div className="card sketchy" style={{ padding: "16px 18px", transform: "rotate(-0.15deg)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <div className="section-label" style={{ marginBottom: 0 }}>Historical trend</div>
+                <svg width="40" height="8" viewBox="0 0 40 8" fill="none"><path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5 Q35 7 40 4" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg>
+              </div>
+              <div style={{ overflowX: "auto" }}>
+                <svg viewBox={`0 0 ${chartW} ${chartH}`} style={{ width: "100%", minWidth: 200, height: chartH }}>
+                  {/* Grid lines */}
+                  {[0, 0.25, 0.5, 0.75, 1].map((pct) => {
+                    const y = padY + (1 - pct) * (chartH - padY * 2);
+                    const val = Math.round(minVal + pct * range);
+                    return (
+                      <g key={pct}>
+                        <line x1={padX} y1={y} x2={chartW - padX} y2={y} stroke="var(--border)" strokeWidth="0.5" strokeDasharray="3,3" />
+                        <text x={padX - 2} y={y + 3} fontSize="7" fill="var(--text-muted)" textAnchor="end">{val}%</text>
+                      </g>
+                    );
+                  })}
+                  {/* Area fill */}
+                  <path d={areaD} fill="var(--primary)" fillOpacity="0.1" />
+                  {/* Line */}
+                  <path d={pathD} fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  {/* Data points */}
+                  {points.map((p, i) => (
+                    <g key={i}>
+                      <circle cx={p.x} cy={p.y} r="3" fill="var(--surface)" stroke="var(--primary)" strokeWidth="2" />
+                      <text x={p.x} y={p.y - 6} fontSize="7" fill="var(--text)" textAnchor="middle" fontWeight="700">{p.pct}%</text>
+                    </g>
+                  ))}
+                </svg>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 10, color: "var(--text-muted)" }}>
+                <span>{fmtDateFull(trend[0].date)}</span>
+                <span>{fmtDateFull(trend[trend.length - 1].date)}</span>
+              </div>
             </div>
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 80, overflow: "hidden" }}>
-              {(() => {
-                const maxVal = Math.max(...data.historical_trend.map((t) => t.mention_pct), 1);
-                return data.historical_trend.map((t, i) => {
-                  const h = Math.max((t.mention_pct / maxVal) * 100, 4);
-                  return (
-                    <div key={i} style={{ flex: 1, minWidth: 8, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                      <div
-                        style={{
-                          width: "100%",
-                          maxWidth: 24,
-                          height: `${h}%`,
-                          background: getLLMColor(t.mention_pct >= 30 ? "high" : "low"),
-                          border: "1px solid var(--border)",
-                          borderRadius: 0,
-                          transition: "height 0.3s",
-                        }}
-                        title={`${t.date}: ${t.mention_pct}%`}
-                      />
-                      <span style={{ fontSize: 8, color: "var(--text-muted)", whiteSpace: "nowrap" }}>{t.date.slice(5)}</span>
-                    </div>
-                  );
-                });
-              })()}
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 10, color: "var(--text-muted)" }}>
-              <span>{data.historical_trend[0].date}</span>
-              <span>{data.historical_trend[data.historical_trend.length - 1].date}</span>
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* 8. QUERY DETAILS */}
         {theyWin.length > 0 && (
