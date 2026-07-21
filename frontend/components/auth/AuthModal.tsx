@@ -56,7 +56,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
     case "SET_VIEW":
       return { ...state, view: action.view, error: "" };
     case "SET_STEP":
-      return { ...state, step: action.step, error: "" };
+      return { ...state, step: action.step };
     case "SET_FIELD":
       return { ...state, [action.field]: action.value };
     case "SET_LOADING":
