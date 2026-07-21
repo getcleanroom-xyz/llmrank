@@ -5,11 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useCompetitorDrilldown } from "@/lib/hooks";
 import { AppHeader, PageHeader } from "@/components/AppHeader";
-
-const LLM_COLORS: Record<string, string> = {
-  chatgpt: "#22C55E", gemini: "#3B82F6", llama: "#A855F7", claude: "#F97316",
-  deepseek: "#22C55E", mistral: "#3B82F6", qwen: "#A855F7",
-};
+import { getLLMColor } from "@/components/ui";
 
 export default function CompetitorDrilldownPage() {
   const { brandId, competitorName } = useParams<{ brandId: string; competitorName: string }>();
@@ -34,10 +30,17 @@ export default function CompetitorDrilldownPage() {
   const theyWin = data.queries.filter((q) => q.brand_mentioned && q.competitor_position != null && q.competitor_position < (q.brand_position ?? 999));
   const youWin = data.queries.filter((q) => q.brand_mentioned && q.competitor_position != null && (q.brand_position ?? 999) < q.competitor_position);
   const youAbsent = data.queries.filter((q) => !q.brand_mentioned);
+  const bothAbsent = data.queries.filter((q) => !q.brand_mentioned && q.competitor_position == null);
 
   const threatLabel = data.mention_pct >= 50 ? "High threat" : data.mention_pct >= 25 ? "Medium threat" : "Low threat";
   const threatColor = data.mention_pct >= 50 ? "#991B1B" : data.mention_pct >= 25 ? "#F59E0B" : "#22C55E";
   const threatBg = data.mention_pct >= 50 ? "#FEE2E2" : data.mention_pct >= 25 ? "#FEF3C7" : "#E6F9ED";
+
+  // Compute "where they beat you" patterns
+  const theyBeatYouIn = Object.entries(llmGroups).map(([llm, queries]) => {
+    const wins = queries.filter((q) => q.brand_mentioned && q.competitor_position != null && q.competitor_position < (q.brand_position ?? 999)).length;
+    return { llm, wins, total: queries.length, pct: queries.length > 0 ? Math.round((wins / queries.length) * 100) : 0 };
+  }).filter((x) => x.wins > 0).sort((a, b) => b.pct - a.pct);
 
   return (
     <div className="page" style={{ display: "flex", flexDirection: "column" }}>
@@ -85,13 +88,12 @@ export default function CompetitorDrilldownPage() {
                   <path d="M0 3 Q8 0 16 4 Q24 6 32 2 Q40 0 48 5 Q56 6 64 2 Q72 0 80 4 Q88 6 96 2 Q104 0 112 4 Q120 3 120 2" fill="none" stroke={threatColor} strokeWidth="2" strokeLinecap="round" />
                 </svg>
 
-                {/* Quick details row */}
                 <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
                   <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.6, margin: 0, fontFamily: "var(--font-serif), Georgia, serif" }}>
-                    Mentioned in <strong>{data.mention_pct}%</strong> of all results ({data.total_appearances} out of {data.total_queries * 4}).
+                    Appears in <strong>{data.mention_pct}%</strong> of all AI responses ({data.total_appearances} out of {data.total_queries * 4}).
                     {data.beats_brand_count > 0
-                      ? <> Ranks higher than you in <strong style={{ color: "#991B1B" }}>{data.beats_brand_count}</strong> of those results.</>
-                      : <> Never ranked higher than you when both were mentioned.</>
+                      ? <> Ranks ahead of you in <strong style={{ color: "#991B1B" }}>{data.beats_brand_count}</strong> queries.</>
+                      : <> Never ranks ahead of you when both are mentioned.</>
                     }
                   </p>
                   {data.domain && (
@@ -108,7 +110,7 @@ export default function CompetitorDrilldownPage() {
           </div>
         </div>
 
-        {/* Actionable recommendation */}
+        {/* Actionable insight */}
         {data.insight && (
           <div style={{ position: "relative", background: "#FFF9DB", border: "2px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "3px 3px 0 #1A1A1A", padding: "14px 18px", marginBottom: "var(--gap)", transform: "rotate(0.2deg)" }}>
             <svg width="16" height="20" viewBox="0 0 16 20" fill="none" style={{ position: "absolute", top: -9, left: 12, zIndex: 2 }}>
@@ -130,40 +132,42 @@ export default function CompetitorDrilldownPage() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
             <div className="card sketchy" style={{ background: "#E6F9ED", padding: "12px 14px", textAlign: "center", transform: "rotate(-0.3deg)" }}>
               <div style={{ fontSize: 28, fontWeight: 800, color: "#22C55E", lineHeight: 1 }}>{youWin.length}</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#166534", textTransform: "uppercase" }}>You win</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#166534", textTransform: "uppercase" }}>You rank higher</div>
             </div>
             <div className="card sketchy" style={{ background: "#FEE2E2", padding: "12px 14px", textAlign: "center", transform: "rotate(0.3deg)" }}>
               <div style={{ fontSize: 28, fontWeight: 800, color: "#EF4444", lineHeight: 1 }}>{theyWin.length}</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#991B1B", textTransform: "uppercase" }}>{decodedName} wins</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#991B1B", textTransform: "uppercase" }}>{decodedName} ranks higher</div>
             </div>
             <div className="card sketchy" style={{ background: "var(--bg-dark)", padding: "12px 14px", textAlign: "center", transform: "rotate(-0.2deg)" }}>
               <div style={{ fontSize: 28, fontWeight: 800, color: "var(--text-muted)", lineHeight: 1 }}>{youAbsent.length}</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>You absent</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>You not mentioned</div>
             </div>
           </div>
         </div>
 
-        {/* Per-LLM dominance */}
-        {Object.keys(llmGroups).length > 0 && (
+        {/* Where they beat you — per LLM */}
+        {theyBeatYouIn.length > 0 && (
           <div className="card sketchy" style={{ padding: "16px 18px", marginBottom: "var(--gap)", transform: "rotate(-0.2deg)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <div className="section-label" style={{ marginBottom: 0 }}>Where they dominate</div>
+              <div className="section-label" style={{ marginBottom: 0 }}>Where they beat you</div>
               <svg width="40" height="8" viewBox="0 0 40 8" fill="none"><path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5 Q35 7 40 4" stroke="#F97316" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {Object.entries(llmGroups).map(([llm, queries]) => {
-                const wins = queries.filter((q) => q.brand_mentioned && q.competitor_position != null && q.competitor_position < (q.brand_position ?? 999)).length;
-                const pct = Math.round((wins / queries.length) * 100);
-                return (
-                  <div key={llm} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, textTransform: "capitalize", minWidth: 70, textAlign: "right", flexShrink: 0 }}>{llm}</span>
-                    <div className="bar-track" style={{ flex: 1, height: 10 }}>
-                      <div className="bar-fill" style={{ width: `${pct}%`, background: LLM_COLORS[llm] ?? "var(--text-muted)", borderRadius: 0 }} />
-                    </div>
-                    <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600, minWidth: 65, flexShrink: 0 }}>{wins}/{queries.length} ahead</span>
+              {theyBeatYouIn.map(({ llm, wins, total, pct }) => (
+                <div key={llm} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, textTransform: "capitalize", minWidth: 70, textAlign: "right", flexShrink: 0 }}>{llm}</span>
+                  <div className="bar-track" style={{ flex: 1, height: 10 }}>
+                    <div className="bar-fill" style={{ width: `${pct}%`, background: getLLMColor(llm), borderRadius: 0 }} />
                   </div>
-                );
-              })}
+                  <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600, minWidth: 80, flexShrink: 0 }}>{wins}/{total} ahead</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 10, lineHeight: 1.5 }}>
+              {theyBeatYouIn[0]?.pct >= 50
+                ? `${decodedName} dominates ${theyBeatYouIn[0].llm} — focus your visibility efforts there.`
+                : `${decodedName} has an edge in ${theyBeatYouIn.length} model${theyBeatYouIn.length > 1 ? "s" : ""}, but the gaps are closable.`
+              }
             </div>
           </div>
         )}
@@ -181,7 +185,7 @@ export default function CompetitorDrilldownPage() {
         {theyWin.length > 0 && (
           <div style={{ marginBottom: 14 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-              <div className="section-label" style={{ marginBottom: 0, color: "#991B1B" }}>They&apos;re ahead ({theyWin.length})</div>
+              <div className="section-label" style={{ marginBottom: 0, color: "#991B1B" }}>They rank higher ({theyWin.length})</div>
               <svg width="30" height="8" viewBox="0 0 30 8" fill="none"><path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -192,7 +196,7 @@ export default function CompetitorDrilldownPage() {
                     <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, textTransform: "capitalize", flexShrink: 0 }}>{q.llm_name}</span>
                   </div>
                   <div style={{ display: "flex", gap: 10, fontSize: 11, alignItems: "center", marginTop: 2 }}>
-                    <span style={{ color: "#991B1B", fontWeight: 700 }}>{decodedName}{q.competitor_position != null ? ` #${q.competitor_position}` : ""}</span>
+                    <span style={{ color: "#991B1B", fontWeight: 700 }}>{decodedName} #{q.competitor_position}</span>
                     <span style={{ color: "var(--text-muted)" }}>You #{q.brand_position}</span>
                   </div>
                 </div>
@@ -205,7 +209,7 @@ export default function CompetitorDrilldownPage() {
         {youWin.length > 0 && (
           <div style={{ marginBottom: 14 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-              <div className="section-label" style={{ marginBottom: 0, color: "#166534" }}>You&apos;re ahead ({youWin.length})</div>
+              <div className="section-label" style={{ marginBottom: 0, color: "#166534" }}>You rank higher ({youWin.length})</div>
               <svg width="30" height="8" viewBox="0 0 30 8" fill="none"><path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5" stroke="#22C55E" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -217,7 +221,7 @@ export default function CompetitorDrilldownPage() {
                   </div>
                   <div style={{ display: "flex", gap: 10, fontSize: 11, alignItems: "center", marginTop: 2 }}>
                     <span style={{ color: "#166534", fontWeight: 700 }}>You #{q.brand_position}</span>
-                    <span style={{ color: "var(--text-muted)" }}>{decodedName}{q.competitor_position != null ? ` #${q.competitor_position}` : ""}</span>
+                    <span style={{ color: "var(--text-muted)" }}>{decodedName} #{q.competitor_position}</span>
                   </div>
                 </div>
               ))}
@@ -229,23 +233,40 @@ export default function CompetitorDrilldownPage() {
         {youAbsent.length > 0 && (
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-              <div className="section-label" style={{ marginBottom: 0, color: "var(--text-muted)" }}>You&apos;re absent ({youAbsent.length})</div>
+              <div className="section-label" style={{ marginBottom: 0, color: "var(--text-muted)" }}>You&apos;re not mentioned ({youAbsent.length})</div>
               <svg width="30" height="8" viewBox="0 0 30 8" fill="none"><path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg>
             </div>
+            <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 10, lineHeight: 1.5 }}>
+              {decodedName} is mentioned in these queries but you are not. These are your biggest visibility gaps.
+            </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {youAbsent.map((q, i) => (
-                <div key={`${q.query_id}-${q.llm_name}`} className="card sketchy" style={{ padding: "10px 14px", transform: `rotate(${i % 2 === 0 ? "-0.15deg" : "0.15deg"})`, borderLeft: "4px solid var(--bg-dark)", background: "var(--surface)", opacity: 0.7 }}>
+              {youAbsent.filter((q) => q.competitor_position != null).map((q, i) => (
+                <div key={`${q.query_id}-${q.llm_name}`} className="card sketchy" style={{ padding: "10px 14px", transform: `rotate(${i % 2 === 0 ? "-0.15deg" : "0.15deg"})`, borderLeft: "4px solid var(--bg-dark)", background: "var(--surface)" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-                    <Link href={`/brands/${brandId}/queries/${q.query_id}`} style={{ fontSize: 13, fontWeight: 600, color: "var(--text-muted)", textDecoration: "none", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{q.query_text}</Link>
+                    <Link href={`/brands/${brandId}/queries/${q.query_id}`} style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", textDecoration: "none", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{q.query_text}</Link>
                     <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, textTransform: "capitalize", flexShrink: 0 }}>{q.llm_name}</span>
                   </div>
                   <div style={{ display: "flex", gap: 10, fontSize: 11, alignItems: "center", marginTop: 2 }}>
-                    <span style={{ color: "#991B1B", fontWeight: 700 }}>{decodedName}{q.competitor_position != null ? ` #${q.competitor_position}` : ""}</span>
-                    <span style={{ color: "var(--text-muted)" }}>Not mentioned</span>
+                    <span style={{ color: "#991B1B", fontWeight: 700 }}>{decodedName} #{q.competitor_position}</span>
+                    <span style={{ color: "var(--text-muted)" }}>You: not present</span>
                   </div>
                 </div>
               ))}
+              {bothAbsent.length > 0 && (
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4, fontWeight: 600 }}>
+                  Neither of you mentioned in {bothAbsent.length} other queries.
+                </div>
+              )}
             </div>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {data.queries.length === 0 && (
+          <div className="card" style={{ textAlign: "center", padding: 32 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>No data yet</div>
+            <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 14 }}>Run a scan to see how {decodedName} compares to your brand.</div>
+            <Link href={`/brands/${brandId}`} className="btn btn-primary btn-sm" style={{ textDecoration: "none" }}>Go to dashboard</Link>
           </div>
         )}
       </div>

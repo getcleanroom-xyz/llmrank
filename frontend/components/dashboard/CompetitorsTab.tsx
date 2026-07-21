@@ -90,7 +90,7 @@ export function CompetitorsTab({ brandId }: { brandId: string }) {
       )}
 
       {/* Competitor detail cards */}
-      <div className="section-label" style={{ marginBottom: 10 }}>All competitors ({competitorShare.length})</div>
+      <div className="section-label" style={{ marginBottom: 10 }}>All competitors ({meaningful.length > 0 ? `${meaningful.length} threats shown of ` : ""}{competitorShare.length})</div>
       <div className="grid-2">
         {sorted.map((c, i) => {
           const col = COMP_COLORS[i % COMP_COLORS.length];

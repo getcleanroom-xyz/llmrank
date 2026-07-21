@@ -34,8 +34,8 @@ export function ScoreRing({ score, size = 80, stroke = 6 }: { score: number; siz
   );
 }
 
-const LLM_COLORS: Record<string, string> = { chatgpt: "#22C55E", gemini: "#3B82F6", llama: "#A855F7", claude: "#F97316" };
-const LLM_LABELS: Record<string, string> = { chatgpt: "ChatGPT", gemini: "Gemini", llama: "Llama 3", claude: "Claude" };
+const LLM_COLORS: Record<string, string> = { chatgpt: "#22C55E", gpt4o: "#10B981", gemini: "#3B82F6", llama: "#A855F7", "llama-small": "#7C3AED", claude: "#F97316", deepseek: "#EF4444", "deepseek-r1": "#DC2626", mistral: "#6366F1", qwen: "#EC4899" };
+const LLM_LABELS: Record<string, string> = { chatgpt: "GPT-4o Mini", gpt4o: "GPT-4o", gemini: "Gemini", llama: "Llama 3.3", "llama-small": "Llama 3.1", claude: "Claude", deepseek: "DeepSeek", "deepseek-r1": "DeepSeek R1", mistral: "Mistral", qwen: "Qwen" };
 
 export function LLMTag({ name }: { name: string }) {
   const color = LLM_COLORS[name] ?? "#888";

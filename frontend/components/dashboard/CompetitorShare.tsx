@@ -20,7 +20,7 @@ export function CompetitorShare({ items, brandName, brandScore }: { items: Compe
             key={c.name}
             onClick={() => router.push(`/brands/${brandId}/competitors/${encodeURIComponent(c.name)}`)}
             style={{ background: "var(--bg-dark)", border: "1.5px solid var(--border)", borderRadius: "var(--radius)", padding: "8px 10px", cursor: "pointer", transition: "background 0.1s" }}
-            onMouseEnter={(e) => e.currentTarget.style.background = "#FEE2E2"}
+            onMouseEnter={(e) => e.currentTarget.style.background = "#FFF9DB"}
             onMouseLeave={(e) => e.currentTarget.style.background = "var(--bg-dark)"}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
