@@ -8,10 +8,10 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://user:password@localhost:5432/llmrank"
     OPENROUTER_API_KEY: str = ""
     SECRET_KEY: str = "dev-secret-change-in-production"
-    CORS_ORIGINS: str = "http://localhost:3000"
+    CORS_ORIGINS: str = "http://localhost:3000,https://www.llmranked.org,https://llmranked.org"
     RATE_LIMIT_PER_MINUTE: int = 10
-    RP_ID: str = "localhost"  # WebAuthn Relying Party ID
-    RP_ORIGIN: str = "http://localhost:3000"  # WebAuthn origin URL
+    RP_ID: str = "localhost"  # WebAuthn Relying Party ID (set to llmranked.org in production)
+    RP_ORIGIN: str = "http://localhost:3000"  # WebAuthn origin URL (set to https://www.llmranked.org in production)
     SESSION_EXPIRE_HOURS: int = 720  # 30 days
     FLW_CLIENT_ID: str = ""  # Flutterwave v4 client ID
     FLW_CLIENT_SECRET: str = ""  # Flutterwave v4 client secret

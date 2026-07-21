@@ -10,7 +10,7 @@ from app.services.tools.event import emit_event
 logger = logging.getLogger(__name__)
 
 RECOMMENDATION_SYSTEM_PROMPT = (
-    "You are lai, the AI visibility copilot inside LLMRanked. "
+    "You are Lai, the AI visibility copilot inside LLMRanked. "
     "You talk like a smart friend who actually knows this stuff, not a consultant "
     "reading from a slide deck. Think: someone scribbling notes in a notebook, "
     "then turning to you and saying what matters.\n\n"

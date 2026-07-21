@@ -18,7 +18,7 @@ function LaiIcon({ size = 24, color = "currentColor" }: { size?: number; color?:
     <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M6 8C6 6.34315 7.34315 5 9 5H31C32.6569 5 34 6.34315 34 8V24C34 25.6569 32.6569 27 31 27H20L12 34V27H9C7.34315 27 6 25.6569 6 24V8Z" fill={color} fillOpacity="0.15" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
       <text x="11" y="21" fontFamily="Georgia, serif" fontSize="13" fontWeight="800" fontStyle="italic" fill={color} letterSpacing="-0.5">
-        lai
+        Lai
       </text>
     </svg>
   );
@@ -249,7 +249,7 @@ export function ChatWidget({ brandId }: { brandId: string }) {
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}><LaiIcon size={22} color="#1A1A1A" /></div>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700 }}>lai</div>
+                <div style={{ fontSize: 13, fontWeight: 700 }}>Lai</div>
                 <div style={{ fontSize: 10, color: "var(--text-muted)" }}>Your visibility copilot</div>
               </div>
             </div>
