@@ -135,7 +135,7 @@ function BrandDashboardPageInner() {
                 {new Date((active_scan ?? latest_scan)!.completed_at!).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
               </span>
             )}
-            <ScanControls brandId={brandId} latestScan={active_scan ?? latest_scan} credits={credits} onScanError={setScanError} />
+            <ScanControls brandId={brandId} latestScan={active_scan ?? latest_scan} credits={credits} onScanError={setScanError} lastScanLLMs={llm_breakdown.map((b) => b.llm_name)} />
           </div>
         </div>
       </PageHeader>

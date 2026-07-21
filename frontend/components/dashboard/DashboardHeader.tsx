@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTriggerScan } from "@/lib/hooks";
 import type { Brand, Scan } from "@/types";
@@ -19,13 +19,21 @@ export const LLM_OPTIONS = [
   { id: "qwen", label: "Qwen 2.5 72B", provider: "Alibaba" },
 ];
 
-export function ScanControls({ brandId, latestScan, credits, onScanError }: { brandId: string; latestScan: Scan | null; credits: CreditBalance | undefined; onScanError?: (msg: string | null) => void }) {
+export function ScanControls({ brandId, latestScan, credits, onScanError, lastScanLLMs }: { brandId: string; latestScan: Scan | null; credits: CreditBalance | undefined; onScanError?: (msg: string | null) => void; lastScanLLMs?: string[] }) {
   const triggerScan = useTriggerScan();
   const router = useRouter();
   const [scanError, setScanError] = useState<string | null>(null);
-  const [selectedLLMs, setSelectedLLMs] = useState(["chatgpt", "llama"]);
+  const [selectedLLMs, setSelectedLLMs] = useState(lastScanLLMs && lastScanLLMs.length > 0 ? lastScanLLMs : ["chatgpt", "llama"]);
   const [showConfig, setShowConfig] = useState(false);
   const configRef = useRef<HTMLDivElement>(null);
+
+  // Sync selected LLMs when last scan changes
+  const prevLLMsKey = useMemo(() => (lastScanLLMs ?? []).join(","), [lastScanLLMs]);
+  useEffect(() => {
+    if (lastScanLLMs && lastScanLLMs.length > 0) {
+      setSelectedLLMs(lastScanLLMs);
+    }
+  }, [prevLLMsKey]);
 
   const isRunning = latestScan?.status === "pending" || latestScan?.status === "running";
 
