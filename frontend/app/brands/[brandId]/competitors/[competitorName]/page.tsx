@@ -240,14 +240,14 @@ export default function CompetitorDrilldownPage() {
               {decodedName} is mentioned in these queries but you are not. These are your biggest visibility gaps.
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {youAbsent.filter((q) => q.competitor_position != null).map((q, i) => (
+              {youAbsent.map((q, i) => (
                 <div key={`${q.query_id}-${q.llm_name}`} className="card sketchy" style={{ padding: "10px 14px", transform: `rotate(${i % 2 === 0 ? "-0.15deg" : "0.15deg"})`, borderLeft: "4px solid var(--bg-dark)", background: "var(--surface)" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
                     <Link href={`/brands/${brandId}/queries/${q.query_id}`} style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", textDecoration: "none", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{q.query_text}</Link>
                     <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, textTransform: "capitalize", flexShrink: 0 }}>{q.llm_name}</span>
                   </div>
                   <div style={{ display: "flex", gap: 10, fontSize: 11, alignItems: "center", marginTop: 2 }}>
-                    <span style={{ color: "#991B1B", fontWeight: 700 }}>{decodedName} #{q.competitor_position}</span>
+                    <span style={{ color: "#991B1B", fontWeight: 700 }}>{decodedName} {q.competitor_position != null ? `#${q.competitor_position}` : "mentioned"}</span>
                     <span style={{ color: "var(--text-muted)" }}>You: not present</span>
                   </div>
                 </div>
