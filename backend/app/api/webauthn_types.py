@@ -54,6 +54,23 @@ class EmailLoginRequest(BaseModel):
     password: str
 
 
+class RecoverRequest(BaseModel):
+    email: EmailStr
+
+class RecoverFinishRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(..., min_length=6, max_length=6)
+    password: str = Field(..., min_length=8, max_length=128)
+    display_name: str | None = None
+
+class AddPasskeyStartRequest(BaseModel):
+    device_name: str = "Unknown device"
+
+class AddPasskeyFinishRequest(BaseModel):
+    credential: dict
+    device_name: str
+
+
 def b64url_encode(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
 

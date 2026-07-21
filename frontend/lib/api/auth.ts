@@ -50,3 +50,37 @@ export const authEmailLogin = (email: string, password: string) =>
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
+
+// ─── Account Recovery ─────────────────────────────────────────────────────────
+
+export const authRecover = (email: string) =>
+  apiFetch<{ status: string; message: string }>("/auth/recover", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+
+export const authRecoverFinish = (email: string, code: string, password: string, display_name?: string) =>
+  apiFetch<{ status: string; user: AuthUser }>("/auth/recover/finish", {
+    method: "POST",
+    body: JSON.stringify({ email, code, password, display_name }),
+  });
+
+// ─── Add Passkey (for logged-in users) ────────────────────────────────────────
+
+export const authAddPasskeyStart = (device_name: string) =>
+  apiFetch<{ challenge: string; rp_id: string; user_id: string }>("/auth/passkeys/start", {
+    method: "POST",
+    body: JSON.stringify({ device_name }),
+  });
+
+export const authAddPasskeyFinish = (credential: Record<string, unknown>, device_name: string) =>
+  apiFetch<{ status: string; message: string }>("/auth/passkeys/finish", {
+    method: "POST",
+    body: JSON.stringify({ credential, device_name }),
+  });
+
+export const authListPasskeys = () =>
+  apiFetch<{ id: string; device_name: string; created_at: string; last_used_at: string }[]>("/auth/passkeys");
+
+export const authDeletePasskey = (passkey_id: string) =>
+  apiFetch<{ status: string }>(`/auth/passkeys/${passkey_id}`, { method: "DELETE" });

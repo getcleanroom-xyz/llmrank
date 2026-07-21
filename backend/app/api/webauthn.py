@@ -14,6 +14,8 @@ from app.api.webauthn_types import (
     RegisterStartRequest, RegisterStartResponse, RegisterFinishRequest,
     LoginStartRequest, LoginStartResponse, LoginFinishRequest,
     EmailRegisterRequest, EmailLoginRequest,
+    RecoverRequest, RecoverFinishRequest,
+    AddPasskeyStartRequest, AddPasskeyFinishRequest,
     UserResponse, PasskeyResponse, b64url_encode, b64url_decode,
 )
 
@@ -409,3 +411,228 @@ async def delete_passkey(passkey_id: uuid.UUID, user: User = Depends(get_current
     await db.delete(passkey)
     await db.commit()
     return {"status": "ok"}
+
+
+# ─── Account Recovery (for passkey-only users locked out after domain change) ──
+
+_recovery_codes: dict[str, tuple[str, float]] = {}  # email -> (code, timestamp)
+RECOVERY_CODE_TTL = 900  # 15 minutes
+
+
+@router.post("/recover")
+async def recover_account(body: RecoverRequest, db: AsyncSession = Depends(get_db)):
+    """Send a 6-digit recovery code to the user's email.
+
+    Allows passkey-only users to set a password and regain access.
+    """
+    import secrets as _secrets
+
+    result = await db.execute(select(User).where(User.email == body.email))
+    user = result.scalar_one_or_none()
+    if not user:
+        # Don't reveal whether the email exists
+        return {"status": "ok", "message": "If an account exists, a recovery code has been sent."}
+
+    code = "".join(_secrets.choice("0123456789") for _ in range(6))
+    _recovery_codes[body.email.lower()] = (code, time.time())
+
+    from app.services.email_service import send_email
+    html = f"""
+    <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
+      <h2 style="margin: 0 0 8px;">Recover your LLMRanked account</h2>
+      <p style="color: #555; margin: 0 0 24px;">Use this code to set a new password and regain access to your account.</p>
+      <div style="background: #f5f5f0; border: 2px solid #1a1a1a; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 24px;">
+        <span style="font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #1a1a1a;">{code}</span>
+      </div>
+      <p style="color: #999; font-size: 12px; margin: 0;">This code expires in 15 minutes. If you didn't request this, you can safely ignore this email.</p>
+    </div>
+    """
+    from_email = settings.CAMPAIGN_FROM_EMAIL
+    ok, err = send_email(body.email, "Your LLMRanked recovery code", html, from_email)
+    if not ok:
+        logger.warning("Failed to send recovery email to %s: %s", body.email, err)
+
+    return {"status": "ok", "message": "If an account exists, a recovery code has been sent."}
+
+
+@router.post("/recover/finish")
+async def recover_finish(body: RecoverFinishRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
+    """Verify recovery code and set a password on the existing account."""
+    from app.services.password import hash_password
+
+    email_lower = body.email.lower()
+    stored = _recovery_codes.get(email_lower)
+    if not stored:
+        raise HTTPException(400, "No recovery code requested. Please request one first.")
+
+    code, timestamp = stored
+    if time.time() - timestamp > RECOVERY_CODE_TTL:
+        _recovery_codes.pop(email_lower, None)
+        raise HTTPException(400, "Recovery code expired. Please request a new one.")
+
+    if body.code != code:
+        raise HTTPException(400, "Invalid recovery code.")
+
+    result = await db.execute(select(User).where(User.email == body.email))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(404, "Account not found.")
+
+    # Set the password
+    user.hashed_password = hash_password(body.password)
+    if body.display_name:
+        user.display_name = body.display_name
+    await db.commit()
+
+    _recovery_codes.pop(email_lower, None)
+
+    # Log the user in
+    token = _create_session_token(str(user.id))
+    response.set_cookie(
+        key="session",
+        value=token,
+        httponly=True,
+        secure=settings.RP_ORIGIN.startswith("https"),
+        samesite="none" if settings.RP_ORIGIN.startswith("https") else "lax",
+        max_age=settings.SESSION_EXPIRE_HOURS * 3600,
+    )
+
+    logger.info("Account recovered for %s — password set", body.email)
+    return {"status": "ok", "user": UserResponse(
+        id=str(user.id),
+        email=user.email,
+        display_name=user.display_name,
+        created_at=user.created_at.isoformat(),
+        is_admin=user.email in settings.admin_emails_list,
+    )}
+
+
+# ─── Add Passkey (for logged-in users) ────────────────────────────────────────
+
+_pending_add_passkey: dict[str, str] = {}  # user_id -> challenge_b64
+_pending_add_passkey_ts: dict[str, float] = {}
+
+
+@router.post("/passkeys/start", response_model=RegisterStartResponse)
+async def add_passkey_start(body: AddPasskeyStartRequest, request: Request, response: Response,
+                            user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Start adding a new passkey to an existing account."""
+    try:
+        import webauthn
+        from webauthn.helpers import bytes_to_base64url
+
+        user_id_str = str(user.id)
+        options = webauthn.generate_registration_options(
+            rp_id=settings.RP_ID,
+            rp_name="LLMRanked",
+            user_id=user_id_str.encode(),
+            user_name=user.email,
+            user_display_name=user.display_name,
+        )
+
+        challenge_b64 = bytes_to_base64url(options.challenge)
+        _pending_add_passkey[user_id_str] = challenge_b64
+        _pending_add_passkey_ts[user_id_str] = time.time()
+
+        # Store device_name in a cookie so finish can read it
+        response.set_cookie(
+            key="add_pk_challenge",
+            value=_sign_data(challenge_b64),
+            httponly=True,
+            secure=settings.RP_ORIGIN.startswith("https"),
+            samesite="none" if settings.RP_ORIGIN.startswith("https") else "lax",
+            max_age=300,
+        )
+        response.set_cookie(
+            key="add_pk_device",
+            value=_sign_data(body.device_name),
+            httponly=True,
+            secure=settings.RP_ORIGIN.startswith("https"),
+            samesite="none" if settings.RP_ORIGIN.startswith("https") else "lax",
+            max_age=300,
+        )
+
+        return RegisterStartResponse(challenge=challenge_b64, rp_id=settings.RP_ID, user_id=user_id_str)
+
+    except ImportError:
+        raise HTTPException(500, "WebAuthn library not installed")
+    except Exception as e:
+        logger.exception("Add passkey start failed")
+        raise HTTPException(500, "Failed to start passkey registration")
+
+
+@router.post("/passkeys/finish")
+async def add_passkey_finish(body: AddPasskeyFinishRequest, request: Request, response: Response,
+                             user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Finish adding a new passkey to an existing account."""
+    try:
+        from webauthn import verify_registration_response, base64url_to_bytes
+
+        signed_challenge = request.cookies.get("add_pk_challenge")
+        if not signed_challenge:
+            raise HTTPException(400, "Missing challenge cookie — restart")
+        challenge_b64 = _verify_signed_data(signed_challenge)
+        if not challenge_b64:
+            raise HTTPException(400, "Invalid challenge — restart")
+
+        # Verify the challenge matches
+        user_id_str = str(user.id)
+        stored_challenge = _pending_add_passkey.get(user_id_str)
+        if not stored_challenge or stored_challenge != challenge_b64:
+            raise HTTPException(400, "Challenge mismatch — restart")
+
+        # Check TTL
+        ts = _pending_add_passkey_ts.get(user_id_str, 0)
+        if time.time() - ts > REGISTRATION_TTL:
+            _pending_add_passkey.pop(user_id_str, None)
+            _pending_add_passkey_ts.pop(user_id_str, None)
+            raise HTTPException(400, "Challenge expired — restart")
+
+        from webauthn.helpers import bytes_to_base64url
+
+        verification = verify_registration_response(
+            credential=body.credential,
+            expected_challenge=base64url_to_bytes(challenge_b64),
+            expected_origin=settings.RP_ORIGIN,
+            expected_rp_id=settings.RP_ID,
+        )
+
+        # Check if this credential ID already exists
+        existing = await db.execute(
+            select(Passkey).where(Passkey.credential_id == b64url_encode(verification.credential_id))
+        )
+        if existing.scalar_one_or_none():
+            raise HTTPException(409, "This passkey is already registered")
+
+        device_name = body.device_name or "Unknown device"
+        signed_device = request.cookies.get("add_pk_device")
+        if signed_device:
+            decoded = _verify_signed_data(signed_device)
+            if decoded:
+                device_name = decoded
+
+        passkey = Passkey(
+            id=uuid.uuid4(),
+            user_id=user.id,
+            credential_id=b64url_encode(verification.credential_id),
+            credential_public_key=bytes_to_base64url(verification.credential_public_key),
+            sign_count=verification.sign_count,
+            device_name=device_name,
+        )
+        db.add(passkey)
+        await db.commit()
+
+        _pending_add_passkey.pop(user_id_str, None)
+        _pending_add_passkey_ts.pop(user_id_str, None)
+
+        response.delete_cookie("add_pk_challenge")
+        response.delete_cookie("add_pk_device")
+
+        logger.info("Added passkey for user %s: %s", user.email, device_name)
+        return {"status": "ok", "message": f"Passkey '{device_name}' added successfully"}
+
+    except ImportError:
+        raise HTTPException(500, "WebAuthn library not installed")
+    except Exception as e:
+        logger.exception("Add passkey finish failed")
+        raise HTTPException(400, "Failed to add passkey")
