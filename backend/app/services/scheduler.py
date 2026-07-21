@@ -70,16 +70,6 @@ async def init_scheduler():
     )
     logger.info("Registered daily query refresh job (3:00 AM)")
 
-    # Register weekly blog post generation (Monday 9 AM)
-    scheduler.add_job(
-        weekly_blog_post,
-        trigger=CronTrigger(day_of_week="mon", hour=9, minute=0),
-        id="blog_post_weekly",
-        replace_existing=True,
-        misfire_grace_time=3600,
-    )
-    logger.info("Registered weekly blog post job (Monday 9:00 AM)")
-
     try:
         from app.core.database import AsyncSessionLocal
         from app.models.models import Campaign, CampaignStatus, ScheduleType
@@ -163,18 +153,3 @@ async def periodic_query_refresh():
                 logger.exception("Query refresh error for %s: %s", brand.name, e)
 
     logger.info("Periodic query refresh complete")
-
-
-async def weekly_blog_post():
-    """Weekly job: generate a blog post and create a PR."""
-    from app.services.blog_generator import run_weekly_post
-
-    logger.info("Starting weekly blog post generation")
-    try:
-        result = await run_weekly_post()
-        if result:
-            logger.info("Weekly blog post complete: %s", result.get("title"))
-        else:
-            logger.warning("Weekly blog post generation returned no result")
-    except Exception as e:
-        logger.exception("Weekly blog post generation failed: %s", e)

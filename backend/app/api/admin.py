@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from pydantic import BaseModel
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -116,3 +116,37 @@ async def list_generated_posts(admin: User = Depends(require_admin)):
             if f.endswith(".md"):
                 posts.append({"filename": f, "generated": f.startswith("generated-")})
     return {"posts": posts}
+
+
+# ─── Blog Webhook (for GitHub Actions) ────────────────────────────────────────
+
+@router.post("/blog/webhook")
+async def blog_webhook(authorization: str = Header(None)):
+    """Webhook endpoint for GitHub Actions to trigger blog generation.
+
+    Expects: Authorization: Bearer <BLOG_WEBHOOK_SECRET>
+    """
+    import os
+    secret = os.environ.get("BLOG_WEBHOOK_SECRET")
+    if not secret:
+        raise HTTPException(503, "Blog webhook not configured (BLOG_WEBHOOK_SECRET not set)")
+
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(401, "Missing or invalid Authorization header")
+
+    token = authorization.removeprefix("Bearer ").strip()
+    if token != secret:
+        raise HTTPException(403, "Invalid webhook secret")
+
+    from app.services.blog_generator import run_weekly_post
+
+    result = await run_weekly_post()
+    if not result:
+        raise HTTPException(500, "Blog generation failed. Check logs for details.")
+
+    return {
+        "status": "ok",
+        "title": result["title"],
+        "filename": result["filename"],
+        "pr_url": result.get("pr_url"),
+    }

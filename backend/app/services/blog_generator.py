@@ -1,9 +1,11 @@
 """Blog generator — creates weekly blog posts using AI research and existing voice."""
 import os
 import json
+import base64
 import logging
-import subprocess
 from datetime import datetime, timezone
+
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -210,13 +212,10 @@ def _slugify(title: str) -> str:
     return slug[:80]
 
 
-def save_post(post: dict) -> str:
-    """Save a generated post as a markdown file. Returns the file path."""
+def _build_markdown(post: dict) -> str:
+    """Build the full markdown file content with frontmatter."""
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    filename = f"{post['filename']}.md"
-    filepath = os.path.join(BLOG_DIR, filename)
 
-    # Add social snippets to the end of content
     content = post["content"]
     if post["social"].get("twitter"):
         content += f"\n\n---\n\n**Twitter:**\n{post['social']['twitter']}\n\n"
@@ -232,15 +231,44 @@ generated: true
 ---
 
 """
-    with open(filepath, "w") as f:
-        f.write(frontmatter + content)
-
-    logger.info("Saved blog post: %s", filepath)
-    return filepath
+    return frontmatter + content
 
 
-def create_pr(post: dict, filepath: str) -> str | None:
-    """Create a GitHub PR with the new blog post. Returns PR URL or None."""
+def _gh_headers(github_token: str) -> dict:
+    """Common GitHub API headers."""
+    return {
+        "Authorization": f"Bearer {github_token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+
+
+async def _gh_get(ref: str, token: str, repo: str) -> dict:
+    """GET a GitHub API endpoint."""
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.get(f"https://api.github.com/repos/{repo}/{ref}", headers=_gh_headers(token))
+        resp.raise_for_status()
+        return resp.json()
+
+
+async def _gh_post(endpoint: str, token: str, repo: str, json_body: dict) -> dict:
+    """POST to a GitHub API endpoint."""
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.post(
+            f"https://api.github.com/repos/{repo}/{endpoint}",
+            headers=_gh_headers(token),
+            json=json_body,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+
+async def create_pr(post: dict, markdown_content: str) -> str | None:
+    """Create a GitHub PR with the new blog post via the GitHub API. Returns PR URL or None.
+
+    No local git needed — uses the GitHub Git Data API to create a commit on a new branch,
+    then opens a PR.
+    """
     github_token = os.environ.get("GITHUB_TOKEN")
     repo = os.environ.get("GITHUB_REPO", "getcleanroom-xyz/llmrank")
 
@@ -250,29 +278,53 @@ def create_pr(post: dict, filepath: str) -> str | None:
 
     branch_name = f"blog/{post['filename']}"
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    blog_path = f"frontend/content/blog/{post['filename']}.md"
+    commit_message = f"blog: add \"{post['title']}\" ({today})"
 
     try:
-        # Create branch
-        subprocess.run(["git", "checkout", "-b", branch_name], check=True, capture_output=True)
+        # 1. Get main branch ref
+        logger.info("Getting main branch ref...")
+        main_ref = await _gh_get("git/ref/heads/main", github_token, repo)
+        base_sha = main_ref["object"]["sha"]
 
-        # Add the file
-        rel_path = os.path.relpath(filepath, os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-        subprocess.run(["git", "add", rel_path], check=True, capture_output=True)
+        # 2. Get the base tree
+        main_commit = await _gh_get(f"git/commits/{base_sha}", github_token, repo)
+        base_tree_sha = main_commit["tree"]["sha"]
 
-        # Commit
-        subprocess.run(
-            ["git", "commit", "-m", f"blog: add \"{post['title']}\" ({today})"],
-            check=True, capture_output=True,
-        )
+        # 3. Create a new tree with the blog post file added
+        file_content_b64 = base64.b64encode(markdown_content.encode("utf-8")).decode("utf-8")
+        logger.info("Creating tree with blog post...")
+        tree = await _gh_post("git/trees", github_token, repo, {
+            "base_tree": base_tree_sha,
+            "tree": [
+                {
+                    "path": blog_path,
+                    "mode": "100644",
+                    "type": "blob",
+                    "content": markdown_content,
+                }
+            ],
+        })
+        new_tree_sha = tree["sha"]
 
-        # Push
-        subprocess.run(
-            ["git", "push", "origin", branch_name],
-            check=True, capture_output=True,
-        )
+        # 4. Create a commit on the new tree
+        logger.info("Creating commit...")
+        commit = await _gh_post("git/commits", github_token, repo, {
+            "message": commit_message,
+            "tree": new_tree_sha,
+            "parents": [base_sha],
+        })
+        new_commit_sha = commit["sha"]
 
-        # Create PR via GitHub API
-        import httpx
+        # 5. Create the branch ref
+        logger.info("Creating branch %s...", branch_name)
+        await _gh_post("git/refs", github_token, repo, {
+            "ref": f"refs/heads/{branch_name}",
+            "sha": new_commit_sha,
+        })
+
+        # 6. Create the PR
+        logger.info("Creating PR...")
         pr_body = f"""## New blog post: {post['title']}
 
 **Summary:** {post['summary']}
@@ -293,38 +345,22 @@ def create_pr(post: dict, filepath: str) -> str | None:
 ---
 *Generated by LLMRanked blog agent on {today}*
 """
-        resp = httpx.post(
-            f"https://api.github.com/repos/{repo}/pulls",
-            headers={
-                "Authorization": f"Bearer {github_token}",
-                "Accept": "application/vnd.github+json",
-            },
-            json={
-                "title": f"blog: {post['title']}",
-                "body": pr_body,
-                "head": branch_name,
-                "base": "main",
-            },
-            timeout=30,
-        )
-        resp.raise_for_status()
-        pr_url = resp.json().get("html_url", "")
+        pr = await _gh_post("pulls", github_token, repo, {
+            "title": f"blog: {post['title']}",
+            "body": pr_body,
+            "head": branch_name,
+            "base": "main",
+        })
+
+        pr_url = pr.get("html_url", "")
         logger.info("Created PR: %s", pr_url)
-
-        # Switch back to main
-        subprocess.run(["git", "checkout", "main"], check=True, capture_output=True)
-        subprocess.run(["git", "branch", "-D", branch_name], check=True, capture_output=True)
-
         return pr_url
 
+    except httpx.HTTPStatusError as e:
+        logger.error("GitHub API error: %s %s — %s", e.response.status_code, e.request.url, e.response.text[:300])
+        return None
     except Exception as e:
         logger.error("Failed to create PR: %s", e)
-        # Cleanup: switch back to main
-        try:
-            subprocess.run(["git", "checkout", "main"], check=True, capture_output=True)
-            subprocess.run(["git", "branch", "-D", branch_name], check=True, capture_output=True)
-        except Exception:
-            pass
         return None
 
 
@@ -359,17 +395,17 @@ async def run_weekly_post():
 
     try:
         post = await generate_blog_post(topic_data)
-        filepath = save_post(post)
+        markdown_content = _build_markdown(post)
 
-        # Create PR
-        pr_url = create_pr(post, filepath)
+        # Create PR via GitHub API
+        pr_url = await create_pr(post, markdown_content)
+
+        # Only mark topic as used after PR is confirmed created
         if pr_url:
+            mark_topic_used(topic_data["topic"])
             logger.info("Blog post PR created: %s", pr_url)
         else:
-            logger.info("Blog post saved locally (PR creation skipped — no GITHUB_TOKEN)")
-
-        # Mark topic as used
-        mark_topic_used(topic_data["topic"])
+            logger.warning("PR creation failed — topic NOT removed from calendar. Will retry next run.")
 
         logger.info("Weekly blog post generation complete: %s", post["title"])
         return {"title": post["title"], "pr_url": pr_url, "filename": post["filename"]}
