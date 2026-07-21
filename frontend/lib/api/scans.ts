@@ -118,4 +118,4 @@ export interface CompetitorDrilldownData {
 }
 
 export const getCompetitorDrilldown = (brandId: string, competitorName: string) =>
-  apiFetch<CompetitorDrilldownData>(`/brands/${brandId}/competitors/${encodeURIComponent(competitorName)}`);
+  apiFetch<CompetitorDrilldownData>(`/brands/${brandId}/competitors/${encodeURIComponent(encodeURIComponent(competitorName))}`);

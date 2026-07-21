@@ -68,7 +68,7 @@ function QueryCard({ q, brandId, variant }: { q: { query_id: string; query_text:
       {variant === "mentioned" && q.competitors_mentioned.length > 0 && (
         <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
           {q.competitors_mentioned.map((c) => (
-            <Link key={c.name} href={`/brands/${brandId}/competitors/${encodeURIComponent(c.name)}`} style={{ textDecoration: "none" }}>
+            <Link key={c.name} href={`/brands/${brandId}/competitors/${encodeURIComponent(encodeURIComponent(c.name))}`} style={{ textDecoration: "none" }}>
               <span className="pill pill-neu" style={{ fontSize: 10, cursor: "pointer" }}>{c.position != null ? `#${c.position} ` : ""}{c.name}</span>
             </Link>
           ))}

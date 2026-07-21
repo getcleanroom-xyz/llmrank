@@ -161,7 +161,7 @@ function QueryDrilldownInner() {
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {topComps.map(([name, count], i) => (
-                <Link key={name} href={`/brands/${brandId}/competitors/${encodeURIComponent(name)}`}
+                <Link key={name} href={`/brands/${brandId}/competitors/${encodeURIComponent(encodeURIComponent(name))}`}
                   className="card sketchy"
                   style={{ padding: "10px 14px", background: "#FFF", transform: `rotate(${i % 2 === 0 ? "-0.3deg" : "0.3deg"})`, textDecoration: "none", color: "var(--text)", display: "flex", alignItems: "center", gap: 8 }}
                   onMouseEnter={(e) => { e.currentTarget.style.transform = "rotate(0deg) translate(-1px, -1px)"; }}
