@@ -147,24 +147,22 @@ export function QueriesTable({
   }, [brandId, brandName, domain, state.keywords, suggestQueries, data, set]);
 
   const toggleSelect = useCallback((id: string, shiftKey: boolean) => {
-    set("selected", (prev: Set<string>) => {
-      const next = new Set(prev);
-      if (shiftKey && state.lastClicked) {
-        const items = data?.items ?? [];
-        const startIdx = items.findIndex((q) => q.id === state.lastClicked);
-        const endIdx = items.findIndex((q) => q.id === id);
-        if (startIdx !== -1 && endIdx !== -1) {
-          const [from, to] = startIdx < endIdx ? [startIdx, endIdx] : [endIdx, startIdx];
-          for (let i = from; i <= to; i++) next.add(items[i].id);
-        }
-      } else {
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
+    const next = new Set(state.selected);
+    if (shiftKey && state.lastClicked) {
+      const items = data?.items ?? [];
+      const startIdx = items.findIndex((q) => q.id === state.lastClicked);
+      const endIdx = items.findIndex((q) => q.id === id);
+      if (startIdx !== -1 && endIdx !== -1) {
+        const [from, to] = startIdx < endIdx ? [startIdx, endIdx] : [endIdx, startIdx];
+        for (let i = from; i <= to; i++) next.add(items[i].id);
       }
-      return next;
-    });
+    } else {
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+    }
+    set("selected", next);
     set("lastClicked", id);
-  }, [state.lastClicked, data, set]);
+  }, [state.lastClicked, state.selected, data, set]);
 
   const toggleSelectAll = useCallback(() => {
     const items = data?.items ?? [];
@@ -266,7 +264,7 @@ export function QueriesTable({
 
         <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
           <button
-            onClick={() => set("showSuggest", (s: boolean) => !s)}
+            onClick={() => set("showSuggest", !state.showSuggest)}
             style={{
               fontWeight: 600, background: "none", border: "none", cursor: "pointer",
               color: "var(--text-secondary)", fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 16,
@@ -501,7 +499,7 @@ export function QueriesTable({
       {/* Pagination */}
       {pages > 1 && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 16 }}>
-          <button onClick={() => set("page", (p: number) => Math.max(1, p - 1))} disabled={state.page <= 1}
+          <button onClick={() => set("page", Math.max(1, state.page - 1))} disabled={state.page <= 1}
             className="btn btn-sm btn-ghost" style={{ opacity: state.page <= 1 ? 0.3 : 1, cursor: state.page <= 1 ? "not-allowed" : "pointer" }}>Prev</button>
           {Array.from({ length: Math.min(pages, 7) }, (_, i) => {
             let n: number;
@@ -516,7 +514,7 @@ export function QueriesTable({
               </button>
             );
           })}
-          <button onClick={() => set("page", (p: number) => Math.min(pages, p + 1))} disabled={state.page >= pages}
+          <button onClick={() => set("page", Math.min(pages, state.page + 1))} disabled={state.page >= pages}
             className="btn btn-sm btn-ghost" style={{ opacity: state.page >= pages ? 0.3 : 1, cursor: state.page >= pages ? "not-allowed" : "pointer" }}>Next</button>
         </div>
       )}
