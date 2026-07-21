@@ -100,7 +100,8 @@ async def list_queries_table(
     # count total matching
     count_query = select(func.count(MonitoredQuery.id)).where(MonitoredQuery.brand_id == brand_id)
     if q:
-        count_query = count_query.where(MonitoredQuery.query_text.ilike(f"%{q}%"))
+        safe_q = q.replace("%", "\\%").replace("_", "\\_")
+        count_query = count_query.where(MonitoredQuery.query_text.ilike(f"%{safe_q}%", escape="\\"))
     total_result = await db.execute(count_query)
     total = total_result.scalar() or 0
 
@@ -113,7 +114,8 @@ async def list_queries_table(
         .where(MonitoredQuery.brand_id == brand_id)
     )
     if q:
-        stmt = stmt.where(MonitoredQuery.query_text.ilike(f"%{q}%"))
+        safe_q = q.replace("%", "\\%").replace("_", "\\_")
+        stmt = stmt.where(MonitoredQuery.query_text.ilike(f"%{safe_q}%", escape="\\"))
     stmt = stmt.order_by(MonitoredQuery.created_at.desc()).offset((page - 1) * per_page).limit(per_page)
     result = await db.execute(stmt)
     queries = result.scalars().all()
@@ -300,11 +302,13 @@ async def suggest_queries(request: Request, brand_id: uuid.UUID, body: QuerySugg
     result = await agent_registry.query_gen.suggest(brand, [c.get("name", "") for c in (brand.competitors or [])], db=db)
     # Merge LLM-generated competitors with user's curated list instead of overwriting
     if result.get("competitors"):
-        existing_names = {c.get("name", "").lower() for c in (brand.competitors or [])}
+        if brand.competitors is None:
+            brand.competitors = []
+        existing_names = {c.get("name", "").lower() for c in brand.competitors}
         for comp in result["competitors"]:
             name = comp.get("name", "").lower()
             if name and name not in existing_names:
-                (brand.competitors or []).append(comp)
+                brand.competitors.append(comp)
         await db.commit()
     return result
 
@@ -353,6 +357,9 @@ async def rescan_single_query(
     if not has_enough:
         raise HTTPException(402, f"Insufficient credits. This rescan costs {cost} credits but you have {balance}.")
 
+    # Deduct credits upfront
+    await deduct_credits(db, cost, f"Rescan: 1 query x {len(llm_names)} LLMs", user.id)
+
     # Create a scan record
     scan = Scan(id=uuid.uuid4(), brand_id=brand_id, status=ScanStatus.running, started_at=_utcnow())
     db.add(scan)
@@ -387,7 +394,6 @@ async def rescan_single_query(
     db.add_all(results)
     scan.status = ScanStatus.completed
     scan.completed_at = _utcnow()
-    await deduct_credits(db, cost, f"Rescan: 1 query × {len(llm_names)} LLMs", user.id)
     await db.commit()
 
     return {"scan_id": str(scan.id)}

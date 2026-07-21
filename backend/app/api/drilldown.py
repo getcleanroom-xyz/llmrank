@@ -267,6 +267,10 @@ async def get_competitor_drilldown(
     sentiments = {"positive": 0, "neutral": 0, "negative": 0}
     llm_stats: dict[str, dict] = {}
 
+    # Compute brand mention rate early (used in historical trend)
+    brand_mentioned_count = sum(1 for r in all_results if r.mentioned)
+    brand_mention_pct = round(brand_mentioned_count / len(all_results) * 100, 1) if all_results else 0
+
     # Compute "neither mentioned" from all results (queries where brand is absent AND competitor is not in competitors_mentioned)
     comp_name_lower = normalized_target
     for r in all_results:
@@ -442,7 +446,7 @@ async def get_competitor_drilldown(
         for lb in llm_breakdown:
             current_per_llm[lb.llm_name] = {
                 "mention_pct": lb.mention_pct,
-                "brand_pct": min(round((lb.brand_wins + (lb.total - lb.competitor_wins - lb.brand_wins) * 0) / lb.total * 100, 1), 100) if lb.total > 0 else 0,
+                "brand_pct": min(round(lb.brand_wins / lb.total * 100, 1), 100) if lb.total > 0 else 0,
             }
         historical_trend.append({
             "date": (latest_scan.completed_at or latest_scan.started_at).isoformat(),
@@ -485,10 +489,6 @@ async def get_competitor_drilldown(
         f"{competitor_name} beats you in {beats_count} out of {total_queries} queries. "
         f"You could target their weaknesses in your content to improve your AI visibility."
     )
-
-    # Brand mention rate (how often YOUR brand appears across all results)
-    brand_mentioned_count = sum(1 for r in all_results if r.mentioned)
-    brand_mention_pct = round(brand_mentioned_count / len(all_results) * 100, 1) if all_results else 0
 
     return CompetitorDrilldownOut(
         competitor_name=competitor_name,

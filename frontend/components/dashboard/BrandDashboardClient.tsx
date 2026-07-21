@@ -84,6 +84,9 @@ function BrandDashboardPageInner() {
     }
   }, [optimisticScanning, data?.active_scan]);
 
+  const refetchRef = useRef(refetch);
+  refetchRef.current = refetch;
+
   useEffect(() => {
     if (!isScanRunning) {
       if (wasRunningRef.current) {
@@ -97,10 +100,10 @@ function BrandDashboardPageInner() {
     }
     wasRunningRef.current = true;
     const interval = setInterval(() => {
-      refetch();
+      refetchRef.current();
     }, 5000);
     return () => clearInterval(interval);
-  }, [isScanRunning, brandId, refetch, qc]);
+  }, [isScanRunning, brandId, qc]);
 
   useEffect(() => {
     if (!authLoading && !user) window.location.href = "/brands";

@@ -1,3 +1,5 @@
+import hmac
+
 from fastapi import APIRouter, Depends, HTTPException, Header
 from pydantic import BaseModel
 from sqlalchemy import select, func
@@ -49,7 +51,8 @@ class BlogGenerateResponse(BaseModel):
 async def list_users(search: str | None = None, page: int = 1, per_page: int = 50, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     query = select(User).order_by(User.created_at.desc())
     if search:
-        query = query.where(User.email.ilike(f"%{search}%") | User.display_name.ilike(f"%{search}%"))
+        safe_search = search.replace("%", "\\%").replace("_", "\\_")
+        query = query.where(User.email.ilike(f"%{safe_search}%", escape="\\") | User.display_name.ilike(f"%{safe_search}%", escape="\\"))
     query = query.offset((page - 1) * per_page).limit(per_page)
     result = await db.execute(query)
     users = result.scalars().all()
@@ -135,7 +138,7 @@ async def blog_webhook(authorization: str = Header(None)):
         raise HTTPException(401, "Missing or invalid Authorization header")
 
     token = authorization.removeprefix("Bearer ").strip()
-    if token != secret:
+    if not hmac.compare_digest(token, secret):
         raise HTTPException(403, "Invalid webhook secret")
 
     from app.services.blog_generator import run_weekly_post

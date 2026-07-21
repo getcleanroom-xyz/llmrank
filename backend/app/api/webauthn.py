@@ -1,3 +1,4 @@
+import hmac
 import uuid
 import time
 import logging
@@ -169,13 +170,8 @@ async def register_finish(body: RegisterFinishRequest, request: Request, respons
 async def login_start(body: LoginStartRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == body.email))
     user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(404, "No account found with this email")
-
-    passkeys_result = await db.execute(select(Passkey).where(Passkey.user_id == user.id))
-    passkeys = passkeys_result.scalars().all()
-    if not passkeys:
-        raise HTTPException(400, "No passkeys registered. Please register first.")
+    if not user or not (await db.execute(select(Passkey).where(Passkey.user_id == user.id))).scalars().first():
+        raise HTTPException(400, "No passkeys found for this email. Please register first.")
 
     try:
         import webauthn
@@ -470,7 +466,7 @@ async def recover_finish(body: RecoverFinishRequest, request: Request, response:
         _recovery_codes.pop(email_lower, None)
         raise HTTPException(400, "Recovery code expired. Please request a new one.")
 
-    if body.code != code:
+    if not hmac.compare_digest(body.code, code):
         raise HTTPException(400, "Invalid recovery code.")
 
     result = await db.execute(select(User).where(User.email == body.email))
