@@ -116,7 +116,7 @@ export function QueriesTable({
     try {
       await addQuery.mutateAsync({ brandId, query_text: text.trim() });
       set("input", "");
-      set("suggestions", (prev: string[]) => prev.filter((s) => s !== text));
+      set("suggestions", state.suggestions.filter((s) => s !== text));
       set("page", 1);
     } catch (e) {
       set("error", e instanceof Error ? e.message : "Failed to add query");
