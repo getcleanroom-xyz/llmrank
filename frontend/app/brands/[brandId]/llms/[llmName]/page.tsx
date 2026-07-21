@@ -166,15 +166,15 @@ export default function LLMDrilldownPage() {
             </div>
 
             {/* Insights */}
-            <div style={{ display: "grid", gridTemplateColumns: sentiment ? "auto 1fr" : "1fr", gap: 12, marginBottom: "var(--gap)" }}>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: "var(--gap)" }}>
               {sentiment && (
-                <div className="card" style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+                <div className="card" style={{ padding: "10px 16px", display: "inline-flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
                   <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>Sentiment</span>
                   <span style={{ fontSize: 13, fontWeight: 700, color: sentiment.color, background: sentiment.bg, padding: "2px 10px", borderRadius: 6 }}>{sentiment.label}</span>
                 </div>
               )}
               {competitors.length > 0 && (
-                <div className="card" style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <div className="card" style={{ padding: "10px 16px", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", minWidth: 0, flex: "1 1 0" }}>
                   <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", flexShrink: 0 }}>Appears alongside</span>
                   {competitors.map(([name, count]) => (
                     <Link key={name} href={`/brands/${brandId}/competitors/${encodeURIComponent(name)}`} style={{ textDecoration: "none" }}>
