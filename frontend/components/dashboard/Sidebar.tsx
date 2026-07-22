@@ -106,7 +106,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   const brandHref = (id: string) => `/brands/${id}?tab=${activeTab}`;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", width: w, transition: "width 0.2s ease", overflow: "hidden" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%", overflow: "hidden" }}>
       {/* Brand search */}
       {showSearch && !collapsed && (
         <div style={{ padding: "8px 10px", borderBottom: "1.5px solid var(--border)" }}>
