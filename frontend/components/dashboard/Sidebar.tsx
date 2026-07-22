@@ -194,6 +194,27 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
             Search for a brand above
           </div>
         )}
+
+        {/* View all brands link */}
+        {!collapsed && (
+          <div style={{ padding: "4px 10px 6px" }}>
+            <Link
+              href="/brands"
+              style={{
+                display: "flex", alignItems: "center", gap: 6, padding: "5px 8px",
+                borderRadius: "var(--radius)", textDecoration: "none",
+                fontSize: 11, fontWeight: 600, color: "var(--text-muted)",
+                border: "1.5px dashed var(--border)",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-dark)"; e.currentTarget.style.color = "var(--text)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-muted)"; }}
+              onClick={onNavigate}
+            >
+              <ExternalLink size={12} strokeWidth={ICON_STROKE} />
+              <span>View all brands</span>
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Section nav */}
@@ -231,7 +252,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       {brandId && !collapsed && (
         <div style={{ padding: "4px 10px", borderTop: "1.5px solid var(--border)" }}>
           <Link
-            href={`/brands/${brandId}?tab=queries`}
+            href={`/brands/${brandId}?tab=overview`}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px", borderRadius: "var(--radius)", textDecoration: "none", background: "var(--primary)", color: "var(--black)", fontSize: 12, fontWeight: 700, border: "1.5px solid var(--border)", justifyContent: "center" }}
             onClick={onNavigate}
           >
