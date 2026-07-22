@@ -162,7 +162,7 @@ async def run_probe_scan(brand_name: str, domain: str, queries: list[dict], clie
 
 
 async def orchestrate_query_generation(brand_name, domain, crawl_content, user_competitors, client) -> dict:
-    from app.services.competitor_service import classify_brand, discover_competitors_from_crawl, discover_competitors_by_category, crawl_competitor_sites, competitors_need_refresh, _is_valid_competitor
+    from app.services.competitor_service import classify_brand, discover_competitors_from_crawl, discover_competitors_by_category, crawl_competitor_sites, fill_missing_domains, competitors_need_refresh, _is_valid_competitor
 
     classification = await classify_brand(crawl_content, brand_name, domain, client)
     logger.info("Classification for %s: %s", domain, classification.get("industry"))
@@ -177,9 +177,12 @@ async def orchestrate_query_generation(brand_name, domain, crawl_content, user_c
             seen[name_lower] = c
     for name in user_competitors:
         if name.lower() not in seen and _is_valid_competitor(name.lower()):
-            seen[name.lower()] = {"name": name, "domain": "", "relevance_score": 5}
+            seen[name_lower] = {"name": name, "domain": "", "relevance_score": 5}
     competitors = sorted(seen.values(), key=lambda c: c.get("relevance_score", 0), reverse=True)[:10]
     logger.info("Discovered %d competitors for %s", len(competitors), domain)
+
+    # Fill missing domains before crawling
+    competitors = await fill_missing_domains(competitors, classification.get("industry", ""))
 
     if competitors_need_refresh(competitors):
         competitors = await crawl_competitor_sites(competitors)

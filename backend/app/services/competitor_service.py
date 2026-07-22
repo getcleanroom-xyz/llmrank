@@ -175,11 +175,58 @@ def competitors_need_refresh(competitors: list[dict], ttl_days: int = 7) -> bool
     return False
 
 
+def _name_variants(name: str) -> list[str]:
+    """Generate search-friendly variants of a competitor name."""
+    import re
+    lower = name.lower()
+    variants = [lower]
+    # Handle & vs "and"
+    if "&" in lower:
+        variants.append(lower.replace("&", "and"))
+    if " and " in lower:
+        variants.append(lower.replace(" and ", "&"))
+    # Split camelCase or PascalCase
+    split = re.sub(r"([a-z])([A-Z])", r"\1 \2", name)
+    if split != name:
+        variants.append(split.lower())
+    # Generate abbreviation from initials (e.g., "Weights & Biases" -> "wb", "w&b", "w and b")
+    words = re.split(r"[\s&]+", lower)
+    if len(words) >= 2:
+        initials = "".join(w[0] for w in words if w)
+        variants.append(initials)
+        variants.append(initials.replace(" ", ""))
+        # Also try with & between initials
+        variants.append("&".join(w[0] for w in words if w))
+        variants.append("and".join(w[0] for w in words if w))
+    return list(set(variants))
+
+
+def _name_matches(name: str, text: str) -> bool:
+    """Check if a competitor name appears in text, with fuzzy matching."""
+    text_lower = text.lower()
+    name_lower = name.lower()
+    # Exact match
+    if name_lower in text_lower:
+        return True
+    # Try variants
+    for variant in _name_variants(name):
+        if variant in text_lower:
+            return True
+    # Check if all words from name appear in text
+    import re
+    name_words = set(re.split(r"[\s&]+", name_lower))
+    text_words = set(re.split(r"[\s&]+", text_lower))
+    if len(name_words) > 1 and name_words.issubset(text_words):
+        return True
+    return False
+
+
 async def fill_missing_domains(competitors: list[dict], industry: str = "") -> list[dict]:
     """Look up domains for competitors that don't have one via web search."""
     try:
         from ddgs import DDGS
     except ImportError:
+        logger.warning("ddgs not installed — cannot fill missing domains")
         return competitors
 
     for comp in competitors:
@@ -188,31 +235,48 @@ async def fill_missing_domains(competitors: list[dict], industry: str = "") -> l
         name = comp.get("name", "")
         if not name:
             continue
-        try:
-            # Use industry context to disambiguate common names
-            query = f"{name} {industry} official website".strip() if industry else f"{name} official website"
-            with DDGS() as ddgs:
-                results = list(ddgs.text(query, max_results=5))
-            for r in results:
-                href = r.get("href", "")
-                title = r.get("title", "").lower()
-                snippet = r.get("body", "").lower()
-                # Extract domain from URL
-                from urllib.parse import urlparse
-                parsed = urlparse(href)
-                domain = parsed.netloc.lower().replace("www.", "")
-                if not domain or "." not in domain or not _is_valid_domain(domain):
-                    continue
-                # Reject obviously wrong results (personal sites, Wikipedia, social media)
-                skip_domains = {"wikipedia.org", "linkedin.com", "twitter.com", "x.com",
-                                "facebook.com", "instagram.com", "youtube.com", "reddit.com"}
-                if any(skip in domain for skip in skip_domains):
-                    continue
-                # For ambiguous names, check if the result title mentions the competitor name
-                if name.lower() not in title and name.lower() not in snippet:
-                    continue
-                comp["domain"] = domain
+
+        found = False
+        # Try multiple query variations
+        queries = [
+            f"{name} official website",
+            f"{name} {industry} company".strip() if industry else None,
+            f"{name} homepage",
+        ]
+        queries = [q for q in queries if q]
+
+        for query in queries:
+            if found:
                 break
-        except Exception:
-            continue
+            try:
+                with DDGS() as ddgs:
+                    results = list(ddgs.text(query, max_results=5))
+                for r in results:
+                    href = r.get("href", "")
+                    title = r.get("title", "")
+                    snippet = r.get("body", "")
+                    # Extract domain from URL
+                    from urllib.parse import urlparse
+                    parsed = urlparse(href)
+                    domain = parsed.netloc.lower().replace("www.", "")
+                    if not domain or "." not in domain or not _is_valid_domain(domain):
+                        continue
+                    # Reject obviously wrong results
+                    skip_domains = {"wikipedia.org", "linkedin.com", "twitter.com", "x.com",
+                                    "facebook.com", "instagram.com", "youtube.com", "reddit.com"}
+                    if any(skip in domain for skip in skip_domains):
+                        continue
+                    # Flexible name matching
+                    if _name_matches(name, title + " " + snippet):
+                        comp["domain"] = domain
+                        found = True
+                        logger.info("Filled domain for %s: %s (query: %s)", name, domain, query)
+                        break
+            except Exception as e:
+                logger.debug("Domain lookup failed for %s (query: %s): %s", name, query, e)
+                continue
+
+        if not found:
+            logger.warning("Could not find domain for competitor: %s", name)
+
     return competitors
