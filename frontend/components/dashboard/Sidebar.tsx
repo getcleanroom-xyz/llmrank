@@ -32,27 +32,62 @@ function addRecentBrand(id: string, name: string) {
   localStorage.setItem("recent_brands", JSON.stringify(recent.slice(0, 5)));
 }
 
-export function Sidebar() {
+/* ─── Mobile hamburger button (rendered in dashboard-mobile-header) ─── */
+function HamburgerButton() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMobileOpen(false); };
+    document.addEventListener("keydown", onKey);
+    return () => { document.body.style.overflow = prev; document.removeEventListener("keydown", onKey); };
+  }, [mobileOpen]);
+
+  return (
+    <>
+      <button
+        className="header-hamburger"
+        onClick={() => setMobileOpen(true)}
+        aria-label="Open navigation"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <line x1="3" y1="12" x2="21" y2="12" />
+          <line x1="3" y1="18" x2="21" y2="18" />
+        </svg>
+      </button>
+
+      {mobileOpen && (
+        <div className="sidebar-mobile-overlay" onClick={() => setMobileOpen(false)}>
+          <div className="sidebar-mobile-backdrop" />
+          <aside className="sidebar-mobile-panel" onClick={(e) => e.stopPropagation()}>
+            <SidebarContent collapsed={false} onNavigate={() => setMobileOpen(false)} />
+          </aside>
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ─── Sidebar content (shared between desktop & mobile) ─── */
+function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const { brandId } = useParams<{ brandId: string }>();
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const { data: brandsData } = useBrands(1, "");
   const brands = brandsData ?? [];
-
-  const [collapsed, setCollapsed] = useState(false);
   const [search, setSearch] = useState("");
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [recentBrands, setRecentBrands] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => { setRecentBrands(getRecentBrands()); }, []);
 
-  // Track current brand in recent
   const currentBrand = brands.find((b) => b.id === brandId);
   useEffect(() => {
     if (currentBrand) addRecentBrand(currentBrand.id, currentBrand.name);
   }, [currentBrand]);
 
-  // Determine active tab from URL
   const activeTab = useMemo(() => {
     const params = new URLSearchParams(pathname.includes("?") ? pathname.split("?")[1] : "");
     return params.get("tab") || "overview";
@@ -71,26 +106,18 @@ export function Sidebar() {
   const showSearch = brands.length >= 3;
   const w = collapsed ? 56 : 220;
 
-  const SidebarContent = () => (
+  return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", width: w, transition: "width 0.2s ease", overflow: "hidden" }}>
       {/* Logo */}
       <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2px solid var(--border)", minHeight: 48 }}>
         {!collapsed && (
-          <Link href="/" style={{ fontSize: 14, fontWeight: 800, color: "var(--text)", textDecoration: "none", lineHeight: 1 }}>
+          <Link href="/" style={{ fontSize: 14, fontWeight: 800, color: "var(--text)", textDecoration: "none", lineHeight: 1 }} onClick={onNavigate}>
             llm<span style={{ background: "var(--primary)", padding: "0 3px", border: "1.5px solid var(--border)" }}>ranked</span>
           </Link>
         )}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="btn btn-ghost"
-          style={{ padding: 4, minWidth: 28, minHeight: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? <ChevronRight size={16} strokeWidth={ICON_STROKE} /> : <ChevronLeft size={16} strokeWidth={ICON_STROKE} />}
-        </button>
       </div>
 
-      {/* Brand search — only when 3+ brands */}
+      {/* Brand search */}
       {showSearch && !collapsed && (
         <div style={{ padding: "8px 10px", borderBottom: "1.5px solid var(--border)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--bg-dark)", border: "1.5px solid var(--border)", borderRadius: "var(--radius)", padding: "5px 8px" }}>
@@ -107,8 +134,7 @@ export function Sidebar() {
       )}
 
       {/* Brand list */}
-      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
-        {/* Recent brands */}
+      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", overscrollBehavior: "contain" }}>
         {recentFiltered.length > 0 && (
           <div style={{ padding: "6px 10px" }}>
             {!collapsed && <div style={{ fontSize: 9, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4, paddingLeft: 4 }}>Recent</div>}
@@ -120,6 +146,7 @@ export function Sidebar() {
                 onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-dark)"}
                 onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
                 title={b.name}
+                onClick={onNavigate}
               >
                 <div style={{ width: 22, height: 22, borderRadius: "var(--radius)", background: "var(--primary)", border: "1.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, flexShrink: 0 }}>
                   {b.name.charAt(0).toUpperCase()}
@@ -130,7 +157,6 @@ export function Sidebar() {
           </div>
         )}
 
-        {/* All brands */}
         {filteredBrands.length > 0 && (
           <div style={{ padding: "6px 10px" }}>
             {!collapsed && <div style={{ fontSize: 9, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4, paddingLeft: 4 }}>Brands</div>}
@@ -151,6 +177,7 @@ export function Sidebar() {
                     onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = "var(--bg-dark)"; }}
                     onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
                     title={b.name}
+                    onClick={onNavigate}
                   >
                     <div style={{ width: 22, height: 22, borderRadius: "var(--radius)", background: isActive ? "var(--surface)" : "var(--bg-dark)", border: "1.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, flexShrink: 0 }}>
                       {b.name.charAt(0).toUpperCase()}
@@ -169,13 +196,13 @@ export function Sidebar() {
           </div>
         )}
 
-        {/* All brands link */}
         {brands.length > 0 && (
           <div style={{ padding: "4px 10px" }}>
             <Link
               href="/brands"
               style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 8px", borderRadius: "var(--radius)", textDecoration: "none", color: "var(--primary)", fontSize: 12, fontWeight: 700 }}
               title="All brands"
+              onClick={onNavigate}
             >
               <ExternalLink size={14} strokeWidth={ICON_STROKE} />
               {!collapsed && <span>All brands</span>}
@@ -184,7 +211,7 @@ export function Sidebar() {
         )}
       </div>
 
-      {/* Section nav (only when a brand is selected) */}
+      {/* Section nav */}
       {brandId && (
         <div style={{ borderTop: "2px solid var(--border)", padding: "6px 10px" }}>
           {!collapsed && <div style={{ fontSize: 9, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4, paddingLeft: 4 }}>Sections</div>}
@@ -205,6 +232,7 @@ export function Sidebar() {
                 onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = "var(--bg-dark)"; }}
                 onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
                 title={item.label}
+                onClick={onNavigate}
               >
                 <Icon size={16} strokeWidth={ICON_STROKE} />
                 {!collapsed && <span>{item.label}</span>}
@@ -220,6 +248,7 @@ export function Sidebar() {
           <Link
             href={`/brands/${brandId}?tab=queries`}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px", borderRadius: "var(--radius)", textDecoration: "none", background: "var(--primary)", color: "var(--black)", fontSize: 12, fontWeight: 700, border: "1.5px solid var(--border)", justifyContent: "center" }}
+            onClick={onNavigate}
           >
             <Plus size={14} strokeWidth={ICON_STROKE} />
             <span>New scan</span>
@@ -248,44 +277,50 @@ export function Sidebar() {
       </div>
     </div>
   );
+}
+
+/* ─── Desktop sidebar (always rendered, hidden on mobile via CSS) ─── */
+function DesktopSidebar() {
+  const [collapsed, setCollapsed] = useState(false);
+  const w = collapsed ? 56 : 220;
 
   return (
-    <>
-      {/* Mobile hamburger */}
-      <button
-        className="header-hamburger"
-        onClick={() => setMobileOpen(true)}
-        aria-label="Open navigation"
-        style={{ display: "none" }}
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="3" y1="6" x2="21" y2="6" />
-          <line x1="3" y1="12" x2="21" y2="12" />
-          <line x1="3" y1="18" x2="21" y2="18" />
-        </svg>
-      </button>
-
-      {/* Desktop sidebar */}
-      <aside
-        style={{
-          width: w, flexShrink: 0, background: "var(--surface)", borderRight: "2px solid var(--border)",
-          transition: "width 0.2s ease", overflow: "hidden", display: "flex", flexDirection: "column",
-          height: "100vh", position: "sticky", top: 0, zIndex: 40,
-        }}
-        className="dashboard-sidebar"
-      >
-        <SidebarContent />
-      </aside>
-
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex" }}>
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }} onClick={() => setMobileOpen(false)} />
-          <aside style={{ width: 260, background: "var(--surface)", borderRight: "2px solid var(--border)", position: "relative", zIndex: 101, display: "flex", flexDirection: "column" }}>
-            <SidebarContent />
-          </aside>
+    <aside
+      className="dashboard-sidebar"
+      style={{
+        width: w, flexShrink: 0, background: "var(--surface)", borderRight: "2px solid var(--border)",
+        transition: "width 0.2s ease", overflow: "hidden", display: "flex", flexDirection: "column",
+        height: "100vh", position: "sticky", top: 0, zIndex: 40,
+      }}
+    >
+      <div style={{ display: "flex", flexDirection: "column", height: "100%", width: w, transition: "width 0.2s ease", overflow: "hidden" }}>
+        {/* Logo + collapse toggle */}
+        <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2px solid var(--border)", minHeight: 48 }}>
+          {!collapsed && (
+            <Link href="/" style={{ fontSize: 14, fontWeight: 800, color: "var(--text)", textDecoration: "none", lineHeight: 1 }}>
+              llm<span style={{ background: "var(--primary)", padding: "0 3px", border: "1.5px solid var(--border)" }}>ranked</span>
+            </Link>
+          )}
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="btn btn-ghost"
+            style={{ padding: 4, minWidth: 28, minHeight: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? <ChevronRight size={16} strokeWidth={ICON_STROKE} /> : <ChevronLeft size={16} strokeWidth={ICON_STROKE} />}
+          </button>
         </div>
-      )}
-    </>
+        <SidebarContent collapsed={collapsed} />
+      </div>
+    </aside>
   );
 }
+
+/* ─── Public API ─── */
+function SidebarRoot() {
+  return <DesktopSidebar />;
+}
+
+SidebarRoot.Hamburger = HamburgerButton;
+
+export { SidebarRoot as Sidebar };

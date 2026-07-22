@@ -67,7 +67,7 @@ export function FilterBar({
 
       {/* Main row: Search + Date range */}
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <div style={{ flex: 1, minWidth: 180, position: "relative" }}>
+        <div style={{ flex: "1 1 140px", minWidth: 0, position: "relative" }}>
           <input
             value={filters.search}
             onChange={(e) => update({ search: e.target.value })}

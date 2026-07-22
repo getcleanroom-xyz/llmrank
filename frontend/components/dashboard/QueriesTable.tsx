@@ -498,7 +498,7 @@ export function QueriesTable({
 
       {/* Pagination */}
       {pages > 1 && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 16, flexWrap: "wrap" }}>
           <button onClick={() => set("page", Math.max(1, state.page - 1))} disabled={state.page <= 1}
             className="btn btn-sm btn-ghost" style={{ opacity: state.page <= 1 ? 0.3 : 1, cursor: state.page <= 1 ? "not-allowed" : "pointer" }}>Prev</button>
           {Array.from({ length: Math.min(pages, 7) }, (_, i) => {

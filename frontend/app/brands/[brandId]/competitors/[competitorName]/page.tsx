@@ -57,7 +57,7 @@ export default function CompetitorDrilldownPage() {
           <div className="skeleton" style={{ width: "40%", height: 28, marginBottom: 8 }} />
           <div className="skeleton" style={{ width: "60%", height: 12 }} />
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
           {[1, 2, 3].map((i) => <div key={i} className="card" style={{ padding: 14 }}><div className="skeleton" style={{ width: "50%", height: 28, marginBottom: 4 }} /><div className="skeleton" style={{ width: "30%", height: 10 }} /></div>)}
         </div>
       </div>

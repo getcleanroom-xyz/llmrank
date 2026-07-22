@@ -73,12 +73,12 @@ export function ScanControls({ brandId, latestScan, credits, onScanError, lastSc
 
   return (
     <>
-      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-        <button className="btn btn-ghost btn-sm" style={{ fontSize: 11, padding: "3px 6px", lineHeight: "20px" }} onClick={() => router.refresh()}>
+      <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+        <button className="btn btn-ghost btn-sm" style={{ fontSize: 12, padding: "6px 10px", minHeight: 36 }} onClick={() => router.refresh()}>
           Refresh
         </button>
         <div style={{ position: "relative" }} ref={configRef}>
-          <button onClick={() => setShowConfig((s) => !s)} className="btn btn-ghost btn-sm" style={{ fontSize: 11, padding: "3px 8px", lineHeight: "20px" }}>
+          <button onClick={() => setShowConfig((s) => !s)} className="btn btn-ghost btn-sm" style={{ fontSize: 12, padding: "6px 10px", minHeight: 36 }}>
             {selectedLLMs.length} model{selectedLLMs.length !== 1 ? "s" : ""}
           </button>
           {showConfig && (
@@ -102,7 +102,7 @@ export function ScanControls({ brandId, latestScan, credits, onScanError, lastSc
             </div>
           )}
         </div>
-        <button onClick={handleScan} disabled={triggerScan.isPending || selectedLLMs.length === 0 || isRunning || credits === undefined || (credits?.balance ?? 0) <= 0} className={`btn btn-sm ${isRunning || triggerScan.isPending ? "btn-ghost" : "btn-primary"}`} style={{ fontSize: 11, padding: "3px 12px", lineHeight: "20px" }}>
+        <button onClick={handleScan} disabled={triggerScan.isPending || selectedLLMs.length === 0 || isRunning || credits === undefined || (credits?.balance ?? 0) <= 0} className={`btn btn-sm ${isRunning || triggerScan.isPending ? "btn-ghost" : "btn-primary"}`} style={{ fontSize: 12, padding: "6px 14px", minHeight: 36 }}>
           Scan
         </button>
       </div>

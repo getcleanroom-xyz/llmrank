@@ -162,11 +162,11 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
                   background: "#FFF9DB",
                   border: "2px solid var(--border)",
                   borderRadius: "var(--radius)",
-                  padding: "28px 32px",
+                  padding: "clamp(16px, 4vw, 28px) clamp(16px, 4vw, 32px)",
                   marginBottom: "var(--gap)",
                   display: "flex",
                   alignItems: "center",
-                  gap: "clamp(20px, 4vw, 40px)",
+                  gap: "clamp(16px, 4vw, 40px)",
                   flexWrap: "wrap",
                   transform: "rotate(-0.2deg)",
                 }}
@@ -219,6 +219,8 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
                     display: "flex",
                     flexDirection: "column",
                     gap: 2,
+                    flex: "1 1 140px",
+                    minWidth: 0,
                   }}
                 >
                   <span style={{ fontSize: 22, fontWeight: 800, color: s.acc, lineHeight: 1, overflow: "hidden", textOverflow: "ellipsis" }}>{s.val}</span>

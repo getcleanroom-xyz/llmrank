@@ -233,6 +233,7 @@ export function ChatWidget({ brandId }: { brandId: string }) {
 
       {state.open && (
         <div
+          className="chat-widget-panel"
           style={{
             position: "fixed", inset: 0, zIndex: 200,
             background: "var(--surface)",
@@ -620,7 +621,7 @@ export function ChatWidget({ brandId }: { brandId: string }) {
       <style>{`
         @keyframes blink { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
         @media (min-width: 769px) {
-          [style*="position: fixed"][style*="inset: 0"][style*="z-index: 200"] {
+          .chat-widget-panel {
             top: auto !important;
             bottom: 0 !important;
             right: 0 !important;
