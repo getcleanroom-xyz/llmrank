@@ -75,7 +75,7 @@ export const suggestQueries = (brandId: string, brand_name: string, domain: stri
   apiFetch<{ suggested_queries: string[] }>(`/brands/${brandId}/queries/suggest`, {
     method: "POST",
     body: JSON.stringify({ brand_name, domain, keywords }),
-  });
+  }, 120_000);
 
 export const getQueriesTable = (brandId: string, page: number = 1, per_page: number = 20, q: string = "") =>
   apiFetch<QueriesTableResponse>(`/brands/${brandId}/queries/table?page=${page}&per_page=${per_page}&q=${encodeURIComponent(q)}`);
@@ -84,12 +84,12 @@ export const suggestQueriesFull = (brandId: string, brand_name: string, domain: 
   apiFetch<QuerySuggestFullResponse>(`/brands/${brandId}/queries/suggest`, {
     method: "POST",
     body: JSON.stringify({ brand_name, domain, keywords }),
-  });
+  }, 120_000);
 
 export const probeQueries = (brandId: string) =>
   apiFetch<{ queries: ScoredQuery[]; probe_result: ProbeResult }>(`/brands/${brandId}/queries/probe`, {
     method: "POST",
-  });
+  }, 120_000);
 
 export interface QueryTrendPoint {
   date: string;

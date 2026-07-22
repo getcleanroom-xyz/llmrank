@@ -286,7 +286,7 @@ export function QueriesTable({
                 }}
               />
               <button onClick={handleSuggest} disabled={suggestQueries.isPending} className="btn btn-sm">
-                {suggestQueries.isPending ? "..." : "Generate"}
+                {suggestQueries.isPending ? "Generating..." : "Generate"}
               </button>
             </>
           )}

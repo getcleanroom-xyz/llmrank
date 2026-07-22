@@ -84,7 +84,25 @@ export default function LLMDrilldownPage() {
   const name = displayName(decodedName);
   const { data, isLoading, error } = useLLMDrilldown(brandId, decodedName);
 
-  if (isLoading) return <div className="page" style={{ display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "var(--text-muted)" }}>Loading...</div>;
+  if (isLoading) return (
+    <div className="page" style={{ display: "flex", flexDirection: "column" }}>
+      <div style={{ background: "var(--surface)", borderBottom: "2px solid var(--border)", padding: "10px 16px" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", gap: 8 }}>
+          <div className="skeleton" style={{ width: 80, height: 20 }} />
+          <div className="skeleton" style={{ width: 100, height: 14 }} />
+        </div>
+      </div>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%", display: "flex", flexDirection: "column", gap: 12 }}>
+        <div className="card" style={{ padding: 24 }}>
+          <div className="skeleton" style={{ width: "30%", height: 28, marginBottom: 8 }} />
+          <div className="skeleton" style={{ width: "50%", height: 12 }} />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12 }}>
+          {[1, 2, 3, 4].map((i) => <div key={i} className="card" style={{ padding: 14 }}><div className="skeleton" style={{ width: "40%", height: 20, marginBottom: 4 }} /><div className="skeleton" style={{ width: "60%", height: 10 }} /></div>)}
+        </div>
+      </div>
+    </div>
+  );
   if (error || !data) return (
     <div className="page" style={{ padding: "var(--page-px)" }}>
       <AppHeader breadcrumb={<Link href={`/brands/${brandId}`} style={{ fontWeight: 600, color: "var(--text-muted)", textDecoration: "none", fontSize: 13 }}>dashboard</Link>} />
