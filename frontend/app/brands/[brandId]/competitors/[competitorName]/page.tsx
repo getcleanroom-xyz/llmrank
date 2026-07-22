@@ -39,7 +39,7 @@ export default function CompetitorDrilldownPage() {
       const gapB = Math.abs(b.mention_pct - (data.brand_mention_pct ?? 0));
       return gapB - gapA;
     });
-  }, [data?.llm_breakdown, data?.brand_mention_pct]);
+  }, [data]);
 
   const strengthsQueries = useMemo(() => theyWin.slice(0, 5), [theyWin]);
   const opportunityQueries = useMemo(() => youAbsent.slice(0, 8), [youAbsent]);
@@ -218,7 +218,7 @@ export default function CompetitorDrilldownPage() {
                         </div>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: "#166534", minWidth: 28 }}>{((llm.mention_pct * 0.7) + (Math.random() * 5)).toFixed(0)}%</span>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "#166534", minWidth: 28 }}>{Math.max(0, llm.mention_pct - gap).toFixed(0)}%</span>
                         <div className="bar-track" style={{ flex: 1, height: 8 }}>
                           <div className="bar-fill" style={{ width: `${Math.max(0, llm.mention_pct - gap)}%`, background: "#22C55E", borderRadius: 0 }} />
                         </div>
