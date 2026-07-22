@@ -72,11 +72,6 @@ const markdownComponents: Components = {
   ),
 };
 
-function isSocialSnippet(text: string): boolean {
-  const trimmed = text.trim().toUpperCase();
-  return trimmed.startsWith("TWITTER:") || trimmed.startsWith("LINKEDIN:") || trimmed.startsWith("NEWSLETTER:");
-}
-
 function SocialSnippet({ label, content }: { label: string; content: string }) {
   const labelClass = `social-snippet-label ${label.toLowerCase()}`;
   return (
@@ -87,37 +82,58 @@ function SocialSnippet({ label, content }: { label: string; content: string }) {
   );
 }
 
-function parseSocialSnippets(children: React.ReactNode): React.ReactNode[] {
-  const result: React.ReactNode[] = [];
-  let socialStarted = false;
-  let socialContent: React.ReactNode[] = [];
+function parseSocialSnippets(content: string): { main: string; social: string } {
+  const parts = content.split("---");
+  if (parts.length >= 3) {
+    const main = parts.slice(0, -2).join("---").trim();
+    const socialSection = parts.slice(-2, -1)[0];
+    return { main, social: socialSection.trim() };
+  }
+  return { main: content, social: "" };
+}
 
-  React.Children.forEach(children, (child) => {
-    if (socialStarted) {
-      socialContent.push(child);
-    } else if (typeof child === "string" && isSocialSnippet(child)) {
-      socialStarted = true;
-      const lines = child.split("\n");
-      const firstLine = lines[0];
-      const label = firstLine.replace(":", "").trim();
-      const rest = lines.slice(1).join("\n");
-      if (rest.trim()) {
-        socialContent.push(<SocialSnippet key={label} label={label} content={rest} />);
+function parseSocialSection(socialText: string): { label: string; content: string }[] {
+  const snippets: { label: string; content: string }[] = [];
+  const lines = socialText.split("\n");
+  let currentLabel = "";
+  let currentContent: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.toUpperCase().endsWith(":") && ["TWITTER", "LINKEDIN", "NEWSLETTER"].includes(trimmed.replace(":", "").toUpperCase())) {
+      if (currentLabel && currentContent.length > 0) {
+        snippets.push({ label: currentLabel, content: currentContent.join("\n").trim() });
       }
-    } else {
-      result.push(child);
+      currentLabel = trimmed.replace(":", "").trim();
+      currentContent = [];
+    } else if (currentLabel) {
+      currentContent.push(line);
     }
-  });
-
-  if (socialContent.length > 0) {
-    result.push(
-      <div key="social-snippets" className="social-snippets">
-        {socialContent}
-      </div>
-    );
   }
 
-  return result;
+  if (currentLabel && currentContent.length > 0) {
+    snippets.push({ label: currentLabel, content: currentContent.join("\n").trim() });
+  }
+
+  return snippets;
+}
+
+function renderBlogContent(content: string) {
+  const { main, social } = parseSocialSnippets(content);
+  const snippets = parseSocialSection(social);
+
+  return (
+    <>
+      <ReactMarkdown components={markdownComponents}>{main}</ReactMarkdown>
+      {snippets.length > 0 && (
+        <div className="social-snippets">
+          {snippets.map((snippet) => (
+            <SocialSnippet key={snippet.label} label={snippet.label} content={snippet.content} />
+          ))}
+        </div>
+      )}
+    </>
+  );
 }
 
 export function BlogPostContent({
@@ -252,41 +268,7 @@ export function BlogPostContent({
           </svg>
 
           <div className="blog-post" style={{ position: "relative", zIndex: 1 }}>
-            <ReactMarkdown
-              components={{
-                ...markdownComponents,
-                p: ({ children }) => {
-                  const extractText = (node: React.ReactNode): string => {
-                    if (typeof node === "string") return node;
-                    if (typeof node === "number") return String(node);
-                    if (React.isValidElement(node)) {
-                      const props = node.props as { children?: React.ReactNode };
-                      return extractText(props.children);
-                    }
-                    if (Array.isArray(node)) return node.map(extractText).join("");
-                    return "";
-                  };
-                  
-                  const text = extractText(children);
-                  
-                  if (isSocialSnippet(text)) {
-                    const lines = text.split("\n");
-                    const firstLine = lines[0];
-                    const label = firstLine.replace(":", "").trim();
-                    const rest = lines.slice(1).join("\n");
-                    return (
-                      <div className="social-snippet">
-                        <span className={`social-snippet-label ${label.toLowerCase()}`}>{label}</span>
-                        <div>{rest.trim()}</div>
-                      </div>
-                    );
-                  }
-                  return <p>{children}</p>;
-                },
-              }}
-            >
-              {post.content}
-            </ReactMarkdown>
+            {renderBlogContent(post.content)}
           </div>
 
           {/* Bottom margin decoration */}
