@@ -1,8 +1,7 @@
-import { cookies } from "next/headers";
 import { Suspense } from "react";
-import { getServerDashboard, getServerQueries } from "@/lib/api/server";
 import { DashboardSkeleton } from "@/components/dashboard/Skeletons";
 import { BrandDashboardClient } from "@/components/dashboard/BrandDashboardClient";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 
 export const dynamic = "force-dynamic";
 
@@ -17,22 +16,12 @@ export default async function BrandDashboardPage({
   params: Promise<{ brandId: string }>;
 }) {
   const { brandId } = await params;
-  const cookieStore = await cookies();
-  const cookieHeader = cookieStore.toString();
-
-  // Server-side data fetch (best effort — client refetches if this fails)
-  const [dashboardData, queriesData] = await Promise.all([
-    getServerDashboard(brandId, cookieHeader),
-    getServerQueries(brandId, cookieHeader),
-  ]);
 
   return (
-    <Suspense fallback={<DashboardSkeleton />}>
-      <BrandDashboardClient
-        brandId={brandId}
-        initialData={dashboardData}
-        initialQueries={queriesData}
-      />
-    </Suspense>
+    <DashboardLayout>
+      <Suspense fallback={<DashboardSkeleton />}>
+        <BrandDashboardClient brandId={brandId} />
+      </Suspense>
+    </DashboardLayout>
   );
 }
