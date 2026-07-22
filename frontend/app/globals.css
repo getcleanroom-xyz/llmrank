@@ -966,3 +966,11 @@ input[type="checkbox"]:not(.native):disabled, input[type="radio"]:not(.native):d
   overscroll-behavior: contain;
   touch-action: pan-y;
 }
+
+/* ─── Features grid responsive ─── */
+@media (max-width: 768px) {
+  .features-grid > * {
+    grid-column: span 12 !important;
+    grid-row: span 1 !important;
+  }
+}

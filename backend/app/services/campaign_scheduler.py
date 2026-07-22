@@ -80,6 +80,7 @@ async def dispatch_campaign(db: AsyncSession, campaign_id: uuid.UUID, base_url: 
     sent = 0
     failed = 0
     loop = asyncio.get_event_loop()
+    results = []
     for recipient in recipients:
         user = users_map.get(recipient.user_id) if recipient.user_id else None
         ctx = _build_recipient_vars(user, recipient.email, template_vars)
@@ -89,6 +90,10 @@ async def dispatch_campaign(db: AsyncSession, campaign_id: uuid.UUID, base_url: 
         ok, err = await loop.run_in_executor(
             None, lambda: send_email(recipient.email, campaign.subject, tracked_html, campaign.from_email)
         )
+        results.append((recipient, ok, err))
+
+    # Batch status updates
+    for recipient, ok, err in results:
         if ok:
             recipient.status = RecipientStatus.sent
             recipient.sent_at = _utcnow()

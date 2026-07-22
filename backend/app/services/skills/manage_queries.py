@@ -1,9 +1,10 @@
 """Manage Queries skill — generate, score, and prune queries."""
 import uuid
 import logging
+from collections import defaultdict
 from datetime import datetime, timezone
 
-from sqlalchemy import select, func
+from sqlalchemy import select, func, text, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.tools.db import write_model, count_records
@@ -104,26 +105,57 @@ async def score_queries(brand_id: str, db: AsyncSession | None = None) -> list[d
         )
         queries = result.scalars().all()
 
+        if not queries:
+            return []
+
+        query_ids = [q.id for q in queries]
+
+        # Batch: find latest completed scan ID for each query in one query
+        latest_scan_subq = (
+            select(
+                QueryResult.query_id,
+                func.max(Scan.completed_at).label("max_completed_at"),
+            )
+            .join(Scan, QueryResult.scan_id == Scan.id)
+            .where(
+                QueryResult.query_id.in_(query_ids),
+                Scan.status == ScanStatus.completed,
+            )
+            .group_by(QueryResult.query_id)
+            .subquery()
+        )
+        latest_scan_rows = await session.execute(
+            select(
+                QueryResult.query_id,
+                QueryResult.scan_id,
+            )
+            .join(Scan, QueryResult.scan_id == Scan.id)
+            .join(
+                latest_scan_subq,
+                (QueryResult.query_id == latest_scan_subq.c.query_id)
+                & (Scan.completed_at == latest_scan_subq.c.max_completed_at),
+            )
+        )
+        query_to_scan = {row.query_id: row.scan_id for row in latest_scan_rows}
+
+        # Batch: fetch all results for all (query_id, scan_id) pairs
+        results_rows = await session.execute(
+            select(QueryResult).where(
+                tuple_(QueryResult.query_id, QueryResult.scan_id).in_(
+                    [(qid, scan_id) for qid, scan_id in query_to_scan.items()]
+                )
+            )
+        )
+        all_results = results_rows.scalars().all()
+        results_by_query: dict = defaultdict(list)
+        for r in all_results:
+            results_by_query[r.query_id].append(r)
+
         scored = []
         for q in queries:
-            # Get ALL results from the most recent completed scan for this query
-            latest_scan_subq = (
-                select(Scan.id)
-                .join(QueryResult, QueryResult.scan_id == Scan.id)
-                .where(QueryResult.query_id == q.id, Scan.status == ScanStatus.completed)
-                .order_by(Scan.completed_at.desc())
-                .limit(1)
-                .scalar_subquery()
-            )
-            latest_results = await session.execute(
-                select(QueryResult)
-                .where(QueryResult.query_id == q.id, QueryResult.scan_id == latest_scan_subq)
-            )
-            results = latest_results.scalars().all()
+            results = results_by_query.get(q.id, [])
 
             if results:
-                # Aggregate: if ANY LLM mentioned the brand, count it as mentioned.
-                # Use the best position/sentiment across LLMs.
                 any_mentioned = any(r.mentioned for r in results)
                 best_position = min((r.position or 99 for r in results if r.mentioned), default=99)
                 best_score = max((r.score or 0 for r in results), default=0)

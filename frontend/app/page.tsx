@@ -30,10 +30,10 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/og-image.svg",
+        url: "/images/dashboard-screenshot.png",
         width: 1200,
         height: 630,
-        alt: "LLMRanked - Track how AI models rank your brand",
+        alt: "LLMRanked dashboard showing GitHub's AI visibility score and competitor analysis",
       },
     ],
   },
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     title: "LLMRanked | Track How AI Models Rank Your Brand",
     description:
       "See exactly how your brand appears in ChatGPT, Gemini, Claude, and more. Free to start.",
-    images: ["/og-image.svg"],
+    images: ["/images/dashboard-screenshot.png"],
   },
   robots: {
     index: true,
@@ -85,26 +85,50 @@ const FEATURES = [
   {
     title: "Visibility Score",
     desc: "One number across all models. Track it over time.",
+    color: "#FFF9DB",
+    accent: "var(--primary)",
+    image: "/images/feature-visibility.png",
+    size: "large" as const,
   },
   {
     title: "Per-Model Breakdown",
     desc: "ChatGPT might love you while Claude ignores you. Know the difference.",
+    color: "#DBEAFF",
+    accent: "#3B82F6",
+    image: "/images/feature-models.png",
+    size: "medium" as const,
   },
   {
     title: "Competitor Intelligence",
     desc: "Threat levels, not just mentions. Know who's beating you and why.",
+    color: "#FEE2E2",
+    accent: "#991B1B",
+    image: "/images/feature-competitors.png",
+    size: "medium" as const,
   },
   {
     title: "Per-Query Drilldown",
     desc: "Click any query. Read the exact AI response. Word for word.",
+    color: "#E6F9ED",
+    accent: "#22C55E",
+    image: "/images/feature-drilldown.png",
+    size: "small" as const,
   },
   {
     title: "AI-Suggested Queries",
     desc: "Not sure what to track? We generate questions your market actually asks.",
+    color: "#F3E8FF",
+    accent: "#A855F7",
+    image: "/images/feature-suggestions.png",
+    size: "small" as const,
   },
   {
     title: "AI Copilot",
     desc: "Ask Lai anything. Get content plans, gap analysis, and competitor strategy on demand.",
+    color: "#FFF9DB",
+    accent: "var(--primary)",
+    image: "/images/feature-copilot.png",
+    size: "wide" as const,
   },
 ];
 
@@ -525,22 +549,142 @@ export default function HomePage() {
             </svg>
           </div>
 
-          <div className="grid-2">
-            {FEATURES.map((feature, i) => (
-              <div
-                key={feature.title}
-                className="card sketchy"
-                style={{
-                  padding: 14,
-                  transform: `rotate(${i % 2 === 0 ? "-0.3deg" : "0.3deg"})`,
-                }}
-              >
-                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{feature.title}</div>
-                <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>
-                  {feature.desc}
+          {/* Magazine-style asymmetric grid */}
+          <div className="features-grid" style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(12, 1fr)",
+            gridAutoRows: "minmax(180px, auto)",
+            gap: 16,
+          }}>
+            {FEATURES.map((feature, i) => {
+              // Determine grid placement based on size
+              let gridStyle: React.CSSProperties = {};
+              let rotate = "0deg";
+              let cardHeight = "auto";
+
+              if (feature.size === "large") {
+                gridStyle = { gridColumn: "span 7", gridRow: "span 2" };
+                rotate = "-0.5deg";
+              } else if (feature.size === "medium" && i === 1) {
+                gridStyle = { gridColumn: "span 5", gridRow: "span 2" };
+                rotate = "0.8deg";
+              } else if (feature.size === "medium" && i === 2) {
+                gridStyle = { gridColumn: "span 5", gridRow: "span 2" };
+                rotate = "-0.3deg";
+              } else if (feature.size === "small") {
+                gridStyle = { gridColumn: "span 6", gridRow: "span 1" };
+                rotate = i % 2 === 0 ? "0.4deg" : "-0.6deg";
+              } else if (feature.size === "wide") {
+                gridStyle = { gridColumn: "span 12", gridRow: "span 1" };
+                rotate = "-0.2deg";
+              }
+
+              return (
+                <div
+                  key={feature.title}
+                  className="card sketchy"
+                  style={{
+                    ...gridStyle,
+                    background: feature.color,
+                    border: "2px solid var(--border)",
+                    borderRadius: "var(--radius)",
+                    boxShadow: "4px 4px 0 #1A1A1A",
+                    transform: `rotate(${rotate})`,
+                    overflow: "hidden",
+                    display: "flex",
+                    flexDirection: "column",
+                    position: "relative",
+                    cursor: "default",
+                    transition: "transform 0.2s, box-shadow 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "rotate(0deg) translateY(-2px)";
+                    e.currentTarget.style.boxShadow = "6px 6px 0 #1A1A1A";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = `rotate(${rotate})`;
+                    e.currentTarget.style.boxShadow = "4px 4px 0 #1A1A1A";
+                  }}
+                >
+                  {/* Image area */}
+                  <div style={{
+                    flex: 1,
+                    minHeight: feature.size === "large" ? 200 : feature.size === "medium" ? 140 : 100,
+                    background: `linear-gradient(135deg, ${feature.color} 0%, ${feature.color}dd 100%)`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    position: "relative",
+                    overflow: "hidden",
+                  }}>
+                    {/* Decorative elements */}
+                    <svg width="100%" height="100%" style={{ position: "absolute", top: 0, left: 0, opacity: 0.15 }}>
+                      <circle cx="80%" cy="20%" r="60" fill={feature.accent} />
+                      <circle cx="20%" cy="80%" r="40" fill={feature.accent} />
+                      <path d="M0 50 Q25 30 50 55 Q75 80 100 45" stroke={feature.accent} strokeWidth="2" fill="none" opacity="0.5" />
+                    </svg>
+
+                    {/* Placeholder for image */}
+                    <div style={{
+                      width: feature.size === "large" ? 180 : feature.size === "medium" ? 120 : 80,
+                      height: feature.size === "large" ? 120 : feature.size === "medium" ? 80 : 50,
+                      background: "rgba(255,255,255,0.6)",
+                      border: `2px dashed ${feature.accent}`,
+                      borderRadius: 8,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontFamily: "var(--font-hand), Caveat, cursive",
+                      fontSize: 12,
+                      color: feature.accent,
+                      fontWeight: 600,
+                    }}>
+                      {feature.image ? "Image" : "Your image here"}
+                    </div>
+
+                    {/* Pushpin on large card */}
+                    {feature.size === "large" && (
+                      <svg width="18" height="22" viewBox="0 0 18 22" fill="none" style={{ position: "absolute", top: 8, right: 16, zIndex: 2 }}>
+                        <ellipse cx="9" cy="4.5" rx="4.5" ry="4.5" fill="#EF4444" stroke="#1A1A1A" strokeWidth="1.5" />
+                        <rect x="7" y="9" width="4" height="7" rx="1" fill="#DC2626" stroke="#1A1A1A" strokeWidth="1.5" />
+                      </svg>
+                    )}
+                  </div>
+
+                  {/* Text content */}
+                  <div style={{ padding: feature.size === "large" ? "18px 20px" : "14px 16px" }}>
+                    <div style={{
+                      fontFamily: "var(--font-hand), Caveat, cursive",
+                      fontSize: feature.size === "large" ? 26 : feature.size === "medium" ? 22 : 18,
+                      fontWeight: 700,
+                      marginBottom: 6,
+                      lineHeight: 1.1,
+                      color: "var(--text)",
+                    }}>
+                      {feature.title}
+                    </div>
+                    <div style={{
+                      fontSize: feature.size === "large" ? 15 : 13,
+                      color: "var(--text-secondary)",
+                      lineHeight: 1.5,
+                      fontFamily: "var(--font-serif), Georgia, serif",
+                    }}>
+                      {feature.desc}
+                    </div>
+                  </div>
+
+                  {/* Gold accent line */}
+                  <div style={{
+                    position: "absolute",
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: 4,
+                    background: feature.accent,
+                  }} />
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div style={{ textAlign: "center", margin: "28px 0 8px", fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 18, color: "var(--text-muted)", opacity: 0.35 }}>
