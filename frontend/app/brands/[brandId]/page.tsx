@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { DashboardSkeleton } from "@/components/dashboard/Skeletons";
 import { BrandDashboardClient } from "@/components/dashboard/BrandDashboardClient";
-import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 
 export const dynamic = "force-dynamic";
 
@@ -18,10 +17,8 @@ export default async function BrandDashboardPage({
   const { brandId } = await params;
 
   return (
-    <DashboardLayout>
-      <Suspense fallback={<DashboardSkeleton />}>
-        <BrandDashboardClient brandId={brandId} />
-      </Suspense>
-    </DashboardLayout>
+    <Suspense fallback={<DashboardSkeleton />}>
+      <BrandDashboardClient brandId={brandId} />
+    </Suspense>
   );
 }

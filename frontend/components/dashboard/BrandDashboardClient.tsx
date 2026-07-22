@@ -10,7 +10,6 @@ import { queryKeys } from "@/lib/query-keys";
 import type { DashboardData, MonitoredQuery } from "@/types";
 import type { AuthUser } from "@/lib/api/auth";
 import { ScoreRing, InsightRow } from "@/components/ui";
-import { AppHeader, PageHeader } from "@/components/AppHeader";
 import { ScanControls } from "@/components/dashboard/DashboardHeader";
 import { LLMBreakdownTable } from "@/components/dashboard/LLMBreakdownTable";
 import { CompetitorShare } from "@/components/dashboard/CompetitorShare";
