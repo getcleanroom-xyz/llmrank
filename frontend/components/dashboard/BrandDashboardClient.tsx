@@ -48,26 +48,7 @@ interface BrandDashboardClientProps {
 function BrandDashboardPageInner({ brandId, initialData, initialQueries }: BrandDashboardClientProps) {
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
-  const [tab, setTabState] = useState<Tab>((searchParams.get("tab") as Tab) ?? "overview");
-
-  const setTab = useCallback((t: Tab) => {
-    setTabState(t);
-    const url = new URL(window.location.href);
-    url.searchParams.set("tab", t);
-    window.history.pushState({}, "", url.toString());
-  }, []);
-
-  useEffect(() => {
-    const handler = () => {
-      const params = new URLSearchParams(window.location.search);
-      const t = params.get("tab") as Tab;
-              if (t && ["overview", "queries", "scans", "competitors"].includes(t)) {
-        setTabState(t);
-      }
-    };
-    window.addEventListener("popstate", handler);
-    return () => window.removeEventListener("popstate", handler);
-  }, []);
+  const tab = (searchParams.get("tab") as Tab) ?? "overview";
 
   const { data: dashResult, error: loadError, refetch } = useDashboard(brandId);
   const { data: credits } = useCredits();
@@ -129,46 +110,31 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
 
   return (
     <div className="page" style={{ display: "flex", flexDirection: "column" }}>
-      {/* Scan controls bar */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", marginBottom: 4 }}>
-        {isScanRunning && <span className="pill pill-gold" style={{ fontSize: 10, flexShrink: 0 }}>Scanning</span>}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto" }}>
-          {(active_scan ?? latest_scan)?.completed_at && (
-            <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>
-              {new Date((active_scan ?? latest_scan)!.completed_at!).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-            </span>
-          )}
+      {/* Scan status & controls */}
+      <div style={{ maxWidth: 1200, margin: "0 auto", width: "100%", padding: "0 var(--page-px)" }}>
+        {isScanRunning && <div className="scan-progress"><div className="scan-progress-fill" /></div>}
+        {scanComplete && (
+          <div style={{ background: "#DCFCE7", border: "2px solid #22C55E", borderRadius: "var(--radius)", padding: "8px 14px", fontSize: 12, color: "#166534", fontWeight: 700, display: "flex", alignItems: "center", gap: 8, boxShadow: "2px 2px 0 #1A1A1A", marginBottom: 8 }}>
+            <span style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 18 }}>Done!</span> Scan complete. Your results have been updated.
+          </div>
+        )}
+        {scanError && (
+          <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "5px 10px", fontSize: 11, color: "#991B1B", fontWeight: 600, marginBottom: 8 }}>{scanError}</div>
+        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "var(--gap)" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {(active_scan ?? latest_scan)?.completed_at && (
+              <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>
+                Last scanned {new Date((active_scan ?? latest_scan)!.completed_at!).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+              </span>
+            )}
+          </div>
           <ScanControls brandId={brandId} latestScan={active_scan ?? latest_scan} credits={credits} onScanError={setScanError} lastScanLLMs={llm_breakdown.map((b) => b.llm_name)} onScanStarted={() => setOptimisticScanning(true)} />
         </div>
       </div>
-      {isScanRunning && <div className="scan-progress" style={{ maxWidth: 1200, margin: "0 auto" }}><div className="scan-progress-fill" /></div>}
-      {scanComplete && (
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "4px var(--page-px) 0" }}>
-          <div style={{ background: "#DCFCE7", border: "2px solid #22C55E", borderRadius: "var(--radius)", padding: "8px 14px", fontSize: 12, color: "#166534", fontWeight: 700, display: "flex", alignItems: "center", gap: 8, boxShadow: "2px 2px 0 #1A1A1A" }}>
-            <span style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 18 }}>Done!</span> Scan complete. Your results have been updated.
-          </div>
-        </div>
-      )}
-      {scanError && <div style={{ maxWidth: 1200, margin: "0 auto", padding: "4px var(--page-px) 0" }}>
-        <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "5px 10px", fontSize: 11, color: "#991B1B", fontWeight: 600 }}>{scanError}</div>
-      </div>}
 
-      <div style={{ flex: 1, padding: "var(--gap) var(--page-px)", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
+      <div style={{ flex: 1, padding: "0 var(--page-px) var(--gap)", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
         {error && data && <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "8px 12px", marginBottom: 12, fontSize: 13, color: "#991B1B", fontWeight: 600 }}>{error}</div>}
-
-        <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", gap: 6, flexWrap: "wrap" }}>
-          <div style={{ fontSize: "clamp(22px, 3vw, 28px)", fontFamily: "var(--font-hand), Caveat, cursive", fontWeight: 700, color: "var(--text)", transform: "rotate(-0.5deg)", lineHeight: 1 }}>
-            {brand.name}
-          </div>
-          <svg width="30" height="8" viewBox="0 0 30 8" fill="none" style={{ marginBottom: 4 }}>
-            <path d="M0 4 Q5 1 10 5 Q15 7 20 3 Q25 1 30 5" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-          </svg>
-          <div role="tablist" style={{ display: "flex", gap: 4, marginLeft: "auto" }}>
-            {(["overview", "queries", "scans", "competitors"] as Tab[]).map((t) => (
-              <button key={t} role="tab" aria-selected={t === tab} onClick={() => setTab(t)} className={`tab ${t === tab ? "tab-active" : ""}`}>{t === "queries" ? "Queries" : t}</button>
-            ))}
-          </div>
-        </div>
 
         {tab === "overview" && (
           <>
@@ -294,7 +260,7 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
                   <div className="section-label" style={{ marginBottom: 0 }}>Queries</div>
                   <Scribble color="#22C55E" />
                 </div>
-                <QueryChipsPanel queries={displayQueries} brandId={brandId} onManageQueries={() => setTab("queries")} />
+                <QueryChipsPanel queries={displayQueries} brandId={brandId} onManageQueries={() => window.location.href = `/brands/${brandId}?tab=queries`} />
               </div>
               <div className="card" style={{ transform: "rotate(0.15deg)", borderTop: "4px solid #A855F7" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
