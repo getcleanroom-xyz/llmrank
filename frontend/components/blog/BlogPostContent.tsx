@@ -256,10 +256,18 @@ export function BlogPostContent({
               components={{
                 ...markdownComponents,
                 p: ({ children }) => {
-                  const text = typeof children === "string" ? children : 
-                    React.Children.toArray(children).map(c => 
-                      typeof c === "string" ? c : React.isValidElement(c) && typeof c.props.children === "string" ? c.props.children : ""
-                    ).join("");
+                  const extractText = (node: React.ReactNode): string => {
+                    if (typeof node === "string") return node;
+                    if (typeof node === "number") return String(node);
+                    if (React.isValidElement(node)) {
+                      const props = node.props as { children?: React.ReactNode };
+                      return extractText(props.children);
+                    }
+                    if (Array.isArray(node)) return node.map(extractText).join("");
+                    return "";
+                  };
+                  
+                  const text = extractText(children);
                   
                   if (isSocialSnippet(text)) {
                     const lines = text.split("\n");
