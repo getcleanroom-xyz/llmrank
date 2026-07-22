@@ -97,7 +97,9 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   const activeTab = searchParams.get("tab") || "overview";
 
   const recent = useMemo(() => {
-    return recentBrands.filter((b) => b.id !== brandId).slice(0, 3);
+    const others = recentBrands.filter((b) => b.id !== brandId).slice(0, 2);
+    const active = recentBrands.find((b) => b.id === brandId);
+    return active ? [active, ...others] : recentBrands.slice(0, 3);
   }, [recentBrands, brandId]);
 
   const searchItems = useMemo(() => {
@@ -142,7 +144,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
                   key={b.id}
                   href={brandHref(b.id)}
                   style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", textDecoration: "none", color: "var(--text-secondary)", fontSize: 12, fontWeight: 600, borderBottom: "1px solid var(--bg-dark)" }}
-                  onClick={() => { setSearchOpen(false); setSearchQuery(""); onNavigate?.(); }}
+                  onClick={() => { addRecentBrand(b.id, b.name); setRecentBrands(getRecentBrands()); setSearchOpen(false); setSearchQuery(""); onNavigate?.(); }}
                 >
                   <div style={{ width: 22, height: 22, borderRadius: "var(--radius)", background: "var(--primary)", border: "1.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, flexShrink: 0 }}>
                     {b.name.charAt(0).toUpperCase()}
@@ -161,22 +163,31 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
         {recent.length > 0 && (
           <div style={{ padding: "6px 10px" }}>
             {!collapsed && <div style={{ fontSize: 9, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4, paddingLeft: 4 }}>Recent</div>}
-            {recent.map((b) => (
-              <Link
-                key={b.id}
-                href={brandHref(b.id)}
-                style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 8px", borderRadius: "var(--radius)", textDecoration: "none", color: "var(--text-secondary)", fontSize: 12, fontWeight: 600, transition: "background 0.1s" }}
-                onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-dark)"}
-                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                title={b.name}
-                onClick={onNavigate}
-              >
-                <div style={{ width: 22, height: 22, borderRadius: "var(--radius)", background: "var(--primary)", border: "1.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, flexShrink: 0 }}>
-                  {b.name.charAt(0).toUpperCase()}
-                </div>
-                {!collapsed && <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.name}</span>}
-              </Link>
-            ))}
+            {recent.map((b) => {
+              const isActive = b.id === brandId;
+              return (
+                <Link
+                  key={b.id}
+                  href={brandHref(b.id)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8, padding: "5px 8px", borderRadius: "var(--radius)",
+                    textDecoration: "none", fontSize: 12, fontWeight: isActive ? 700 : 600, transition: "background 0.1s",
+                    background: isActive ? "var(--primary)" : "transparent",
+                    color: isActive ? "var(--black)" : "var(--text-secondary)",
+                    border: isActive ? "1.5px solid var(--border)" : "1.5px solid transparent",
+                  }}
+                  onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = "var(--bg-dark)"; }}
+                  onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
+                  title={b.name}
+                  onClick={onNavigate}
+                >
+                  <div style={{ width: 22, height: 22, borderRadius: "var(--radius)", background: isActive ? "var(--surface)" : "var(--primary)", border: "1.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, flexShrink: 0 }}>
+                    {b.name.charAt(0).toUpperCase()}
+                  </div>
+                  {!collapsed && <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.name}</span>}
+                </Link>
+              );
+            })}
           </div>
         )}
 

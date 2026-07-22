@@ -187,76 +187,88 @@ function PushPin() {
 
 function DashboardPreview() {
   return (
-    <div
-      className="card"
-      style={{
-        position: "relative",
-        overflow: "hidden",
-        border: "2px solid var(--border)",
-        borderRadius: "var(--radius)",
-        boxShadow: "6px 6px 0 #1A1A1A",
-        transform: "rotate(-0.5deg)",
-        marginBottom: 32,
-      }}
-    >
-      {/* Mock browser chrome */}
-      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", background: "var(--bg-dark)", borderBottom: "2px solid var(--border)" }}>
-        <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#EF4444", border: "1.5px solid #1A1A1A" }} />
-        <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#FBBF24", border: "1.5px solid #1A1A1A" }} />
-        <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#22C55E", border: "1.5px solid #1A1A1A" }} />
-        <div style={{ flex: 1, height: 16, borderRadius: 4, background: "var(--surface)", border: "1.5px solid var(--border)", marginLeft: 8, display: "flex", alignItems: "center", paddingLeft: 8, fontSize: 9, color: "var(--text-muted)", fontWeight: 600 }}>
-          llmranked.org/brands/abc123
+    <div style={{ position: "relative", marginBottom: 40, perspective: 1000 }}>
+      {/* Decorative scribble behind */}
+      <svg width="120" height="40" viewBox="0 0 120 40" fill="none" style={{ position: "absolute", top: -20, right: -10, zIndex: 0, opacity: 0.5 }}>
+        <path d="M0 20 Q15 5 30 25 Q45 40 60 15 Q75 0 90 20 Q105 35 120 10" stroke="var(--primary)" strokeWidth="3" fill="none" strokeLinecap="round" />
+      </svg>
+
+      {/* Main screenshot card */}
+      <div
+        style={{
+          position: "relative",
+          border: "3px solid var(--border)",
+          borderRadius: "var(--radius)",
+          boxShadow: "8px 8px 0 #1A1A1A",
+          transform: "rotate(-0.8deg)",
+          overflow: "hidden",
+          background: "var(--surface)",
+        }}
+      >
+        {/* Pushpin */}
+        <PushPin />
+
+        {/* Browser chrome */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 14px", background: "var(--bg-dark)", borderBottom: "2px solid var(--border)" }}>
+          <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#EF4444", border: "1.5px solid #1A1A1A" }} />
+          <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#FBBF24", border: "1.5px solid #1A1A1A" }} />
+          <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#22C55E", border: "1.5px solid #1A1A1A" }} />
+          <div style={{ flex: 1, height: 18, borderRadius: 4, background: "var(--surface)", border: "1.5px solid var(--border)", marginLeft: 8, display: "flex", alignItems: "center", paddingLeft: 8, fontSize: 10, color: "var(--text-muted)", fontWeight: 600 }}>
+            llmranked.org/brands/github
+          </div>
+        </div>
+
+        {/* Screenshot image */}
+        <div style={{ position: "relative" }}>
+          <img
+            src="/images/dashboard-screenshot.png"
+            alt="LLMRanked dashboard showing GitHub's AI visibility score of 59.3/100 with LLM breakdown and competitor share"
+            style={{ width: "100%", height: "auto", display: "block" }}
+          />
+          {/* Gradient overlay at bottom */}
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 60, background: "linear-gradient(transparent, var(--surface))" }} />
         </div>
       </div>
 
-      {/* Dashboard content mock */}
-      <div style={{ padding: "16px 20px", background: "var(--surface)" }}>
-        {/* Header row */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 800 }}>Acme Corp</div>
-            <div style={{ fontSize: 10, color: "var(--text-muted)" }}>acme.com</div>
-          </div>
-          <div style={{ display: "flex", gap: 4 }}>
-            <span className="pill pill-pos" style={{ fontSize: 9 }}>Completed</span>
-            <span className="pill pill-gold" style={{ fontSize: 9 }}>12 queries</span>
-          </div>
-        </div>
+      {/* Floating annotation cards */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 20,
+          left: -16,
+          background: "#FFF9DB",
+          border: "2px solid var(--border)",
+          borderRadius: "var(--radius)",
+          padding: "8px 12px",
+          boxShadow: "3px 3px 0 #1A1A1A",
+          transform: "rotate(2deg)",
+          zIndex: 2,
+          maxWidth: 140,
+        }}
+      >
+        <div style={{ fontSize: 9, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 2 }}>Visibility Score</div>
+        <div style={{ fontSize: 20, fontWeight: 800, color: "#F59E0B", lineHeight: 1 }}>59.3</div>
+        <div style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 12, color: "var(--text-secondary)" }}>/100 across 4 LLMs</div>
+      </div>
 
-        {/* Score cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
-          <div style={{ background: "var(--bg-dark)", borderRadius: "var(--radius)", padding: 10, border: "1.5px solid var(--border)" }}>
-            <div style={{ fontSize: 9, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", marginBottom: 2 }}>Score</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: "#22C55E" }}>72</div>
-          </div>
-          <div style={{ background: "var(--bg-dark)", borderRadius: "var(--radius)", padding: 10, border: "1.5px solid var(--border)" }}>
-            <div style={{ fontSize: 9, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", marginBottom: 2 }}>Mentions</div>
-            <div style={{ fontSize: 22, fontWeight: 800 }}>67%</div>
-          </div>
-          <div style={{ background: "var(--bg-dark)", borderRadius: "var(--radius)", padding: 10, border: "1.5px solid var(--border)" }}>
-            <div style={{ fontSize: 9, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", marginBottom: 2 }}>Position</div>
-            <div style={{ fontSize: 22, fontWeight: 800 }}>#2</div>
-          </div>
-        </div>
-
-        {/* Mini LLM breakdown */}
-        <div style={{ background: "var(--bg-dark)", borderRadius: "var(--radius)", padding: 10, border: "1.5px solid var(--border)" }}>
-          <div style={{ fontSize: 9, color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>Per-Model Breakdown</div>
-          {[
-            { name: "ChatGPT", pct: 85, color: "#22C55E" },
-            { name: "Gemini", pct: 72, color: "#3B82F6" },
-            { name: "Claude", pct: 45, color: "#F59E0B" },
-            { name: "Llama", pct: 60, color: "#8B5CF6" },
-          ].map((llm) => (
-            <div key={llm.name} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-              <span style={{ fontSize: 10, fontWeight: 600, width: 50 }}>{llm.name}</span>
-              <div style={{ flex: 1, height: 6, borderRadius: 3, background: "var(--border)", overflow: "hidden" }}>
-                <div style={{ width: `${llm.pct}%`, height: "100%", background: llm.color, borderRadius: 3 }} />
-              </div>
-              <span style={{ fontSize: 9, color: "var(--text-muted)", fontWeight: 600, width: 28, textAlign: "right" }}>{llm.pct}%</span>
-            </div>
-          ))}
-        </div>
+      <div
+        style={{
+          position: "absolute",
+          top: 40,
+          right: -12,
+          background: "#E6F9ED",
+          border: "2px solid var(--border)",
+          borderRadius: "var(--radius)",
+          padding: "8px 12px",
+          boxShadow: "3px 3px 0 #1A1A1A",
+          transform: "rotate(-1.5deg)",
+          zIndex: 2,
+          maxWidth: 130,
+        }}
+      >
+        <div style={{ fontSize: 9, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 2 }}>Competitor</div>
+        <div style={{ fontSize: 14, fontWeight: 800, color: "#991B1B", lineHeight: 1 }}>Travis CI</div>
+        <div style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 11, color: "var(--text-secondary)" }}>beating you on 3 models</div>
       </div>
     </div>
   );
