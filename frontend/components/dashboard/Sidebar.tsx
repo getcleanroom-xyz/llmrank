@@ -42,9 +42,18 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [search, setSearch] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [recentBrands, setRecentBrands] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => { setRecentBrands(getRecentBrands()); }, []);
+
+  // Detect mobile
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   // Track current brand in recent
   const currentBrand = brands.find((b) => b.id === brandId);
@@ -252,33 +261,35 @@ export function Sidebar() {
   return (
     <>
       {/* Mobile hamburger */}
-      <button
-        className="header-hamburger"
-        onClick={() => setMobileOpen(true)}
-        aria-label="Open navigation"
-        style={{ display: "none" }}
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="3" y1="6" x2="21" y2="6" />
-          <line x1="3" y1="12" x2="21" y2="12" />
-          <line x1="3" y1="18" x2="21" y2="18" />
-        </svg>
-      </button>
+      {isMobile && (
+        <button
+          className="header-hamburger"
+          onClick={() => setMobileOpen(true)}
+          aria-label="Open navigation"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+      )}
 
       {/* Desktop sidebar */}
-      <aside
-        style={{
-          width: w, flexShrink: 0, background: "var(--surface)", borderRight: "2px solid var(--border)",
-          transition: "width 0.2s ease", overflow: "hidden", display: "flex", flexDirection: "column",
-          height: "100vh", position: "sticky", top: 0, zIndex: 40,
-        }}
-        className="dashboard-sidebar"
-      >
-        <SidebarContent />
-      </aside>
+      {!isMobile && (
+        <aside
+          style={{
+            width: w, flexShrink: 0, background: "var(--surface)", borderRight: "2px solid var(--border)",
+            transition: "width 0.2s ease", overflow: "hidden", display: "flex", flexDirection: "column",
+            height: "100vh", position: "sticky", top: 0, zIndex: 40,
+          }}
+        >
+          <SidebarContent />
+        </aside>
+      )}
 
       {/* Mobile overlay */}
-      {mobileOpen && (
+      {isMobile && mobileOpen && (
         <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex" }}>
           <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }} onClick={() => setMobileOpen(false)} />
           <aside style={{ width: 260, background: "var(--surface)", borderRight: "2px solid var(--border)", position: "relative", zIndex: 101, display: "flex", flexDirection: "column" }}>
