@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
 import type { BlogPost } from "@/lib/blog";
 
@@ -124,7 +125,7 @@ function renderBlogContent(content: string) {
 
   return (
     <>
-      <ReactMarkdown components={markdownComponents}>{main}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{main}</ReactMarkdown>
       {snippets.length > 0 && (
         <div className="social-snippets">
           {snippets.map((snippet) => (

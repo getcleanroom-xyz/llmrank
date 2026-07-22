@@ -1,7 +1,5 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import type { Metadata } from "next";
-import ReactMarkdown from "react-markdown";
 import { getBlogPost, getAllBlogPosts } from "@/lib/blog";
 import { BlogPostContent } from "@/components/blog/BlogPostContent";
 
