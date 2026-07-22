@@ -104,11 +104,21 @@ function SocialSnippet({ label, content }: { label: string; content: string }) {
 }
 
 function parseSocialSnippets(content: string): { main: string; social: string } {
-  const parts = content.split("---");
-  if (parts.length >= 3) {
-    const main = parts.slice(0, -2).join("---").trim();
-    const socialSection = parts.slice(-2, -1)[0];
-    return { main, social: socialSection.trim() };
+  const lines = content.split("\n");
+  const separatorIndices: number[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    if (trimmed === "---") {
+      separatorIndices.push(i);
+    }
+  }
+
+  if (separatorIndices.length >= 2) {
+    const secondSep = separatorIndices[separatorIndices.length - 2];
+    const main = lines.slice(0, secondSep).join("\n").trim();
+    const socialSection = lines.slice(secondSep + 1, separatorIndices[separatorIndices.length - 1]).join("\n").trim();
+    return { main, social: socialSection };
   }
   return { main: content, social: "" };
 }

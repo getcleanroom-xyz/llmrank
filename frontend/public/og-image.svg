@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F5F5F0"/>
+      <stop offset="100%" style="stop-color:#E8E8E3"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  
+  <!-- Decorative border -->
+  <rect x="40" y="40" width="1120" height="550" fill="none" stroke="#1A1A1A" stroke-width="3" rx="0"/>
+  
+  <!-- Gold accent bar top -->
+  <rect x="40" y="40" width="1120" height="8" fill="#C9A84C"/>
+  
+  <!-- Logo -->
+  <text x="80" y="120" font-family="system-ui, -apple-system, sans-serif" font-size="48" font-weight="800" fill="#1A1A1A">llm</text>
+  <rect x="195" y="82" width="95" height="42" fill="#C9A84C" stroke="#1A1A1A" stroke-width="2"/>
+  <text x="200" y="115" font-family="system-ui, -apple-system, sans-serif" font-size="40" font-weight="800" fill="#1A1A1A">ranked</text>
+  
+  <!-- Main headline -->
+  <text x="80" y="220" font-family="system-ui, -apple-system, sans-serif" font-size="56" font-weight="800" fill="#1A1A1A">Track how AI ranks</text>
+  <text x="80" y="290" font-family="system-ui, -apple-system, sans-serif" font-size="56" font-weight="800" fill="#1A1A1A">your brand.</text>
+  
+  <!-- Subheadline -->
+  <text x="80" y="350" font-family="system-ui, -apple-system, sans-serif" font-size="24" fill="#666666">See exactly how you appear in ChatGPT, Gemini,</text>
+  <text x="80" y="385" font-family="system-ui, -apple-system, sans-serif" font-size="24" fill="#666666">Claude, and other AI models.</text>
+  
+  <!-- Feature pills -->
+  <rect x="80" y="430" width="180" height="40" fill="#FFF9DB" stroke="#1A1A1A" stroke-width="2" rx="0"/>
+  <text x="170" y="457" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700" fill="#1A1A1A" text-anchor="middle">Visibility Score</text>
+  
+  <rect x="280" y="430" width="180" height="40" fill="#DBEAFF" stroke="#1A1A1A" stroke-width="2" rx="0"/>
+  <text x="370" y="457" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700" fill="#1A1A1A" text-anchor="middle">10 AI Models</text>
+  
+  <rect x="480" y="430" width="180" height="40" fill="#E6F9ED" stroke="#1A1A1A" stroke-width="2" rx="0"/>
+  <text x="570" y="457" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700" fill="#1A1A1A" text-anchor="middle">Competitor Intel</text>
+  
+  <!-- Score mockup -->
+  <rect x="820" y="180" width="280" height="280" fill="#FFFFFF" stroke="#1A1A1A" stroke-width="3" rx="0"/>
+  <circle cx="960" cy="300" r="80" fill="none" stroke="#E8E8E3" stroke-width="12"/>
+  <circle cx="960" cy="300" r="80" fill="none" stroke="#C9A84C" stroke-width="12" stroke-dasharray="377" stroke-dashoffset="100" transform="rotate(-90 960 300)"/>
+  <text x="960" y="315" font-family="system-ui, -apple-system, sans-serif" font-size="48" font-weight="800" fill="#1A1A1A" text-anchor="middle">72</text>
+  <text x="960" y="420" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" fill="#666666" text-anchor="middle">VISIBILITY SCORE</text>
+  
+  <!-- Gold accent bar bottom -->
+  <rect x="40" y="582" width="1120" height="8" fill="#C9A84C"/>
+  
+  <!-- URL -->
+  <text x="600" y="610" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#666666" text-anchor="middle">llmranked.org</text>
+</svg>

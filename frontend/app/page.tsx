@@ -28,12 +28,21 @@ export const metadata: Metadata = {
     siteName: "LLMRanked",
     locale: "en_US",
     type: "website",
+    images: [
+      {
+        url: "/og-image.svg",
+        width: 1200,
+        height: 630,
+        alt: "LLMRanked - Track how AI models rank your brand",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "LLMRanked | Track How AI Models Rank Your Brand",
     description:
       "See exactly how your brand appears in ChatGPT, Gemini, Claude, and more. Free to start.",
+    images: ["/og-image.svg"],
   },
   robots: {
     index: true,
