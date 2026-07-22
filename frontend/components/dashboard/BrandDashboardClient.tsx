@@ -111,17 +111,9 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
   return (
     <div className="page" style={{ display: "flex", flexDirection: "column" }}>
       {/* Scan status & controls */}
-      <div style={{ maxWidth: 1200, margin: "0 auto", width: "100%", padding: "0 var(--page-px)" }}>
-        {isScanRunning && <div className="scan-progress"><div className="scan-progress-fill" /></div>}
-        {scanComplete && (
-          <div style={{ background: "#DCFCE7", border: "2px solid #22C55E", borderRadius: "var(--radius)", padding: "8px 14px", fontSize: 12, color: "#166534", fontWeight: 700, display: "flex", alignItems: "center", gap: 8, boxShadow: "2px 2px 0 #1A1A1A", marginBottom: 8 }}>
-            <span style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 18 }}>Done!</span> Scan complete. Your results have been updated.
-          </div>
-        )}
-        {scanError && (
-          <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "5px 10px", fontSize: 11, color: "#991B1B", fontWeight: 600, marginBottom: 8 }}>{scanError}</div>
-        )}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "var(--gap)" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", width: "100%", padding: "0 var(--page-px)", background: "var(--surface)", borderBottom: "2px solid var(--border)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 0" }}>
+          {isScanRunning && <span className="pill pill-gold" style={{ fontSize: 10, flexShrink: 0 }}>Scanning</span>}
           <div style={{ flex: 1, minWidth: 0 }}>
             {(active_scan ?? latest_scan)?.completed_at && (
               <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>
@@ -131,9 +123,18 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
           </div>
           <ScanControls brandId={brandId} latestScan={active_scan ?? latest_scan} credits={credits} onScanError={setScanError} lastScanLLMs={llm_breakdown.map((b) => b.llm_name)} onScanStarted={() => setOptimisticScanning(true)} />
         </div>
+        {isScanRunning && <div className="scan-progress"><div className="scan-progress-fill" /></div>}
+        {scanComplete && (
+          <div style={{ background: "#DCFCE7", border: "2px solid #22C55E", borderRadius: "var(--radius)", padding: "8px 14px", fontSize: 12, color: "#166534", fontWeight: 700, display: "flex", alignItems: "center", gap: 8, boxShadow: "2px 2px 0 #1A1A1A", marginBottom: 8 }}>
+            <span style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 18 }}>Done!</span> Scan complete. Your results have been updated.
+          </div>
+        )}
+        {scanError && (
+          <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "5px 10px", fontSize: 11, color: "#991B1B", fontWeight: 600, marginBottom: 8 }}>{scanError}</div>
+        )}
       </div>
 
-      <div style={{ flex: 1, padding: "0 var(--page-px) var(--gap)", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
+      <div style={{ flex: 1, padding: "var(--gap) var(--page-px)", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
         {error && data && <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "8px 12px", marginBottom: 12, fontSize: 13, color: "#991B1B", fontWeight: 600 }}>{error}</div>}
 
         {tab === "overview" && (

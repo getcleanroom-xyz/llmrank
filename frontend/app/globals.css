@@ -62,7 +62,7 @@ body {
 *:focus-visible { outline: 2px solid var(--black); outline-offset: 2px; }
 
 /* ─── Page ─── */
-.page { min-height: 100vh; background: var(--bg); padding-top: clamp(24px, 4vh, 48px); }
+.page { min-height: 100vh; background: var(--bg); }
 
 /* ─── Card ─── */
 .card {
@@ -885,6 +885,9 @@ input[type="checkbox"]:not(.native):disabled, input[type="radio"]:not(.native):d
   overflow-x: hidden;
 }
 @media (max-width: 767px) {
+  .dashboard-sidebar {
+    display: none !important;
+  }
   .dashboard-layout .header-hamburger {
     display: flex !important;
   }
