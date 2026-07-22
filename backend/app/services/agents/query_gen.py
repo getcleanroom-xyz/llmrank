@@ -310,7 +310,10 @@ class QueryGenAgent(BaseAgent):
             str(brand.id), brand.name, brand.domain, summary, self.name,
         )
 
-        return {"summary": summary, "competitors": competitors, "queries": queries}
+        # Extract query text strings for the frontend
+        suggested_queries = [q.get("query_text", "") for q in queries if q.get("query_text")]
+
+        return {"summary": summary, "competitors": competitors, "suggested_queries": suggested_queries}
 
     async def probe(self, brand) -> dict:
         """Run probe scan on generated queries."""
