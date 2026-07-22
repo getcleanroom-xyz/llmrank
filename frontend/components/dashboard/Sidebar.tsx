@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useBrands } from "@/lib/hooks";
 import {
@@ -30,13 +30,6 @@ function addRecentBrand(id: string, name: string) {
   const recent = getRecentBrands().filter((b) => b.id !== id);
   recent.unshift({ id, name });
   localStorage.setItem("recent_brands", JSON.stringify(recent.slice(0, 5)));
-}
-
-function getActiveTab(pathname: string): string {
-  const qIndex = pathname.indexOf("?");
-  if (qIndex === -1) return "overview";
-  const params = new URLSearchParams(pathname.slice(qIndex));
-  return params.get("tab") || "overview";
 }
 
 /* ─── Mobile hamburger button (rendered in dashboard-mobile-header) ─── */
@@ -81,7 +74,7 @@ function HamburgerButton() {
 /* ─── Sidebar content (shared between desktop & mobile) ─── */
 function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const { brandId } = useParams<{ brandId: string }>();
-  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user, logout } = useAuth();
   const { data: brandsData } = useBrands(1, "");
   const brands = brandsData ?? [];
@@ -95,7 +88,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     if (currentBrand) addRecentBrand(currentBrand.id, currentBrand.name);
   }, [currentBrand]);
 
-  const activeTab = getActiveTab(pathname);
+  const activeTab = searchParams.get("tab") || "overview";
 
   const filteredBrands = useMemo(() => {
     if (!search) return brands;

@@ -111,8 +111,8 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
   return (
     <div className="page" style={{ display: "flex", flexDirection: "column" }}>
       {/* Scan status & controls */}
-      <div style={{ maxWidth: 1200, margin: "0 auto", width: "100%", padding: "0 var(--page-px)", background: "var(--surface)", borderBottom: "2px solid var(--border)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "var(--gap) 0" }}>
+      <div style={{ width: "100%", padding: "0 var(--page-px)", background: "var(--surface)", borderBottom: "2px solid var(--border)" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", gap: 8, padding: "var(--gap) 0" }}>
           {isScanRunning && <span className="pill pill-gold" style={{ fontSize: 10, flexShrink: 0 }}>Scanning</span>}
           <div style={{ flex: 1, minWidth: 0 }}>
             {(active_scan ?? latest_scan)?.completed_at && (
@@ -134,7 +134,8 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
         )}
       </div>
 
-      <div style={{ flex: 1, padding: "var(--gap) var(--page-px)", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
+      <div style={{ flex: 1, padding: "0 var(--page-px)", width: "100%" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "var(--gap) 0" }}>
         {error && data && <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "8px 12px", marginBottom: 12, fontSize: 13, color: "#991B1B", fontWeight: 600 }}>{error}</div>}
 
         {tab === "overview" && (
@@ -303,6 +304,7 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
         )}
 
         {tab === "competitors" && <CompetitorsTab brandId={brandId} />}
+      </div>
       </div>
 
       <ChatWidget brandId={brandId} />
