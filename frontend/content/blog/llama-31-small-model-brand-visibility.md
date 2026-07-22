@@ -70,32 +70,3 @@ As AI moves to edge devices (phones, laptops, IoT), small models like Llama 3.1 
 4. Simplify your content structure for better extraction
 5. Consider the edge AI channel for long-term visibility
 
----
-
-TWITTER:
-1/ Nobody talks about Llama 3.1 8B. But it's powering edge devices, mobile apps, and cost-sensitive AI products 🧵
-
-2/ The small model challenge: 34% fewer brands mentioned per query. The competition is even tighter than on GPT-4o Mini.
-
-3/ Key difference: small models need clearer signals. Ambiguous positioning gets filtered out completely.
-
-4/ What works: consolidated messaging, high-authority sources, simple language, clear category association.
-
-5/ The edge AI opportunity: Apple Intelligence, Samsung AI, on-device assistants all use small models.
-
-LINKEDIN:
-Llama 3.1 8B is the smallest model in Meta's lineup, but it's powering a growing ecosystem of edge AI products, mobile assistants, and cost-sensitive applications.
-
-My testing shows 34% fewer brands mentioned per query compared to larger models. The competition is tighter, and the optimization requirements are different.
-
-Key insights for small model optimization:
-- Consolidated messaging across all content
-- High-authority source mentions
-- Simple, clear language
-- Strong category association
-- Structured data (tables, bullets)
-
-As AI moves to edge devices, small models will process an increasing share of brand queries. Optimizing for Llama 3.1 8B positions you for this growing channel.
-
-NEWSLETTER:
-Llama 3.1 8B powers edge devices and mobile AI assistants. It mentions 34% fewer brands than larger models, requiring clearer messaging and high-authority source mentions. This is the optimization channel most brands are ignoring.

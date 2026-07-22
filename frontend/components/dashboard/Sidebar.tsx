@@ -32,6 +32,13 @@ function addRecentBrand(id: string, name: string) {
   localStorage.setItem("recent_brands", JSON.stringify(recent.slice(0, 5)));
 }
 
+function getActiveTab(pathname: string): string {
+  const qIndex = pathname.indexOf("?");
+  if (qIndex === -1) return "overview";
+  const params = new URLSearchParams(pathname.slice(qIndex));
+  return params.get("tab") || "overview";
+}
+
 /* ─── Mobile hamburger button (rendered in dashboard-mobile-header) ─── */
 function HamburgerButton() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -63,11 +70,6 @@ function HamburgerButton() {
         <div className="sidebar-mobile-overlay" onClick={() => setMobileOpen(false)}>
           <div className="sidebar-mobile-backdrop" />
           <aside className="sidebar-mobile-panel" onClick={(e) => e.stopPropagation()}>
-            <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", borderBottom: "2px solid var(--border)", minHeight: 48 }}>
-              <Link href="/" style={{ fontSize: 14, fontWeight: 800, color: "var(--text)", textDecoration: "none", lineHeight: 1 }} onClick={() => setMobileOpen(false)}>
-                llm<span style={{ background: "var(--primary)", padding: "0 3px", border: "1.5px solid var(--border)" }}>ranked</span>
-              </Link>
-            </div>
             <SidebarContent collapsed={false} onNavigate={() => setMobileOpen(false)} />
           </aside>
         </div>
@@ -93,10 +95,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     if (currentBrand) addRecentBrand(currentBrand.id, currentBrand.name);
   }, [currentBrand]);
 
-  const activeTab = useMemo(() => {
-    const params = new URLSearchParams(pathname.includes("?") ? pathname.split("?")[1] : "");
-    return params.get("tab") || "overview";
-  }, [pathname]);
+  const activeTab = getActiveTab(pathname);
 
   const filteredBrands = useMemo(() => {
     if (!search) return brands;
@@ -110,6 +109,8 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
 
   const showSearch = brands.length >= 3;
   const w = collapsed ? 56 : 220;
+
+  const brandHref = (id: string) => `/brands/${id}?tab=${activeTab}`;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", width: w, transition: "width 0.2s ease", overflow: "hidden" }}>
@@ -137,7 +138,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
             {recentFiltered.slice(0, collapsed ? 2 : 3).map((b) => (
               <Link
                 key={b.id}
-                href={`/brands/${b.id}`}
+                href={brandHref(b.id)}
                 style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 8px", borderRadius: "var(--radius)", textDecoration: "none", color: "var(--text-secondary)", fontSize: 12, fontWeight: 600, transition: "background 0.1s" }}
                 onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-dark)"}
                 onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
@@ -162,7 +163,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
                 return (
                   <Link
                     key={b.id}
-                    href={`/brands/${b.id}`}
+                    href={brandHref(b.id)}
                     style={{
                       display: "flex", alignItems: "center", gap: 8, padding: "5px 8px", borderRadius: "var(--radius)",
                       textDecoration: "none", fontSize: 12, fontWeight: isActive ? 700 : 600, transition: "background 0.1s",
@@ -275,7 +276,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   );
 }
 
-/* ─── Desktop sidebar (always rendered, hidden on mobile via CSS) ─── */
+/* ─── Desktop sidebar ─── */
 function DesktopSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const w = collapsed ? 56 : 220;
@@ -285,7 +286,7 @@ function DesktopSidebar() {
       className="dashboard-sidebar"
       style={{
         width: w, flexShrink: 0, background: "var(--surface)", borderRight: "2px solid var(--border)",
-        transition: "width 0.2s ease", overflow: "hidden", display: "flex", flexDirection: "column",
+        transition: "width 0.2s ease", overflow: "hidden",
         height: "100vh", position: "sticky", top: 0, zIndex: 40,
       }}
     >

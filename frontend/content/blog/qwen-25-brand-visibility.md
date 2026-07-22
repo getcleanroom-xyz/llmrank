@@ -58,32 +58,3 @@ Brand messaging that works in the West may not work in Asia. Adapt your position
 4. Build relationships with Asian industry publications
 5. Adapt brand messaging for different cultural contexts
 
----
-
-TWITTER:
-1/ Qwen 2.5 72B is the most multilingual model in the LLMRanked lineup 🧵
-
-2/ It supports 29 languages natively and has strong Asian market performance. This creates unique brand visibility opportunities.
-
-3/ My testing: 42% more Asian brands in non-English queries, 15% more global brands in English queries.
-
-4/ What works: Asian market presence, native multilingual content, Asian review platforms, Alibaba ecosystem leverage.
-
-5/ Global brands need multilingual optimization. Qwen is the model that rewards it.
-
-LINKEDIN:
-Qwen 2.5 72B is Alibaba's leading open-source LLM with the strongest multilingual capabilities. It supports 29 languages natively and has strong performance across Asian markets.
-
-My testing shows 42% more Asian brands mentioned in non-English queries and 15% more global brands in English queries.
-
-Brand optimization for Qwen:
-- Asian market presence
-- Native multilingual content (not translations)
-- Asian review platforms and publications
-- Alibaba ecosystem leverage
-- Cultural context adaptation
-
-Global brands need multilingual optimization. Qwen is the model that rewards it most.
-
-NEWSLETTER:
-Qwen 2.5 72B supports 29 languages natively with strong Asian market performance. Asian market presence, native multilingual content, and cultural context adaptation are the key optimization strategies for global brand visibility.

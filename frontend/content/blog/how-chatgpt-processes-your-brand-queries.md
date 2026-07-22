@@ -74,32 +74,3 @@ A University of Toronto study found AI systems cite third-party authoritative so
 
 The window is still open. Most brands haven't figured this out yet. The ones who start now will have a compounding advantage as AI search grows.
 
----
-
-TWITTER:
-1/ GPT-4o doesn't rank pages. It generates text from patterns. Here's how it picks brands to mention 🧵
-
-2/ The #1 factor: training data frequency. If your brand appears in 100 articles and a competitor appears in 10, you're 10x more likely to be mentioned.
-
-3/ Counterintuitive finding: authoritative tone HURTS your visibility by 6%. GPT-4o prefers facts over confidence. Numbers > adjectives.
-
-4/ What works: statistics (+97.9% visibility), quotes (+115.1%), structured content, third-party citations.
-
-5/ Start by running your brand through ChatGPT with 10 category queries. If you're not showing up, you have a new channel to invest in.
-
-LINKEDIN:
-I spent a month reverse-engineering how GPT-4o picks brands to recommend. The patterns are clear.
-
-Key finding: GPT-4o doesn't care about your website. It cares about what others say about you. AI systems cite third-party sources 92.1% of the time.
-
-The optimization playbook:
-- Get mentioned in review sites (G2, Capterra, industry pubs)
-- Add specific statistics to your content
-- Use structured formats (tables, bullets, lists)
-- Be specific about your use case
-- Earn press coverage over self-promotion
-
-The brands winning in ChatGPT today aren't gaming an algorithm. They're building genuine presence in sources that matter.
-
-NEWSLETTER:
-GPT-4o picks brands based on training data patterns, not web searches. The #1 factor is how often your brand appears in authoritative third-party sources. Statistics boost visibility by 97.9% while authoritative tone actually hurts. Start by checking your visibility across 10 category queries.

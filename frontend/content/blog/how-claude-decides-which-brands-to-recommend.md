@@ -58,32 +58,3 @@ Claude likes to present balanced comparisons. Create content that compares your 
 4. Build a strategy for encouraging third-party reviews
 5. Create comparison content that includes competitors
 
----
-
-TWITTER:
-1/ Claude is the most cautious LLM for brand recommendations. It mentions 38% fewer brands than GPT-4o 🧵
-
-2/ Why: Constitutional AI trains Claude to be helpful, harmless, and honest. It adds caveats and suggests users do their own research.
-
-3/ When Claude mentions a brand, it's in more favorable contexts. Quality over quantity.
-
-4/ What works: verifiable claims, third-party validation, transparency, comprehensive documentation, comparison content.
-
-5/ Claude rewards honesty over marketing. If your product has limitations, acknowledge them.
-
-LINKEDIN:
-Claude is the most cautious LLM when it comes to brand recommendations. My testing shows 38% fewer brands mentioned compared to GPT-4o.
-
-The reason: Constitutional AI training emphasizes helpfulness, harmlessness, and honesty. Claude is more likely to add caveats and suggest users do their own research.
-
-Brand optimization for Claude:
-- Verifiable claims with specific data points
-- Third-party validation (G2, Capterra, industry reviews)
-- Transparency about limitations
-- Comprehensive product documentation
-- Comparison content that includes competitors
-
-When Claude does mention a brand, it's in more favorable contexts. Quality of mention matters more than quantity.
-
-NEWSLETTER:
-Claude mentions 38% fewer brands than GPT-4o due to Constitutional AI training. Verifiable claims, third-party validation, and transparency are the key optimization strategies. Quality of mention matters more than quantity.

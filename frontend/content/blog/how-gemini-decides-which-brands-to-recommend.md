@@ -73,32 +73,3 @@ Update your key pages regularly. Gemini's real-time retrieval means recent conte
 4. Create or update YouTube content for your top queries
 5. Track Gemini visibility separately from ChatGPT (LLMRanked does this)
 
----
-
-TWITTER:
-1/ Gemini isn't just ChatGPT with a Google logo. It processes brand queries differently 🧵
-
-2/ The Google ecosystem advantage: Gemini gives weight to Google Search rankings, YouTube, Google Reviews, and Business Profiles. No other model does this.
-
-3/ Only 34% overlap in brand recommendations between ChatGPT and Gemini. If you're optimizing only for one, you're missing the other.
-
-4/ What works for Gemini: schema markup, YouTube content, Google Business Profile, fresh content, traditional SEO.
-
-5/ The one model where SEO and GEO overlap: optimize for Google Search to optimize for Gemini.
-
-LINKEDIN:
-Google's Gemini processes brand queries differently than ChatGPT. The key difference: Gemini leverages Google's ecosystem data.
-
-My testing shows only 34% overlap in brand recommendations between the two models. That means optimizing only for ChatGPT misses two-thirds of the AI search landscape.
-
-Gemini-specific strategies:
-- Google Business Profile optimization
-- YouTube content with transcripts
-- Schema markup (FAQ, HowTo, Product)
-- Content freshness signals
-- Traditional SEO (the one model where it matters)
-
-The brands winning on Gemini aren't just optimizing for AI. They're optimizing for Google's entire ecosystem.
-
-NEWSLETTER:
-Gemini leverages Google's ecosystem differently than ChatGPT. Google Business Profile, YouTube, and schema markup all directly impact Gemini visibility. Only 34% overlap in brand recommendations means you need to optimize for both models.

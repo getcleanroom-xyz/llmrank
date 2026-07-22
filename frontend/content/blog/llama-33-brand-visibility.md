@@ -69,32 +69,3 @@ Many companies use fine-tuned versions of Llama. Understanding which fine-tuned 
 4. Create or improve technical documentation
 5. Consider multilingual content strategy
 
----
-
-TWITTER:
-1/ Everyone's optimizing for ChatGPT. But Llama 3.3 70B is powering dozens of AI products 🧵
-
-2/ Llama mentioned 23% more niche brands than GPT-4o in my testing. Smaller brands have a real opportunity here.
-
-3/ Why: Llama's training data includes more diverse sources - forums, GitHub, technical docs, multilingual content.
-
-4/ What works: community presence, technical documentation, multilingual content, niche publications.
-
-5/ The open-source advantage: fine-tuned Llama variants are being used across industries. Know which ones matter for you.
-
-LINKEDIN:
-Llama 3.3 70B is the most widely deployed open-source LLM, powering dozens of AI products from Perplexity to enterprise chatbots.
-
-My testing shows Llama mentions 23% more niche brands than GPT-4o. The open-source model has more diverse training data, including forums, GitHub discussions, and technical documentation.
-
-Brand optimization for Llama:
-- Community presence (Reddit, GitHub, forums)
-- Technical documentation and API references
-- Multilingual content
-- Niche industry publications
-- Track fine-tuned variants in your industry
-
-If you're only optimizing for ChatGPT, you're missing a significant portion of AI-powered recommendations.
-
-NEWSLETTER:
-Llama 3.3 70B powers dozens of AI products and mentions 23% more niche brands than GPT-4o. Community presence, technical documentation, and multilingual content are the key optimization strategies for this open-source model.

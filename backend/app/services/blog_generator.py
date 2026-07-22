@@ -47,20 +47,7 @@ Return ONLY the markdown content. No frontmatter. Start with the first paragraph
 The post should be 800-1500 words.
 Include a "## What to do next" section near the end with actionable steps.
 End with a natural transition to trying LLMRanked (not a hard sell).
-
-SOCIAL MEDIA SNIPPETS (at the very end, separated by ---):
-After the blog content, add:
-
----
-TWITTER:
-[3-5 tweet thread summarizing the post]
-
-LINKEDIN:
-[LinkedIn post version, 150-200 words]
-
-NEWSLETTER:
-[Email blurb, 2-3 sentences]
----"""
+Do NOT include social media snippets (Twitter, LinkedIn, Newsletter) — just the blog content."""
 
 
 async def generate_blog_post(topic_data: dict) -> dict:

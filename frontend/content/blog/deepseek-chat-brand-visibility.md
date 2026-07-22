@@ -60,35 +60,3 @@ DeepSeek's cost efficiency means more queries can be processed. Optimize for the
 4. Build presence in developer communities
 5. Consider Chinese-language content if relevant
 
----
-
-TWITTER:
-1/ DeepSeek Chat is the cost-effective model changing AI recommendations 🧵
-
-2/ It mentions 12% more brands than GPT-4o but 23% fewer than Claude. The selection patterns are distinctly different.
-
-3/ Why: MoE architecture, GRPO training, technical focus, Chinese-language training data.
-
-4/ What works: developer documentation, performance benchmarks, GitHub/Stack Overflow presence, Chinese market content.
-
-5/ DeepSeek's cost efficiency means more queries. Optimize for the high-volume AI products that use it.
-
-LINKEDIN:
-DeepSeek Chat is disrupting the AI industry with GPT-4 level performance at a fraction of the cost. Understanding its brand selection patterns is key for the growing ecosystem of AI products built on DeepSeek.
-
-My testing shows 12% more brands mentioned than GPT-4o but 23% fewer than Claude. The selection patterns are distinctly different due to:
-- MoE architecture (236B total, 21B active)
-- GRPO training method
-- Technical documentation focus
-- Chinese-language training data
-
-Brand optimization for DeepSeek:
-- Developer-focused documentation
-- Performance benchmarks and metrics
-- GitHub and Stack Overflow presence
-- Chinese-language content (if relevant)
-
-DeepSeek's cost efficiency means more queries across more AI products.
-
-NEWSLETTER:
-DeepSeek Chat delivers GPT-4 level performance at a fraction of the cost. Technical documentation, performance benchmarks, and developer community presence are the key optimization strategies for this cost-efficient model.

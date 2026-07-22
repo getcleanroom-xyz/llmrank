@@ -65,33 +65,3 @@ G2, Capterra, TrustRadius, and Reddit carry disproportionate weight with GPT-4o 
 4. Restructure your key content pages with tables and bullet points
 5. Test your brand positioning for clarity - if a stranger can't understand what you do in 5 seconds, neither can Mini
 
----
-
-TWITTER:
-1/ Everyone's optimizing for GPT-4o. But GPT-4o Mini processes most brand queries. Here's why that matters 🧵
-
-2/ Mini mentions 3.1 brands per query vs GPT-4o's 4.2. Fewer slots = tighter competition. You need to be in those 3.
-
-3/ Key difference: Mini is less tolerant of ambiguous positioning. "We do everything" hurts you more here.
-
-4/ What works: volume of mentions (20 mid-tier > 2 premium), clear category language, structured data, high-volume queries.
-
-5/ Check your Mini visibility specifically. LLMRanked shows model-by-model breakdowns.
-
-LINKEDIN:
-Most brands optimize for GPT-4o. But GPT-4o Mini is processing the majority of recommendation queries on ChatGPT's free tier.
-
-The challenge: Mini mentions fewer brands per query (3.1 vs 4.2). The competition is tighter.
-
-Key insight from my testing: Mini is 23% more likely to skip brands with ambiguous positioning. "We're a comprehensive work operating system" loses to "we're a project management tool for remote teams."
-
-Optimization strategies that work for Mini:
-- Volume of mentions across mid-tier sources
-- Clear, category-defining language
-- Structured content (tables, bullets, lists)
-- High-volume query targeting
-
-The brands winning on Mini aren't the ones with the biggest budgets. They're the ones with the clearest positioning.
-
-NEWSLETTER:
-GPT-4o Mini processes most ChatGPT queries but mentions fewer brands per query. Clear positioning and volume of mentions across mid-tier sources matter more than premium placements. Check your Mini-specific visibility with LLMRanked.
