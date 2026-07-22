@@ -56,7 +56,7 @@ function QueryCard({ q, brandId, variant }: { q: { query_id: string; query_text:
         {variant === "mentioned" ? (
           <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
             <PositionPill position={q.position} />
-            <SentimentPill sentiment={q.sentiment as any} />
+            <SentimentPill sentiment={q.sentiment as string} />
             {q.score != null && q.score > 0 && (
               <span style={{ fontSize: 13, fontWeight: 800, color: q.score >= 70 ? "#166534" : q.score >= 40 ? "var(--text)" : "#991B1B" }}>{q.score}</span>
             )}

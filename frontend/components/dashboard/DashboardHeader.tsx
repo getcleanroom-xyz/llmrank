@@ -29,11 +29,13 @@ export function ScanControls({ brandId, latestScan, credits, onScanError, lastSc
 
   // Sync selected LLMs when last scan changes
   const prevLLMsKey = useMemo(() => (lastScanLLMs ?? []).join(","), [lastScanLLMs]);
+  const prevLLMsKeyRef = useRef(prevLLMsKey);
   useEffect(() => {
-    if (lastScanLLMs && lastScanLLMs.length > 0) {
+    if (lastScanLLMs && lastScanLLMs.length > 0 && prevLLMsKeyRef.current !== prevLLMsKey) {
       setSelectedLLMs(lastScanLLMs);
     }
-  }, [prevLLMsKey]);
+    prevLLMsKeyRef.current = prevLLMsKey;
+  }, [prevLLMsKey, lastScanLLMs]);
 
   const isRunning = latestScan?.status === "pending" || latestScan?.status === "running";
 

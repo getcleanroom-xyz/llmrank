@@ -449,7 +449,7 @@ export function AdminDashboard() {
 
           {blogPosts && blogPosts.posts.length === 0 && (
             <div style={{ textAlign: "center", padding: "24px 16px", fontSize: 12, color: "var(--text-muted)" }}>
-              No posts yet. Click "Generate Post" to create one.
+              No posts yet. Click &quot;Generate Post&quot; to create one.
             </div>
           )}
         </div>

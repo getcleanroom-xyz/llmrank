@@ -85,9 +85,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const { data: searchResults } = useBrands(1, searchQuery);
-  const [recentBrands, setRecentBrands] = useState<{ id: string; name: string }[]>([]);
-
-  useEffect(() => { setRecentBrands(getRecentBrands()); }, []);
+  const [recentBrands, setRecentBrands] = useState<{ id: string; name: string }[]>(() => getRecentBrands());
 
   const currentBrand = (searchResults ?? []).find((b) => b.id === brandId);
   useEffect(() => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useCreditPackages, useCreateCheckout } from "@/lib/hooks";
 import { getEncryptionKey } from "@/lib/api";
 import { encryptAES, generateNonce } from "@/lib/encrypt";
@@ -21,9 +21,10 @@ export function BuyCreditsModal({ open, onClose }: BuyCreditsModalProps) {
   const [encrypting, setEncrypting] = useState(false);
   const [error, setError] = useState("");
   const [encKey, setEncKey] = useState("");
+  const prevOpen = useRef(false);
 
   useEffect(() => {
-    if (open) {
+    if (open && !prevOpen.current) {
       setStep("packages");
       setError("");
       setCardNumber("");
@@ -31,6 +32,7 @@ export function BuyCreditsModal({ open, onClose }: BuyCreditsModalProps) {
       setCvv("");
       getEncryptionKey().then((r) => setEncKey(r.key)).catch(() => setError("Failed to load encryption key"));
     }
+    prevOpen.current = open;
   }, [open]);
 
   if (!open) return null;

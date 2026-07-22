@@ -542,7 +542,15 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
     return editor?.getHTML() || "";
   }, [state.showSource, state.sourceHtml, editor]);
 
-  const buildPayload = useCallback(() => {
+  const buildPayload = useCallback((): {
+    name: string;
+    subject: string;
+    html_body: string;
+    from_email?: string;
+    audience_type?: string;
+    audience_config?: Record<string, unknown>;
+    template_vars?: TemplateVar[];
+  } => {
     let audience_config: Record<string, unknown> | undefined;
     if (state.audienceType === "segment") {
       audience_config = { signed_up_after: state.signedUpAfter || undefined, signed_up_before: state.signedUpBefore || undefined };
@@ -566,10 +574,10 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
     try {
       const payload = buildPayload();
       if (state.campaignId) {
-        await updateCampaign.mutateAsync({ id: state.campaignId, data: payload as any });
+        await updateCampaign.mutateAsync({ id: state.campaignId, data: payload });
         set("success", "Campaign saved as draft");
       } else {
-        const c = await createCampaign.mutateAsync(payload as any);
+        const c = await createCampaign.mutateAsync(payload);
         set("campaignId", c.id);
         set("success", "Campaign saved as draft");
       }
@@ -583,11 +591,11 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
     try {
       let id = state.campaignId;
       if (!id) {
-        const c = await createCampaign.mutateAsync(buildPayload() as any);
+        const c = await createCampaign.mutateAsync(buildPayload());
         id = c.id;
         set("campaignId", id);
       } else {
-        await updateCampaign.mutateAsync({ id, data: buildPayload() as any });
+        await updateCampaign.mutateAsync({ id, data: buildPayload() });
       }
 
       await buildAudience.mutateAsync(id);

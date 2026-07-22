@@ -162,7 +162,10 @@ export function ChatWidget({ brandId }: { brandId: string }) {
   }, [brandId, deleteConv, state.deleteTarget]);
 
   const messagesRef = useRef(messages);
-  messagesRef.current = messages;
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  });
 
   const send = async (text: string) => {
     if (!text.trim() || state.streaming) return;

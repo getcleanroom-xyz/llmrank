@@ -15,8 +15,17 @@ function CreditsSuccessPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { mutateAsync: verifyPayment } = useVerifyPayment();
-  const [state, setState] = useState<State>({ status: "loading" });
   const hasRun = useRef(false);
+
+  const [state, setState] = useState<State>(() => {
+    const status = searchParams.get("status");
+    const transactionId = searchParams.get("transaction_id");
+    if (!transactionId || status !== "successful") {
+      const reason = status === "cancelled" ? "Payment was cancelled." : "Payment was not successful.";
+      return { status: "failed", reason };
+    }
+    return { status: "loading" };
+  });
 
   useEffect(() => {
     if (hasRun.current) return;
@@ -26,8 +35,6 @@ function CreditsSuccessPageInner() {
     const transactionId = searchParams.get("transaction_id");
 
     if (!transactionId || status !== "successful") {
-      const reason = status === "cancelled" ? "Payment was cancelled." : "Payment was not successful.";
-      setState({ status: "failed", reason });
       return;
     }
 

@@ -63,14 +63,18 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
   const queries = dashResult?.queries ?? initialQueries ?? [];
   const isScanRunning = optimisticScanning || (data && (data.active_scan?.status === "pending" || data.active_scan?.status === "running"));
 
+  const prevOptimisticRef = useRef(optimisticScanning);
   useEffect(() => {
-    if (optimisticScanning && data?.active_scan) {
+    if (prevOptimisticRef.current && !optimisticScanning && data?.active_scan) {
       setOptimisticScanning(false);
     }
+    prevOptimisticRef.current = optimisticScanning;
   }, [optimisticScanning, data?.active_scan]);
 
   const refetchRef = useRef(refetch);
-  refetchRef.current = refetch;
+  useEffect(() => {
+    refetchRef.current = refetch;
+  });
 
   useEffect(() => {
     if (!isScanRunning) {
