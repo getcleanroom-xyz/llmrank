@@ -76,49 +76,53 @@ export function FeaturesGrid({ features }: { features: Feature[] }) {
                 flex: 1,
                 minHeight:
                   feature.size === "large"
-                    ? 200
+                    ? 260
                     : feature.size === "medium"
-                      ? 140
-                      : 100,
+                      ? 180
+                      : feature.size === "wide"
+                        ? 200
+                        : 140,
                 background: `linear-gradient(135deg, ${feature.color} 0%, ${feature.color}dd 100%)`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 position: "relative",
                 overflow: "hidden",
+                padding: feature.size === "large" ? 16 : 12,
               }}
             >
-              {/* Decorative elements */}
-              <svg
-                width="100%"
-                height="100%"
-                style={{ position: "absolute", top: 0, left: 0, opacity: 0.15 }}
-              >
-                <circle cx="80%" cy="20%" r="60" fill={feature.accent} />
-                <circle cx="20%" cy="80%" r="40" fill={feature.accent} />
-                <path
-                  d="M0 50 Q25 30 50 55 Q75 80 100 45"
-                  stroke={feature.accent}
-                  strokeWidth="2"
-                  fill="none"
-                  opacity="0.5"
-                />
-              </svg>
-
               {/* Feature image */}
               {feature.image && (
                 <img
                   src={feature.image}
                   alt={feature.title}
                   style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
+                    maxWidth: "100%",
+                    maxHeight: "100%",
+                    objectFit: "contain",
+                    borderRadius: 6,
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
                   }}
                 />
+              )}
+
+              {/* Decorative elements (shown when no image) */}
+              {!feature.image && (
+                <svg
+                  width="100%"
+                  height="100%"
+                  style={{ position: "absolute", top: 0, left: 0, opacity: 0.15 }}
+                >
+                  <circle cx="80%" cy="20%" r="60" fill={feature.accent} />
+                  <circle cx="20%" cy="80%" r="40" fill={feature.accent} />
+                  <path
+                    d="M0 50 Q25 30 50 55 Q75 80 100 45"
+                    stroke={feature.accent}
+                    strokeWidth="2"
+                    fill="none"
+                    opacity="0.5"
+                  />
+                </svg>
               )}
 
               {/* Pushpin on large card */}
