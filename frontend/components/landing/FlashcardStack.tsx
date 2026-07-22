@@ -44,7 +44,7 @@ export function FlashcardStack({ items }: { items: QaItem[] }) {
       </div>
 
       {/* Flashcard stack container */}
-      <div style={{ position: "relative", maxWidth: 640 }}>
+      <div style={{ position: "relative" }}>
         {active !== null ? (
           <>
             {/* Active card — full size, on top */}
