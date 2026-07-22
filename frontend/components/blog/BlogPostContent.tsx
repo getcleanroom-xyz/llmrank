@@ -31,6 +31,26 @@ function ScribbleUnderline({ color = "var(--primary)", width = "100%", style }: 
 }
 
 const markdownComponents: Components = {
+  table: ({ children }) => (
+    <div style={{ overflowX: "auto", margin: "1.5em 0" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "var(--font-sans), Inter, sans-serif", fontSize: "0.9em" }}>
+        {children}
+      </table>
+    </div>
+  ),
+  thead: ({ children }) => <thead>{children}</thead>,
+  tbody: ({ children }) => <tbody>{children}</tbody>,
+  tr: ({ children }) => <tr style={{ borderBottom: "1px solid var(--bg-dark)" }}>{children}</tr>,
+  th: ({ children }) => (
+    <th style={{ padding: "10px 14px", textAlign: "left", background: "var(--text)", color: "var(--surface)", fontWeight: 700, fontSize: "0.85em", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+      {children}
+    </th>
+  ),
+  td: ({ children }) => (
+    <td style={{ padding: "10px 14px", textAlign: "left", borderBottom: "1.5px solid var(--border)" }}>
+      {children}
+    </td>
+  ),
   blockquote: ({ children }) => (
     <div
       style={{
