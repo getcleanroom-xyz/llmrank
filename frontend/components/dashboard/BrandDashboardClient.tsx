@@ -130,28 +130,18 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
 
   return (
     <div className="page" style={{ display: "flex", flexDirection: "column" }}>
-      <AppHeader
-        breadcrumb={
-          <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-            <Link href="/brands" style={{ fontSize: 12, color: "var(--text-muted)", textDecoration: "none", fontWeight: 700, flexShrink: 0 }}>brands</Link>
-            <span style={{ color: "var(--text-muted)", flexShrink: 0, fontSize: 11 }}>/</span>
-            <span style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{brand.name}</span>
-          </div>
-        }
-      />
-      <PageHeader>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
-          {isScanRunning && <span className="pill pill-gold" style={{ fontSize: 10, flexShrink: 0 }}>Scanning</span>}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto" }}>
-            {(active_scan ?? latest_scan)?.completed_at && (
-              <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>
-                {new Date((active_scan ?? latest_scan)!.completed_at!).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-              </span>
-            )}
-            <ScanControls brandId={brandId} latestScan={active_scan ?? latest_scan} credits={credits} onScanError={setScanError} lastScanLLMs={llm_breakdown.map((b) => b.llm_name)} onScanStarted={() => setOptimisticScanning(true)} />
-          </div>
+      {/* Scan controls bar */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", marginBottom: 4 }}>
+        {isScanRunning && <span className="pill pill-gold" style={{ fontSize: 10, flexShrink: 0 }}>Scanning</span>}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto" }}>
+          {(active_scan ?? latest_scan)?.completed_at && (
+            <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>
+              {new Date((active_scan ?? latest_scan)!.completed_at!).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+            </span>
+          )}
+          <ScanControls brandId={brandId} latestScan={active_scan ?? latest_scan} credits={credits} onScanError={setScanError} lastScanLLMs={llm_breakdown.map((b) => b.llm_name)} onScanStarted={() => setOptimisticScanning(true)} />
         </div>
-      </PageHeader>
+      </div>
       {isScanRunning && <div className="scan-progress" style={{ maxWidth: 1200, margin: "0 auto" }}><div className="scan-progress-fill" /></div>}
       {scanComplete && (
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "4px var(--page-px) 0" }}>

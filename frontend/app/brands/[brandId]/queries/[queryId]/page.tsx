@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { rescanQuery } from "@/lib/api";
 import { useQueryDrilldown } from "@/lib/hooks";
-import { AppHeader, PageHeader } from "@/components/AppHeader";
+import { PageHeader } from "@/components/AppHeader";
 import { InsightRow, getLLMColor } from "@/components/ui";
 import { SENTIMENT_LABELS, LLM_NAMES } from "@/lib/utils";
 
@@ -84,15 +84,6 @@ function QueryDrilldownInner() {
 
   return (
     <div className="page" style={{ display: "flex", flexDirection: "column" }}>
-      <AppHeader breadcrumb={
-        <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-          <Link href="/brands" style={{ fontSize: 12, color: "var(--text-muted)", textDecoration: "none", fontWeight: 700, flexShrink: 0 }}>brands</Link>
-          <span style={{ color: "var(--text-muted)", flexShrink: 0, fontSize: 11 }}>/</span>
-          <Link href={`/brands/${brandId}`} style={{ fontSize: 12, color: "var(--text-muted)", textDecoration: "none", fontWeight: 700, flexShrink: 0 }}>dashboard</Link>
-          <span style={{ color: "var(--text-muted)", flexShrink: 0, fontSize: 11 }}>/</span>
-          <span style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{data.query_text}</span>
-        </div>
-      } />
       <PageHeader>
         <Link href={`/brands/${brandId}`} className="btn btn-sm btn-ghost btn-back">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
