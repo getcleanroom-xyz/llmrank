@@ -63,6 +63,11 @@ function HamburgerButton() {
         <div className="sidebar-mobile-overlay" onClick={() => setMobileOpen(false)}>
           <div className="sidebar-mobile-backdrop" />
           <aside className="sidebar-mobile-panel" onClick={(e) => e.stopPropagation()}>
+            <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", borderBottom: "2px solid var(--border)", minHeight: 48 }}>
+              <Link href="/" style={{ fontSize: 14, fontWeight: 800, color: "var(--text)", textDecoration: "none", lineHeight: 1 }} onClick={() => setMobileOpen(false)}>
+                llm<span style={{ background: "var(--primary)", padding: "0 3px", border: "1.5px solid var(--border)" }}>ranked</span>
+              </Link>
+            </div>
             <SidebarContent collapsed={false} onNavigate={() => setMobileOpen(false)} />
           </aside>
         </div>
@@ -108,15 +113,6 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", width: w, transition: "width 0.2s ease", overflow: "hidden" }}>
-      {/* Logo */}
-      <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2px solid var(--border)", minHeight: 48 }}>
-        {!collapsed && (
-          <Link href="/" style={{ fontSize: 14, fontWeight: 800, color: "var(--text)", textDecoration: "none", lineHeight: 1 }} onClick={onNavigate}>
-            llm<span style={{ background: "var(--primary)", padding: "0 3px", border: "1.5px solid var(--border)" }}>ranked</span>
-          </Link>
-        )}
-      </div>
-
       {/* Brand search */}
       {showSearch && !collapsed && (
         <div style={{ padding: "8px 10px", borderBottom: "1.5px solid var(--border)" }}>

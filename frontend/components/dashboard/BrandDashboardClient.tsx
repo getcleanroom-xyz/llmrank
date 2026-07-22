@@ -112,7 +112,7 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
     <div className="page" style={{ display: "flex", flexDirection: "column" }}>
       {/* Scan status & controls */}
       <div style={{ maxWidth: 1200, margin: "0 auto", width: "100%", padding: "0 var(--page-px)", background: "var(--surface)", borderBottom: "2px solid var(--border)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 0" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "var(--gap) 0" }}>
           {isScanRunning && <span className="pill pill-gold" style={{ fontSize: 10, flexShrink: 0 }}>Scanning</span>}
           <div style={{ flex: 1, minWidth: 0 }}>
             {(active_scan ?? latest_scan)?.completed_at && (
