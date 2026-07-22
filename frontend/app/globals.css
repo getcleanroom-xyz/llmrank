@@ -974,3 +974,15 @@ input[type="checkbox"]:not(.native):disabled, input[type="radio"]:not(.native):d
     grid-row: span 1 !important;
   }
 }
+
+/* ─── Pricing grid responsive ─── */
+@media (max-width: 900px) {
+  .pricing-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+@media (max-width: 500px) {
+  .pricing-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

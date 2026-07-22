@@ -329,29 +329,133 @@ function PricingSection() {
         </svg>
       </div>
 
-      <div className="grid-2" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+      <div className="pricing-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
         {PRICING_PLANS.map((plan, i) => (
           <div
             key={plan.name}
-            className="card sketchy"
             style={{
-              padding: 14,
+              position: "relative",
+              background: plan.highlight ? "#FFFEF5" : "#FEFEFE",
+              border: "1.5px dashed #C8C4BC",
+              borderRadius: 2,
+              padding: "20px 14px 18px",
               textAlign: "center",
-              transform: `rotate(${i % 2 === 0 ? "-0.3deg" : "0.3deg"})`,
-              border: plan.highlight ? "2px solid var(--primary)" : undefined,
-              background: plan.highlight ? "#FFF9DB" : undefined,
+              transform: `rotate(${i % 2 === 0 ? "-0.6deg" : "0.5deg"})`,
+              boxShadow: "1px 2px 4px rgba(0,0,0,0.06)",
+              fontFamily: "'Courier New', Courier, monospace",
             }}
           >
-            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 4 }}>{plan.name}</div>
-            <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 2 }}>{plan.price}</div>
-            <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 4 }}>{plan.credits} credits</div>
-            <div style={{ fontSize: 10, color: "var(--text-secondary)" }}>{plan.note}</div>
+            {/* Torn top edge */}
+            <svg
+              width="100%"
+              height="8"
+              viewBox="0 0 200 8"
+              preserveAspectRatio="none"
+              style={{ position: "absolute", top: -4, left: 0, right: 0 }}
+            >
+              <path
+                d="M0 8 L5 2 L10 6 L15 1 L20 5 L25 2 L30 7 L35 1 L40 6 L45 3 L50 7 L55 1 L60 5 L65 2 L70 6 L75 1 L80 5 L85 3 L90 7 L95 2 L100 6 L105 1 L110 5 L115 3 L120 7 L125 1 L130 6 L135 2 L140 5 L145 3 L150 7 L155 1 L160 6 L165 2 L170 5 L175 3 L180 7 L185 1 L190 6 L195 2 L200 5 L200 8 Z"
+                fill={plan.highlight ? "#FFFEF5" : "#FEFEFE"}
+                stroke="none"
+              />
+            </svg>
+
+            {/* Plan name */}
+            <div
+              style={{
+                fontSize: 9,
+                fontWeight: 700,
+                color: "#888",
+                textTransform: "uppercase",
+                letterSpacing: "0.12em",
+                marginBottom: 10,
+              }}
+            >
+              {plan.name}
+            </div>
+
+            {/* Perforated line */}
+            <div
+              style={{
+                borderTop: "1px dashed #D4D0C8",
+                margin: "0 0 10px",
+              }}
+            />
+
+            {/* Price */}
+            <div
+              style={{
+                fontSize: 28,
+                fontWeight: 800,
+                color: "#1A1A1A",
+                lineHeight: 1,
+                marginBottom: 4,
+              }}
+            >
+              {plan.price}
+            </div>
+
+            {/* Credits */}
+            <div
+              style={{
+                fontSize: 11,
+                color: "#666",
+                marginBottom: 8,
+                fontWeight: 600,
+              }}
+            >
+              {plan.credits} credits
+            </div>
+
+            {/* Perforated line */}
+            <div
+              style={{
+                borderTop: "1px dashed #D4D0C8",
+                margin: "0 0 8px",
+              }}
+            />
+
+            {/* Note */}
+            <div
+              style={{
+                fontSize: 10,
+                color: "#999",
+                fontStyle: "italic",
+              }}
+            >
+              {plan.note}
+            </div>
+
+            {/* Torn bottom edge */}
+            <svg
+              width="100%"
+              height="10"
+              viewBox="0 0 200 10"
+              preserveAspectRatio="none"
+              style={{ position: "absolute", bottom: -5, left: 0, right: 0 }}
+            >
+              <path
+                d="M0 0 L5 6 L10 2 L15 7 L20 3 L25 6 L30 1 L35 7 L40 3 L45 5 L50 1 L55 7 L60 3 L65 6 L70 2 L75 7 L80 3 L85 5 L90 1 L95 6 L100 2 L105 7 L110 3 L115 5 L120 1 L125 6 L130 2 L135 7 L140 3 L145 5 L150 1 L155 7 L160 3 L165 6 L170 2 L175 5 L180 1 L185 6 L190 2 L195 5 L200 3 L200 0 Z"
+                fill={plan.highlight ? "#FFFEF5" : "#FEFEFE"}
+                stroke="none"
+              />
+            </svg>
           </div>
         ))}
       </div>
-      <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600, marginTop: 8, textAlign: "center" }}>
+      <div
+        style={{
+          fontSize: 11,
+          color: "var(--text-muted)",
+          fontWeight: 600,
+          marginTop: 16,
+          textAlign: "center",
+          fontFamily: "var(--font-sans), Inter, sans-serif",
+        }}
+      >
         1 credit = $0.001 &middot; No subscriptions &middot; Pay as you go
       </div>
+
     </section>
   );
 }
