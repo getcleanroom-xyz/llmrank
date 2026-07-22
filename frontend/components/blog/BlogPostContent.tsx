@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
@@ -71,6 +71,54 @@ const markdownComponents: Components = {
     </div>
   ),
 };
+
+function isSocialSnippet(text: string): boolean {
+  const trimmed = text.trim().toUpperCase();
+  return trimmed.startsWith("TWITTER:") || trimmed.startsWith("LINKEDIN:") || trimmed.startsWith("NEWSLETTER:");
+}
+
+function SocialSnippet({ label, content }: { label: string; content: string }) {
+  const labelClass = `social-snippet-label ${label.toLowerCase()}`;
+  return (
+    <div className="social-snippet">
+      <span className={labelClass}>{label}</span>
+      <div>{content.trim()}</div>
+    </div>
+  );
+}
+
+function parseSocialSnippets(children: React.ReactNode): React.ReactNode[] {
+  const result: React.ReactNode[] = [];
+  let socialStarted = false;
+  let socialContent: React.ReactNode[] = [];
+
+  React.Children.forEach(children, (child) => {
+    if (socialStarted) {
+      socialContent.push(child);
+    } else if (typeof child === "string" && isSocialSnippet(child)) {
+      socialStarted = true;
+      const lines = child.split("\n");
+      const firstLine = lines[0];
+      const label = firstLine.replace(":", "").trim();
+      const rest = lines.slice(1).join("\n");
+      if (rest.trim()) {
+        socialContent.push(<SocialSnippet key={label} label={label} content={rest} />);
+      }
+    } else {
+      result.push(child);
+    }
+  });
+
+  if (socialContent.length > 0) {
+    result.push(
+      <div key="social-snippets" className="social-snippets">
+        {socialContent}
+      </div>
+    );
+  }
+
+  return result;
+}
 
 export function BlogPostContent({
   post,
@@ -204,7 +252,33 @@ export function BlogPostContent({
           </svg>
 
           <div className="blog-post" style={{ position: "relative", zIndex: 1 }}>
-            <ReactMarkdown components={markdownComponents}>{post.content}</ReactMarkdown>
+            <ReactMarkdown
+              components={{
+                ...markdownComponents,
+                p: ({ children }) => {
+                  const text = typeof children === "string" ? children : 
+                    React.Children.toArray(children).map(c => 
+                      typeof c === "string" ? c : React.isValidElement(c) && typeof c.props.children === "string" ? c.props.children : ""
+                    ).join("");
+                  
+                  if (isSocialSnippet(text)) {
+                    const lines = text.split("\n");
+                    const firstLine = lines[0];
+                    const label = firstLine.replace(":", "").trim();
+                    const rest = lines.slice(1).join("\n");
+                    return (
+                      <div className="social-snippet">
+                        <span className={`social-snippet-label ${label.toLowerCase()}`}>{label}</span>
+                        <div>{rest.trim()}</div>
+                      </div>
+                    );
+                  }
+                  return <p>{children}</p>;
+                },
+              }}
+            >
+              {post.content}
+            </ReactMarkdown>
           </div>
 
           {/* Bottom margin decoration */}
