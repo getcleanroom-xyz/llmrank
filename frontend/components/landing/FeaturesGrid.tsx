@@ -105,35 +105,21 @@ export function FeaturesGrid({ features }: { features: Feature[] }) {
                 />
               </svg>
 
-              {/* Placeholder for image */}
-              <div
-                style={{
-                  width:
-                    feature.size === "large"
-                      ? 180
-                      : feature.size === "medium"
-                        ? 120
-                        : 80,
-                  height:
-                    feature.size === "large"
-                      ? 120
-                      : feature.size === "medium"
-                        ? 80
-                        : 50,
-                  background: "rgba(255,255,255,0.6)",
-                  border: `2px dashed ${feature.accent}`,
-                  borderRadius: 8,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontFamily: "var(--font-hand), Caveat, cursive",
-                  fontSize: 12,
-                  color: feature.accent,
-                  fontWeight: 600,
-                }}
-              >
-                {feature.image ? "Image" : "Your image here"}
-              </div>
+              {/* Feature image */}
+              {feature.image && (
+                <img
+                  src={feature.image}
+                  alt={feature.title}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                  }}
+                />
+              )}
 
               {/* Pushpin on large card */}
               {feature.size === "large" && (
