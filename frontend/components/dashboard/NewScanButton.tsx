@@ -313,7 +313,7 @@ export function NewScanButton({
         <div
           style={{
             position: "absolute",
-            top: "calc(100% + 6px)",
+            bottom: "calc(100% + 6px)",
             left: 0,
             right: 0,
             background: "var(--surface)",
