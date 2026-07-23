@@ -435,14 +435,6 @@ async def get_competitor_drilldown(
             })
         # Add current scan
         current_per_llm = {}
-        for llm_name, stats in llm_stats.items():
-            t = stats["total"]
-            current_per_llm[llm_name] = {
-                "mention_pct": min(round(len([1 for r, _ in comp_results if r.llm_name == llm_name]) / t * 100, 1), 100) if t > 0 else 0,
-                "brand_pct": min(round(stats["brand_wins"] + stats.get("brand_positions", []) and len(stats.get("brand_positions", [])) / t * 100, 1), 100) if t > 0 else 0,
-            }
-        # Simpler current per-LLM from existing llm_breakdown
-        current_per_llm = {}
         for lb in llm_breakdown:
             current_per_llm[lb.llm_name] = {
                 "mention_pct": lb.mention_pct,
