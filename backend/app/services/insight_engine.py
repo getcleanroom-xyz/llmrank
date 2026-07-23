@@ -4,42 +4,36 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-INSIGHT_DEVELOPER = (
-    "You are an SEO/GEO strategist. Based on the scan results below, provide 2-3 specific, actionable recommendations "
-    "for the brand. Each insight must reference actual data from the scan (specific LLMs, positions, competitors). "
-    "Return ONLY a valid JSON array: [{\"type\":\"tip\"|\"warning\",\"text\":\"...\"}]. "
-    "No text outside the array. Insights must be concrete — not generic advice."
-)
-
-DIAGNOSIS_PROMPT_ADDENDUM = (
-    "\n\nDIAGNOSTIC DATA:\n"
-    "For each query where the brand was absent, I ran a multi-signal diagnosis:\n"
-    "- Does the brand have content about this topic on their own website?\n"
-    "- Are there brand mentions across the web (Reddit, YouTube, Wikipedia, industry sites)?\n"
-    "- Is the brand present on key citation sources that AI models trust?\n\n"
-    "Each gap is labeled with a fix_type. Use this to give PRECISE recommendations:\n\n"
-    "fix_type=content_gap: Content doesn't exist. Recommend creating targeted content.\n"
-    "fix_type=discoverability: Content exists but AI can't find or trust it. "
-    "Recommend: clearer headings, schema markup, structured data, FAQ sections, "
-    "better internal linking, server-side rendering.\n"
-    "fix_type=mentions: Content exists but brand lacks web mentions. "
-    "Recommend: PR outreach, guest posts, industry rankings, review sites, "
-    "unlinked mentions on authoritative pages.\n"
-    "fix_type=authority: Brand missing from trusted citation sources. "
-    "Recommend: Reddit presence, YouTube content, Wikipedia (if notable), "
-    "industry publications, expert endorsements.\n\n"
-    "CRITICAL: Never recommend 'create more content' when content already exists. "
-    "The fix must match the actual root cause. Be specific — name the exact action."
+# Use the copilot's system prompt for insights — same quality, same personality
+INSIGHT_SYSTEM_PROMPT = (
+    "You are Lai, the AI visibility copilot inside LLMRanked. "
+    "You talk like a smart friend who actually knows this stuff, not a consultant "
+    "reading from a slide deck. Think: someone scribbling notes in a notebook, "
+    "then turning to you and saying what matters.\n\n"
+    "You have REAL data about this brand below. Every query, number, and competitor "
+    "name is pulled straight from their scan results.\n\n"
+    "CRITICAL RULES:\n"
+    "- NEVER assume or guess what the brand's features, products, or value propositions are.\n"
+    "- ONLY use the brand name, domain, queries, scan results, and competitor data provided.\n"
+    "- Be direct. No filler like 'Great question!' or 'I'd be happy to help!'\n"
+    "- Use the actual data. Quote real query texts, real percentages, real positions.\n"
+    "- When something is bad, say it's bad. When something is working, say so.\n"
+    "- Give specific next steps, not vague advice like 'improve your content'\n"
+    "- No emojis. No em dashes. No corporate jargon. Write like a human.\n\n"
+    "OUTPUT FORMAT:\n"
+    "Return ONLY a valid JSON array with 2-3 insights:\n"
+    "[{\"type\":\"tip\"|\"warning\",\"text\":\"HTML-formatted insight with <strong> for emphasis\"}]\n"
+    "Each insight must reference actual data — specific LLMs, positions, competitors, percentages.\n"
+    "No text outside the JSON array."
 )
 
 
-async def _call_llm(messages: list[dict]) -> str:
-    """Called via llm_adapters._call_openrouter — but we need a client."""
-    # This is a placeholder; _call_openrouter is imported lazily
+async def _call_llm(messages: list[dict], model: str = "chatgpt") -> str:
+    """Call LLM via llm_adapters."""
     from app.services.llm_adapters import _call_openrouter
     import httpx
-    async with httpx.AsyncClient(timeout=15) as client:
-        return await _call_openrouter(messages, "chatgpt", client, temperature=0.3, max_tokens=512)
+    async with httpx.AsyncClient(timeout=30) as client:
+        return await _call_openrouter(messages, model, client, temperature=0.4, max_tokens=1024)
 
 
 async def diagnose_visibility_gap(
@@ -194,39 +188,60 @@ async def generate_insights_for_query(
     query_text: str,
     results: list,
     classification: dict | None = None,
+    brand_id: str | None = None,
+    query_id: str | None = None,
 ) -> list[dict]:
-    """Generate tailored insights for a single query using LLM."""
+    """Generate tailored insights for a single query using LLM with rich context."""
     if not results:
         return []
 
-    # Build a concise summary of results per LLM
-    lines = []
-    for r in results:
-        mentioned = "mentioned" if r.mentioned else "NOT mentioned"
-        position = f" at position #{r.position}" if r.position else ""
-        sentiment = r.sentiment
-        competitors = ", ".join(c.get("name", "") for c in (r.competitors_mentioned or []))
-        comp_str = f" | competitors: {competitors}" if competitors else ""
-        llm_name = r.llm_name.title() if hasattr(r.llm_name, "title") else r.llm_name
-        lines.append(f"  {llm_name}: {mentioned}{position} (sentiment: {sentiment}, score: {r.score}){comp_str}")
+    # Build rich context using the copilot's context builder
+    context = ""
+    if brand_id:
+        try:
+            from app.services.tools.domain import build_brand_context
+            context = await build_brand_context(brand_id)
+        except Exception as e:
+            logger.debug("Failed to build brand context for insights: %s", e)
 
-    industry = classification.get("sub_category", classification.get("industry", "unknown")) if classification else "unknown"
+    if not context:
+        # Fallback to simpler context
+        lines = []
+        for r in results:
+            mentioned = "mentioned" if r.mentioned else "NOT mentioned"
+            position = f" at position #{r.position}" if r.position else ""
+            sentiment = r.sentiment
+            competitors = ", ".join(c.get("name", "") for c in (r.competitors_mentioned or []))
+            comp_str = f" | competitors: {competitors}" if competitors else ""
+            llm_name = r.llm_name.title() if hasattr(r.llm_name, "title") else r.llm_name
+            lines.append(f"  {llm_name}: {mentioned}{position} (sentiment: {sentiment}, score: {r.score}){comp_str}")
+
+        industry = classification.get("sub_category", classification.get("industry", "unknown")) if classification else "unknown"
+        context = (
+            f"Brand: {brand_name}\n"
+            f"Industry: {industry}\n"
+            f"Query: {query_text}\n\n"
+            f"Scan results:\n" + "\n".join(lines)
+        )
 
     user_msg = (
-        f"Brand: {brand_name}\n"
-        f"Industry: {industry}\n"
+        f"Generate 2-3 specific, actionable insights for this brand about this particular query:\n\n"
         f"Query: {query_text}\n\n"
-        f"Scan results:\n" + "\n".join(lines)
+        f"Focus on:\n"
+        f"- Why the brand is or isn't mentioned for this specific query\n"
+        f"- Which specific LLMs mention or skip the brand, and what competitors they mention instead\n"
+        f"- What the brand can do to improve visibility for THIS EXACT QUERY\n\n"
+        f"Brand data:\n{context}"
     )
 
     messages = [
-        {"role": "developer", "content": INSIGHT_DEVELOPER},
+        {"role": "developer", "content": INSIGHT_SYSTEM_PROMPT},
         {"role": "user", "content": user_msg},
     ]
 
     try:
         import re
-        resp = await _call_llm(messages)
+        resp = await _call_llm(messages, "chatgpt")
         match = re.search(r"\[.*\]", resp, re.DOTALL)
         if match:
             insights = json.loads(match.group())
@@ -253,98 +268,68 @@ async def generate_dashboard_insights(
     classification: dict | None = None,
     query_map: dict | None = None,
     crawl_content: str | None = None,
+    brand_id: str | None = None,
 ) -> list[dict]:
-    """Generate tailored dashboard-level insights using LLM.
-
-    Args:
-        crawl_content: Optional cached crawl content to avoid web searches for own-domain checks.
-    """
+    """Generate tailored dashboard-level insights using LLM with rich context."""
     if not all_results:
         return []
 
-    # Build per-LLM summary
-    from collections import defaultdict
-    llm_data = defaultdict(list)
-    for r in all_results:
-        llm_data[r.llm_name].append(r)
+    # Build rich context using the copilot's context builder
+    context = ""
+    if brand_id:
+        try:
+            from app.services.tools.domain import build_brand_context
+            context = await build_brand_context(brand_id)
+        except Exception as e:
+            logger.debug("Failed to build brand context for dashboard insights: %s", e)
 
-    lines = []
-    for llm, results in sorted(llm_data.items()):
-        avg_score = sum(r.score or 0 for r in results) / len(results)
-        mentioned = sum(1 for r in results if r.mentioned)
-        total = len(results)
-        comps = set()
-        for r in results:
-            for c in (r.competitors_mentioned or []):
-                if c.get("name"):
-                    comps.add(c["name"])
-        comp_str = f", competitors: {', '.join(list(comps)[:3])}" if comps else ""
-        llm_name = llm.title() if hasattr(llm, "title") else llm
-        lines.append(f"  {llm_name}: avg score {avg_score:.0f}/100, mentioned {mentioned}/{total}{comp_str}")
-
-    # Diagnose visibility gaps for queries where brand was NOT mentioned
-    diagnosis_lines = []
-    if brand_domain:
-        # Group results by query to find fully-missed queries
-        query_results = defaultdict(list)
+    if not context:
+        # Fallback to simpler context
+        from collections import defaultdict
+        llm_data = defaultdict(list)
         for r in all_results:
-            query_results[r.query_id].append(r)
+            llm_data[r.llm_name].append(r)
 
-        # Run diagnoses with rate limiting (max 3 concurrent to avoid 429s)
-        import asyncio
-        sem = asyncio.Semaphore(3)
+        lines = []
+        for llm, results in sorted(llm_data.items()):
+            avg_score = sum(r.score or 0 for r in results) / len(results)
+            mentioned = sum(1 for r in results if r.mentioned)
+            total = len(results)
+            comps = set()
+            for r in results:
+                for c in (r.competitors_mentioned or []):
+                    if c.get("name"):
+                        comps.add(c["name"])
+            comp_str = f", competitors: {', '.join(list(comps)[:3])}" if comps else ""
+            llm_name = llm.title() if hasattr(llm, "title") else llm
+            lines.append(f"  {llm_name}: avg score {avg_score:.0f}/100, mentioned {mentioned}/{total}{comp_str}")
 
-        async def _rate_limited_diagnose(q_text: str) -> dict:
-            async with sem:
-                return await diagnose_visibility_gap(
-                    brand_name, brand_domain, q_text, crawl_content=crawl_content
-                )
-
-        diag_tasks = []
-        diag_query_ids = []
-        for query_id, results in query_results.items():
-            if not any(r.mentioned for r in results):
-                query_obj = query_map.get(query_id) if query_map else None
-                query_text = query_obj.query_text if hasattr(query_obj, "query_text") else str(query_id)
-                diag_tasks.append(_rate_limited_diagnose(query_text))
-                diag_query_ids.append(query_text)
-
-        if diag_tasks:
-            diags = await asyncio.gather(*diag_tasks, return_exceptions=True)
-            for query_text, diag in zip(diag_query_ids, diags):
-                if isinstance(diag, Exception):
-                    continue
-                diagnosis_lines.append(
-                    f"  [{diag['fix_type'].upper()}] \"{query_text}\" — {diag['diagnosis']}. Evidence: {diag['evidence']}"
-                )
-
-    industry = classification.get("sub_category", classification.get("industry", "unknown")) if classification else "unknown"
-
-    user_msg = (
-        f"Brand: {brand_name}\n"
-        f"Industry: {industry}\n"
-        f"Domain: {brand_domain}\n\n"
-        f"Scan results across all queries:\n" + "\n".join(lines)
-    )
-
-    if diagnosis_lines:
-        user_msg += (
-            f"\n\nContent diagnosis for queries where brand was absent:\n"
-            + "\n".join(diagnosis_lines)
+        industry = classification.get("sub_category", classification.get("industry", "unknown")) if classification else "unknown"
+        context = (
+            f"Brand: {brand_name}\n"
+            f"Industry: {industry}\n"
+            f"Domain: {brand_domain}\n\n"
+            f"Scan results across all queries:\n" + "\n".join(lines)
         )
 
-    prompt = INSIGHT_DEVELOPER
-    if diagnosis_lines:
-        prompt += DIAGNOSIS_PROMPT_ADDENDUM
+    user_msg = (
+        f"Generate 2-3 specific, actionable insights for this brand's overall AI visibility.\n\n"
+        f"Focus on:\n"
+        f"- Which models mention the brand most/least and why\n"
+        f"- Which competitors are dominating and what they're doing differently\n"
+        f"- The biggest opportunities for improvement\n"
+        f"- Specific, concrete next steps (not vague advice)\n\n"
+        f"Brand data:\n{context}"
+    )
 
     messages = [
-        {"role": "developer", "content": prompt},
+        {"role": "developer", "content": INSIGHT_SYSTEM_PROMPT},
         {"role": "user", "content": user_msg},
     ]
 
     try:
         import re
-        resp = await _call_llm(messages)
+        resp = await _call_llm(messages, "chatgpt")
         match = re.search(r"\[.*\]", resp, re.DOTALL)
         if match:
             insights = json.loads(match.group())

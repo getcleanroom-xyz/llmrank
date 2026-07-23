@@ -378,7 +378,7 @@ async def rescan_single_query(
                 competitors_mentioned=[], annotated_response=None, score=None)
         else:
             r = QueryResult(id=uuid.uuid4(), scan_id=scan.id, query_id=query.id, llm_name=llm_name,
-                raw_response=result_data.get("summary", str(result_data)),
+                raw_response=result_data.get("raw_response_text") or result_data.get("summary", str(result_data)),
                 mentioned=result_data.get("brand_mentioned", False),
                 position=result_data.get("brand_position"),
                 sentiment=result_data.get("brand_sentiment", "not_mentioned"),

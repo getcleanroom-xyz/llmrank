@@ -115,10 +115,13 @@ async def run_scan(brand_id: str, scan_id: str, llm_names: list[str],
                               c.lower() != brand.domain.split(".")[0]]
                 score = compute_visibility_score(mentioned, position, sentiment)
 
+                # Use full raw response text if available, fallback to summary
+                raw_resp = result_data.get("raw_response_text") or result_data.get("summary", json.dumps(result_data))
+
                 result = QueryResult(
                     id=uuid.uuid4(), scan_id=scan.id,
                     query_id=uuid.UUID(q_id), llm_name=llm_name,
-                    raw_response=result_data.get("summary", json.dumps(result_data)),
+                    raw_response=raw_resp,
                     mentioned=mentioned, position=position, sentiment=sentiment,
                     competitors_mentioned=competitors, annotated_response=None, score=score,
                 )

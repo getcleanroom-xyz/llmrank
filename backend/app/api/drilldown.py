@@ -113,7 +113,10 @@ async def get_query_drilldown(
     if cached_insights is not None:
         insights = cached_insights
     else:
-        raw_insights = await generate_insights_for_query(brand.name, query.query_text, successful)
+        raw_insights = await generate_insights_for_query(
+            brand.name, query.query_text, successful,
+            brand_id=str(brand_id), query_id=str(query_id),
+        )
         insights = [DrilldownInsight(type=i["type"], text=i["text"]) for i in raw_insights]
         dashboard_cache.set(insight_cache_key, insights, ttl=300)
 

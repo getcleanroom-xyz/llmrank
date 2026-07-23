@@ -126,6 +126,9 @@ async def scan_query(query_text: str, llm_name: str, client, brand_name: str = "
                     "summary": resp[:500],
                 }
 
+            # Store the full raw response text for display
+            parsed["raw_response_text"] = resp
+
             # Post-hoc brand mention detection
             brand_mentioned = False
             brand_position = None
