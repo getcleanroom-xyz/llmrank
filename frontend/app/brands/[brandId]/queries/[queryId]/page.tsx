@@ -86,23 +86,39 @@ function QueryDrilldownInner() {
 
   if (isFetching && !data) return (
     <div className="page" style={{ display: "flex", flexDirection: "column" }}>
-      <div style={{ background: "var(--surface)", borderBottom: "2px solid var(--border)", padding: "10px 16px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", gap: 8 }}>
-          <div className="skeleton" style={{ width: 80, height: 20 }} />
-          <div className="skeleton" style={{ width: 200, height: 14 }} />
+      <div style={{ flex: 1, maxWidth: 1200, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
+        {/* Query hero skeleton */}
+        <div style={{ position: "relative", background: "#FFF9DB", border: "2px solid var(--border)", padding: "24px 28px", marginBottom: "var(--gap)", transform: "rotate(-0.2deg)" }}>
+          <div className="skeleton" style={{ width: "80%", height: 28, marginBottom: 8 }} />
+          <div className="skeleton" style={{ width: "60%", height: 8 }} />
         </div>
-      </div>
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
-        <div className="card" style={{ padding: 24, marginBottom: "var(--gap)" }}>
-          <div className="skeleton" style={{ width: "70%", height: 24, marginBottom: 8 }} />
-          <div className="skeleton" style={{ width: "40%", height: 8 }} />
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+
+        {/* Stat pills skeleton */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "var(--gap)", marginBottom: "var(--gap)" }}>
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="card" style={{ padding: 14 }}>
-              <div className="skeleton" style={{ width: "50%", height: 20, marginBottom: 4 }} />
-              <div className="skeleton" style={{ width: "30%", height: 10, marginBottom: 2 }} />
-              <div className="skeleton" style={{ width: "60%", height: 10 }} />
+            <div key={i} className="card" style={{ padding: "12px 14px" }}>
+              <div className="skeleton" style={{ width: "50%", height: 20, marginBottom: 6 }} />
+              <div className="skeleton" style={{ width: "40%", height: 8, marginBottom: 4 }} />
+              <div className="skeleton" style={{ width: "60%", height: 8 }} />
+            </div>
+          ))}
+        </div>
+
+        {/* LLM results skeleton */}
+        <div className="card" style={{ padding: "8px 16px" }}>
+          {[1, 2, 3].map((i) => (
+            <div key={i} style={{ padding: "10px 0", borderBottom: i < 3 ? "1px solid var(--border)" : "none" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                <div className="skeleton" style={{ width: 80, height: 14 }} />
+                <div style={{ display: "flex", gap: 6 }}>
+                  <div className="skeleton" style={{ width: 40, height: 18 }} />
+                  <div className="skeleton" style={{ width: 60, height: 18 }} />
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div className="skeleton" style={{ flex: 1, height: 10 }} />
+                <div className="skeleton" style={{ width: 30, height: 14 }} />
+              </div>
             </div>
           ))}
         </div>

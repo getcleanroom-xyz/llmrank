@@ -86,19 +86,32 @@ export default function LLMDrilldownPage() {
 
   if (isLoading) return (
     <div className="page" style={{ display: "flex", flexDirection: "column" }}>
-      <div style={{ background: "var(--surface)", borderBottom: "2px solid var(--border)", padding: "10px 16px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", gap: 8 }}>
-          <div className="skeleton" style={{ width: 80, height: 20 }} />
-          <div className="skeleton" style={{ width: 100, height: 14 }} />
-        </div>
-      </div>
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%", display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ flex: 1, maxWidth: 1200, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%", display: "flex", flexDirection: "column", gap: 12 }}>
+        {/* Hero card skeleton */}
         <div className="card" style={{ padding: 24 }}>
           <div className="skeleton" style={{ width: "30%", height: 28, marginBottom: 8 }} />
           <div className="skeleton" style={{ width: "50%", height: 12 }} />
         </div>
+        {/* Stat cards skeleton */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
-          {[1, 2, 3, 4].map((i) => <div key={i} className="card" style={{ padding: 14 }}><div className="skeleton" style={{ width: "40%", height: 20, marginBottom: 4 }} /><div className="skeleton" style={{ width: "60%", height: 10 }} /></div>)}
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="card" style={{ padding: 14 }}>
+              <div className="skeleton" style={{ width: "40%", height: 20, marginBottom: 6 }} />
+              <div className="skeleton" style={{ width: "60%", height: 8 }} />
+            </div>
+          ))}
+        </div>
+        {/* Query list skeleton */}
+        <div className="card" style={{ padding: 16 }}>
+          {[1, 2, 3].map((i) => (
+            <div key={i} style={{ padding: "10px 0", borderBottom: i < 3 ? "1px solid var(--border)" : "none" }}>
+              <div className="skeleton" style={{ width: "70%", height: 14, marginBottom: 4 }} />
+              <div style={{ display: "flex", gap: 8 }}>
+                <div className="skeleton" style={{ width: 40, height: 18 }} />
+                <div className="skeleton" style={{ width: 60, height: 18 }} />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
