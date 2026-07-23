@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useBrands, useCreateBrand, useDeleteBrand } from "@/lib/hooks";
-import { AppHeader, PageHeader } from "@/components/AppHeader";
 import { BrandWizard } from "@/components/brands/BrandWizard";
 import { useToast } from "@/components/ui/Toast";
 
@@ -99,36 +98,10 @@ function BrandsPageInner() {
 
   return (
     <div className="page" style={{ display: "flex", flexDirection: "column" }}>
-      <AppHeader
-        breadcrumb={
-          <span style={{ fontSize: 13, fontWeight: 600 }}>brands</span>
-        }
-      />
-      <PageHeader>
-        {user && (
-          <button onClick={() => set("showModal", true)} className="btn btn-primary btn-sm" style={{ marginLeft: "auto" }}>+ New brand</button>
-        )}
-      </PageHeader>
-
       <div style={{ flex: 1, maxWidth: 700, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
-        <h1
-          style={{
-            fontFamily: "var(--font-hand), Caveat, cursive",
-            fontSize: "clamp(32px, 5vw, 42px)",
-            fontWeight: 700,
-            margin: "0 0 4px",
-            lineHeight: 1,
-            transform: "rotate(-0.5deg)",
-          }}
-        >
-          Your brands
-        </h1>
-        <svg width="140" height="8" viewBox="0 0 140 8" preserveAspectRatio="none" style={{ display: "block", marginBottom: 16 }}>
-          <path d="M0 4 Q10 0 20 5 Q30 8 40 3 Q50 0 60 6 Q70 8 80 2 Q90 0 100 5 Q110 8 120 3 Q130 1 140 5" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" />
-        </svg>
 
         {user && (
-          <div style={{ marginBottom: 16, display: "flex", gap: 8 }}>
+          <div style={{ marginBottom: 16, display: "flex", gap: 8, alignItems: "center" }}>
             <input
               className="input"
               value={state.searchInput}
@@ -153,6 +126,13 @@ function BrandsPageInner() {
                 Clear
               </button>
             )}
+            <button
+              onClick={() => set("showModal", true)}
+              className="btn btn-primary btn-sm"
+              style={{ flexShrink: 0 }}
+            >
+              + New
+            </button>
           </div>
         )}
 

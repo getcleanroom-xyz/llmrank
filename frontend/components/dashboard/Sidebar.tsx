@@ -4,12 +4,14 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { useBrands, useDashboard } from "@/lib/hooks";
+import { useBrands, useDashboard, useCreateBrand } from "@/lib/hooks";
 import {
   Search, ChevronLeft, ChevronRight, LayoutDashboard, SearchCode,
   History, Swords, Plus, LogOut, User, ExternalLink,
 } from "lucide-react";
 import { NewScanButton } from "./NewScanButton";
+import { BrandWizard } from "@/components/brands/BrandWizard";
+import { useToast } from "@/components/ui/Toast";
 
 const ICON_STROKE = 2.5;
 
@@ -88,10 +90,14 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   const { data: searchResults } = useBrands(1, searchQuery);
   const [recentBrands, setRecentBrands] = useState<{ id: string; name: string }[]>(() => getRecentBrands());
   const { data: dashResult } = useDashboard(brandId || "");
+  const createBrand = useCreateBrand();
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const { addToast } = useToast();
 
+  const dashboard = dashResult?.dashboard;
   const lastScanLLMs = useMemo(
-    () => dashResult?.dashboard?.llm_breakdown?.map((b) => b.llm_name) ?? [],
-    [dashResult]
+    () => dashboard?.llm_breakdown?.map((b) => b.llm_name) ?? [],
+    [dashboard]
   );
 
   const currentBrand = (searchResults ?? []).find((b) => b.id === brandId);
@@ -170,6 +176,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
             {!collapsed && <div style={{ fontSize: 9, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4, paddingLeft: 4 }}>Recent</div>}
             {recent.map((b) => {
               const isActive = b.id === brandId;
+              const isCurrentActive = isActive && dashboard;
               return (
                 <Link
                   key={b.id}
@@ -189,7 +196,25 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
                   <div style={{ width: 22, height: 22, borderRadius: "var(--radius)", background: isActive ? "var(--surface)" : "var(--primary)", border: "1.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, flexShrink: 0 }}>
                     {b.name.charAt(0).toUpperCase()}
                   </div>
-                  {!collapsed && <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.name}</span>}
+                  {!collapsed && (
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.name}</div>
+                      {isCurrentActive && dashboard?.brand?.domain && (
+                        <div style={{ fontSize: 10, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {dashboard.brand.domain}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {!collapsed && isCurrentActive && dashboard?.visibility_score != null && (
+                    <div style={{
+                      fontSize: 9, fontWeight: 800, padding: "1px 5px", borderRadius: 4, flexShrink: 0,
+                      background: dashboard.visibility_score >= 50 ? "#DCFCE7" : dashboard.visibility_score >= 25 ? "#FEF3C7" : "#FEE2E2",
+                      color: dashboard.visibility_score >= 50 ? "#166534" : dashboard.visibility_score >= 25 ? "#92400E" : "#991B1B",
+                    }}>
+                      {Math.round(dashboard.visibility_score)}
+                    </div>
+                  )}
                 </Link>
               );
             })}
@@ -266,6 +291,27 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
         </div>
       )}
 
+      {/* New brand button */}
+      {!collapsed && (
+        <div style={{ padding: "4px 10px", borderTop: "1.5px solid var(--border)" }}>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            style={{
+              display: "flex", alignItems: "center", gap: 6, padding: "6px 8px",
+              borderRadius: "var(--radius)", textDecoration: "none",
+              background: "transparent", color: "var(--text-secondary)",
+              fontSize: 12, fontWeight: 600, border: "1.5px dashed var(--border)",
+              justifyContent: "center", cursor: "pointer", width: "100%",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-dark)"; e.currentTarget.style.color = "var(--text)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-secondary)"; }}
+          >
+            <Plus size={14} strokeWidth={ICON_STROKE} />
+            <span>New brand</span>
+          </button>
+        </div>
+      )}
+
       {/* User section */}
       <div style={{ borderTop: "2px solid var(--border)", padding: "8px 10px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 8px" }}>
@@ -285,6 +331,24 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
           )}
         </div>
       </div>
+
+      {/* Create brand modal */}
+      {showCreateModal && (
+        <BrandWizard
+          open={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onCreated={async (name, domain, competitors) => {
+            try {
+              await createBrand.mutateAsync({ name, domain, competitors });
+              setShowCreateModal(false);
+              addToast(`${name} created`, "success");
+            } catch (err) {
+              addToast(err instanceof Error ? err.message : "Failed to create brand", "error");
+            }
+          }}
+          creating={createBrand.isPending}
+        />
+      )}
     </div>
   );
 }
