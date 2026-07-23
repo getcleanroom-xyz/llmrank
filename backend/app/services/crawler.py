@@ -96,6 +96,7 @@ async def crawl_website(domain: str, max_pages: int = MAX_PAGES) -> str:
                     for link in links:
                         if link not in to_visit and link not in visited:
                             to_visit.append(link)
+                    to_visit = to_visit[:max_pages * 3]
                     logger.debug("Crawled %s: %d chars, %d new links", url, len(text), len(links))
                 except Exception as e:
                     logger.debug("Failed to crawl %s: %s", url, e)

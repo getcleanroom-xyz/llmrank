@@ -193,7 +193,7 @@ async def scan_query(query_text: str, llm_name: str, client, brand_name: str = "
             status = e.response.status_code
             if status == 429:
                 return None, f"{llm_name} rate limited"
-            if status == 503 and attempt < 2:
+            if status in (500, 502, 503, 504) and attempt < 2:
                 await asyncio.sleep(2 * (2 ** attempt))
                 continue
             return None, str(e)

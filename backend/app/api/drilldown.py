@@ -393,10 +393,17 @@ async def get_competitor_drilldown(
             .limit(5)
         )
         prev_scans = prev_scans_result.scalars().all()
-        for prev_scan in reversed(prev_scans):
-            prev_results = (await db.execute(
-                select(QueryResult).where(QueryResult.scan_id == prev_scan.id)
+        prev_scan_ids = [ps.id for ps in prev_scans]
+        all_prev_results = []
+        if prev_scan_ids:
+            all_prev_results = (await db.execute(
+                select(QueryResult).where(QueryResult.scan_id.in_(prev_scan_ids))
             )).scalars().all()
+        results_by_scan: dict[uuid.UUID, list] = {}
+        for r in all_prev_results:
+            results_by_scan.setdefault(r.scan_id, []).append(r)
+        for prev_scan in reversed(prev_scans):
+            prev_results = results_by_scan.get(prev_scan.id, [])
             prev_total = len({r.query_id for r in prev_results})
             prev_comp = 0
             prev_brand = 0

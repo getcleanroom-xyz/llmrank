@@ -184,6 +184,7 @@ async def list_messages(
     user: User = Depends(get_current_user),
 ):
     """List all messages in a conversation."""
+    limit = min(limit, 200)
     await _verify_brand_owner(db, brand_id, user.id)
 
     result = await db.execute(

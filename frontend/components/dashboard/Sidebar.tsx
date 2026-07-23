@@ -85,15 +85,27 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   const searchParams = useSearchParams();
   const { user, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
-  const { data: searchResults } = useBrands(1, searchQuery);
-  const [recentBrands, setRecentBrands] = useState<{ id: string; name: string }[]>(() => getRecentBrands());
+  const { data: searchResults } = useBrands(1, debouncedQuery);
+  const [recentBrands, setRecentBrands] = useState<{ id: string; name: string }[]>([]);
   const { data: dashResult } = useDashboard(brandId || "");
   const createBrand = useCreateBrand();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const { addToast } = useToast();
   const { data: credits } = useCredits();
+
+  useEffect(() => {
+    setRecentBrands(getRecentBrands());
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const dashboard = dashResult?.dashboard;
   const lastScanLLMs = useMemo(

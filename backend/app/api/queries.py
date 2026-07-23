@@ -257,6 +257,8 @@ async def bulk_update_queries(
         raise HTTPException(400, "Invalid action. Must be: activate, deactivate, delete")
     if not query_ids:
         raise HTTPException(400, "No query IDs provided")
+    if len(query_ids) > 100:
+        raise HTTPException(400, "Too many query IDs")
 
     # Convert string IDs to UUIDs
     try:

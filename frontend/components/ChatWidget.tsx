@@ -105,6 +105,7 @@ export function ChatWidget({ brandId }: { brandId: string }) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const streamAbortRef = useRef<AbortController | null>(null);
   const titleRefreshRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sendingRef = useRef(false);
   const qc = useQueryClient();
   const { addToast } = useToast();
 
@@ -170,7 +171,8 @@ export function ChatWidget({ brandId }: { brandId: string }) {
   });
 
   const send = async (text: string) => {
-    if (!text.trim() || state.streaming) return;
+    if (!text.trim() || state.streaming || sendingRef.current) return;
+    sendingRef.current = true;
     const userMsg: ChatMessage = { role: "user", content: text.trim() };
     dispatch({ type: "SEND_START", userMsg });
 
@@ -207,6 +209,7 @@ export function ChatWidget({ brandId }: { brandId: string }) {
       dispatch({ type: "SEND_ERROR", message: msg });
       addToast(msg, "error");
     } finally {
+      sendingRef.current = false;
       dispatch({ type: "STREAM_FINISH", fullResponse });
       qc.invalidateQueries({ queryKey: ["conversations", brandId] });
       if (convId) {

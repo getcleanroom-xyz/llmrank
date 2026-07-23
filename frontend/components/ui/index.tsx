@@ -9,11 +9,17 @@ function sanitizeHtml(html: string): string {
     .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, "")
     .replace(/<embed\b[^>]*>/gi, "")
     .replace(/<base\b[^>]*>/gi, "")
+    .replace(/<meta\b[^>]*>/gi, "")
+    .replace(/<link\b[^>]*>/gi, "")
     .replace(/on\w+\s*=\s*"[^"]*"/gi, "")
     .replace(/on\w+\s*=\s*'[^']*'/gi, "")
     .replace(/on\w+\s*=\s*[^\s>"']*/gi, "")
     .replace(/javascript\s*:/gi, "")
-    .replace(/data\s*:/gi, "");
+    .replace(/data\s*:/gi, "")
+    .replace(/expression\s*\(/gi, "")
+    .replace(/style\s*=\s*"[^"]*expression\s*\([^"]*"/gi, "")
+    .replace(/style\s*=\s*'[^']*expression\s*\([^']*'/gi, "")
+    .replace(/style\s*=\s*[^\s>"']*expression\s*\([^\s>"']*/gi, "");
 }
 
 export function ScoreRing({ score, size = 80, stroke = 6 }: { score: number; size?: number; stroke?: number }) {

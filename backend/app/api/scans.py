@@ -51,7 +51,7 @@ async def trigger_scan(
         select(Scan).where(
             Scan.brand_id == brand_id,
             Scan.status.in_([ScanStatus.pending, ScanStatus.running])
-        ).limit(1)
+        ).with_for_update().limit(1)
     )
     if running_result.scalar_one_or_none():
         raise HTTPException(409, "A scan is already in progress for this brand. Please wait for it to complete.")
@@ -165,6 +165,7 @@ async def list_scans(
     page: int = 1,
     per_page: int = 20,
 ):
+    per_page = min(per_page, 100)
     brand_result = await db.execute(
         Brand.active().where(Brand.id == brand_id, Brand.owner_id == user.id)
     )

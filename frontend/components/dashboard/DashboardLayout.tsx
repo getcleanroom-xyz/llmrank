@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Sidebar } from "@/components/dashboard/Sidebar";
-import { ChatWidget } from "@/components/ChatWidget";
+import dynamic from "next/dynamic";
+
+const ChatWidget = dynamic(() => import("@/components/ChatWidget").then((m) => m.ChatWidget), { ssr: false });
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { brandId } = useParams<{ brandId: string }>();

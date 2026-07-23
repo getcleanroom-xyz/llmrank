@@ -14,7 +14,9 @@ import { CompetitorShare } from "@/components/dashboard/CompetitorShare";
 import { QueryChipsPanel } from "@/components/dashboard/QueryChipsPanel";
 import { QueriesTable } from "@/components/dashboard/QueriesTable";
 import { CompetitorsTab } from "@/components/dashboard/CompetitorsTab";
-import { ScoreHistoryChart } from "@/components/dashboard/ScoreHistoryChart";
+import dynamic from "next/dynamic";
+
+const ScoreHistoryChart = dynamic(() => import("@/components/dashboard/ScoreHistoryChart").then((m) => m.ScoreHistoryChart), { ssr: false });
 import { ScanHistory } from "@/components/dashboard/ScanHistory";
 import { DashboardSkeleton } from "@/components/dashboard/Skeletons";
 import { useToast } from "@/components/ui/Toast";
@@ -54,6 +56,7 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
   const [scanComplete, setScanComplete] = useState(false);
   const [optimisticScanning, setOptimisticScanning] = useState(false);
   const wasRunningRef = useRef(false);
+  const scanCompleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const freshData = dashResult?.dashboard ?? null;
   const data: DashboardData | null = freshData ?? initialData ?? null;
@@ -79,7 +82,7 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
         setScanComplete(true);
         addToast("Scan complete! Your results have been updated.", "success");
         qc.invalidateQueries({ queryKey: queryKeys.dashboard(brandId) });
-        setTimeout(() => setScanComplete(false), 10000);
+        scanCompleteTimerRef.current = setTimeout(() => setScanComplete(false), 10000);
         wasRunningRef.current = false;
       }
       return;
@@ -88,7 +91,13 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
     const interval = setInterval(() => {
       refetchRef.current();
     }, 5000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (scanCompleteTimerRef.current) {
+        clearTimeout(scanCompleteTimerRef.current);
+        scanCompleteTimerRef.current = null;
+      }
+    };
   }, [isScanRunning, brandId, qc]);
 
   // Redirect if not authenticated (client-side fallback)
@@ -98,7 +107,20 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
 
   if (authLoading) return <DashboardSkeleton />;
   if (!user) return null;
-  if (!data) return <DashboardSkeleton />;
+  if (!data) {
+    if (loadError) {
+      const errorMsg = loadError instanceof Error ? loadError.message : "Failed to load dashboard data";
+      return (
+        <div className="page" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "50vh" }}>
+          <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "16px 24px", fontSize: 14, color: "#991B1B", fontWeight: 600, textAlign: "center" }}>
+            <div style={{ marginBottom: 8 }}>{errorMsg}</div>
+            <button onClick={() => refetch()} style={{ padding: "6px 16px", background: "var(--primary)", border: "1.5px solid var(--border)", borderRadius: "var(--radius)", cursor: "pointer", fontWeight: 600, fontSize: 13 }}>Retry</button>
+          </div>
+        </div>
+      );
+    }
+    return <DashboardSkeleton />;
+  }
 
   const error = loadError ? (loadError instanceof Error ? loadError.message : "Failed to load") : null;
 

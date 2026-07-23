@@ -273,6 +273,7 @@ async def login_finish(body: LoginFinishRequest, request: Request, response: Res
 
 @router.post("/register/email")
 async def register_email(body: EmailRegisterRequest, response: Response, db: AsyncSession = Depends(get_db)):
+    _cleanup_pending_registrations()
     from app.services.password import hash_password
 
     existing = await db.execute(select(User).where(User.email == body.email))

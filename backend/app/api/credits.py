@@ -44,4 +44,5 @@ async def credit_history(
     page: int = 1,
     per_page: int = 50,
 ):
+    per_page = min(per_page, 100)
     return await get_credit_history(db, user.id, limit=per_page, offset=(page - 1) * per_page)
