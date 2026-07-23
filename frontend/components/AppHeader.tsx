@@ -3,9 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
-import { useCredits } from "@/lib/hooks";
 import { AuthButton } from "@/components/auth/AuthButton";
-import { BuyCreditsModal } from "@/components/BuyCreditsModal";
 
 function HeaderDrawer({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -43,8 +41,6 @@ function HeaderDrawer({ open, onClose, children }: { open: boolean; onClose: () 
 
 export function AppHeader({ breadcrumb }: { breadcrumb?: React.ReactNode }) {
   const { user } = useAuth();
-  const { data: credits } = useCredits();
-  const [showBuy, setShowBuy] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
@@ -81,7 +77,7 @@ export function AppHeader({ breadcrumb }: { breadcrumb?: React.ReactNode }) {
           <div style={{ flex: 1, minWidth: 0 }} />
 
           <div className="app-header-actions">
-            <AuthButton credits={credits} onBuyClick={() => setShowBuy(true)} />
+            <AuthButton />
           </div>
         </div>
       </div>
@@ -90,8 +86,6 @@ export function AppHeader({ breadcrumb }: { breadcrumb?: React.ReactNode }) {
         <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 12 }}>Navigation</div>
         {breadcrumb}
       </HeaderDrawer>
-
-      <BuyCreditsModal open={showBuy} onClose={() => setShowBuy(false)} />
     </header>
   );
 }

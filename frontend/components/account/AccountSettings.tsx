@@ -1,11 +1,13 @@
 "use client";
 
-import { useReducer, useEffect } from "react";
+import { useReducer, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
+import { useCredits } from "@/lib/hooks";
 import { useToast } from "@/components/ui/Toast";
 import { AppHeader } from "@/components/AppHeader";
+import { BuyCreditsModal } from "@/components/BuyCreditsModal";
 import {
   authListPasskeys,
   authDeletePasskey,
@@ -91,6 +93,8 @@ export function AccountSettings() {
   const router = useRouter();
   const [state, dispatch] = useReducer(accountReducer, initialState);
   const { addToast } = useToast();
+  const { data: credits } = useCredits();
+  const [showBuyCredits, setShowBuyCredits] = useState(false);
 
   const loadPasskeys = async () => {
     try {
@@ -201,6 +205,24 @@ export function AccountSettings() {
       />
 
       <div style={{ flex: 1, maxWidth: 560, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
+        {/* Credits section */}
+        <div className="card" style={{ padding: "16px 20px", marginBottom: "var(--gap)" }}>
+          <div className="section-label" style={{ marginBottom: 10 }}>Credits</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <div style={{ fontSize: 28, fontWeight: 800, lineHeight: 1 }}>
+                {credits?.balance?.toLocaleString() ?? "0"}
+              </div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
+                credits available &middot; 1 credit = $0.001
+              </div>
+            </div>
+            <button onClick={() => setShowBuyCredits(true)} className="btn btn-primary btn-sm">
+              Buy credits
+            </button>
+          </div>
+        </div>
+
         <div className="card" style={{ padding: "16px 20px", marginBottom: "var(--gap)" }}>
           <div className="section-label" style={{ marginBottom: 10 }}>Account</div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
@@ -278,6 +300,8 @@ export function AccountSettings() {
           )}
         </div>
       </div>
+
+      <BuyCreditsModal open={showBuyCredits} onClose={() => setShowBuyCredits(false)} />
     </div>
   );
 }

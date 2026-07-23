@@ -6,14 +6,13 @@ import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { authLogout } from "@/lib/api";
-import type { CreditBalance } from "@/lib/api";
 
 interface AuthButtonProps {
-  credits?: CreditBalance | null;
-  onBuyClick?: () => void;
+  credits?: never;
+  onBuyClick?: never;
 }
 
-export function AuthButton({ credits, onBuyClick }: AuthButtonProps) {
+export function AuthButton(_props?: AuthButtonProps) {
   const { user, setUser, openAuthModal } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -70,13 +69,6 @@ export function AuthButton({ credits, onBuyClick }: AuthButtonProps) {
             <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{user.email}</div>
           </div>
 
-          {credits && (
-            <div style={{ padding: "6px 8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Credits</span>
-              <span style={{ fontSize: 12, fontWeight: 700 }}>{credits.balance}</span>
-            </div>
-          )}
-
           <Link
             href="/account"
             style={{
@@ -123,28 +115,6 @@ export function AuthButton({ credits, onBuyClick }: AuthButtonProps) {
             >
               Admin
             </Link>
-          )}
-
-          {onBuyClick && (
-            <button
-              onClick={() => { setShowMenu(false); onBuyClick(); }}
-              style={{
-                width: "100%",
-                padding: "6px 8px",
-                fontSize: 12,
-                fontWeight: 600,
-                textAlign: "left",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                borderRadius: "var(--radius)",
-                color: "var(--text)"
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = "var(--background)"}
-              onMouseLeave={(e) => e.currentTarget.style.background = "none"}
-            >
-              Buy Credits
-            </button>
           )}
 
           <button

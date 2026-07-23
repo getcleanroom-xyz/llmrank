@@ -4,10 +4,10 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { useBrands, useDashboard, useCreateBrand } from "@/lib/hooks";
+import { useBrands, useDashboard, useCreateBrand, useCredits } from "@/lib/hooks";
 import {
   Search, ChevronLeft, ChevronRight, LayoutDashboard, SearchCode,
-  History, Swords, Plus, LogOut, User, ExternalLink,
+  History, Swords, Plus, LogOut, User, ExternalLink, CreditCard,
 } from "lucide-react";
 import { NewScanButton } from "./NewScanButton";
 import { BrandWizard } from "@/components/brands/BrandWizard";
@@ -93,6 +93,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   const createBrand = useCreateBrand();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const { addToast } = useToast();
+  const { data: credits } = useCredits();
 
   const dashboard = dashResult?.dashboard;
   const lastScanLLMs = useMemo(
@@ -314,6 +315,30 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
 
       {/* User section */}
       <div style={{ borderTop: "2px solid var(--border)", padding: "8px 10px" }}>
+        {/* Credits display */}
+        {!collapsed && credits && (
+          <Link
+            href="/account"
+            style={{
+              display: "flex", alignItems: "center", gap: 6, padding: "5px 8px",
+              borderRadius: "var(--radius)", textDecoration: "none",
+              marginBottom: 6,
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-dark)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+            onClick={onNavigate}
+          >
+            <CreditCard size={14} strokeWidth={ICON_STROKE} color="var(--text-muted)" />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Credits</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: credits.balance > 0 ? "var(--text)" : "#991B1B" }}>
+                {credits.balance.toLocaleString()}
+              </div>
+            </div>
+            <span style={{ fontSize: 10, color: "var(--primary)", fontWeight: 600 }}>Buy</span>
+          </Link>
+        )}
+
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 8px" }}>
           <div style={{ width: 28, height: 28, borderRadius: "var(--radius)", background: "var(--primary)", border: "1.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, flexShrink: 0 }}>
             {user?.display_name?.charAt(0).toUpperCase() || "?"}
