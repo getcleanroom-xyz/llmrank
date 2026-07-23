@@ -8,6 +8,7 @@ import { useAdminCampaigns, useAdminStats, useAdminDeleteCampaign, useAdminCance
 import { AppHeader, PageHeader } from "@/components/AppHeader";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { Select } from "@/components/admin/Select";
+import { useToast } from "@/components/ui/Toast";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Draft",
@@ -76,6 +77,7 @@ export function AdminDashboard() {
   const { data: blogPosts } = useAdminBlogPosts();
   const { data: blogCalendar } = useAdminBlogCalendar();
   const generateBlog = useAdminGenerateBlog();
+  const { addToast } = useToast();
 
   const [state, dispatch] = useReducer(reducer, initialState);
   const set = (field: keyof State, value: State[keyof State]) =>
@@ -87,8 +89,9 @@ export function AdminDashboard() {
     if (!state.confirmAction || state.confirmAction.type !== "delete") return;
     try {
       await deleteCampaign.mutateAsync(state.confirmAction.id);
+      addToast("Campaign deleted", "success");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Delete failed");
+      addToast(err instanceof Error ? err.message : "Delete failed", "error");
     }
     set("confirmAction", null);
   };
@@ -97,8 +100,9 @@ export function AdminDashboard() {
     if (!state.confirmAction || state.confirmAction.type !== "cancel") return;
     try {
       await cancelCampaign.mutateAsync(state.confirmAction.id);
+      addToast("Campaign cancelled", "success");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Cancel failed");
+      addToast(err instanceof Error ? err.message : "Cancel failed", "error");
     }
     set("confirmAction", null);
   };
@@ -106,9 +110,10 @@ export function AdminDashboard() {
   const handleClone = async (id: string) => {
     try {
       const cloned = await cloneCampaign.mutateAsync(id);
+      addToast("Campaign cloned", "success");
       router.push(`/admin/campaigns/${cloned.id}`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Clone failed");
+      addToast(err instanceof Error ? err.message : "Clone failed", "error");
     }
   };
 
@@ -388,12 +393,11 @@ export function AdminDashboard() {
             </div>
             <button
               onClick={async () => {
-                set("blogMessage", null);
                 try {
                   const result = await generateBlog.mutateAsync();
-                  set("blogMessage", `Generated "${result.title}"${result.pr_url ? ` — PR: ${result.pr_url}` : " (saved locally)"}`);
+                  addToast(`Generated "${result.title}"${result.pr_url ? ` — PR: ${result.pr_url}` : " (saved locally)"}`, "success");
                 } catch (err) {
-                  set("blogMessage", err instanceof Error ? err.message : "Generation failed");
+                  addToast(err instanceof Error ? err.message : "Generation failed", "error");
                 }
               }}
               disabled={generateBlog.isPending}
@@ -402,12 +406,6 @@ export function AdminDashboard() {
               {generateBlog.isPending ? "Generating..." : "+ Generate Post"}
             </button>
           </div>
-
-          {state.blogMessage && (
-            <div style={{ padding: "10px 16px", fontSize: 12, fontWeight: 600, background: state.blogMessage.includes("failed") || state.blogMessage.includes("Error") ? "#FEE2E2" : "#E6F9ED", borderBottom: "1px solid var(--border)" }}>
-              {state.blogMessage}
-            </div>
-          )}
 
           {/* Content Calendar */}
           {blogCalendar && blogCalendar.topics.length > 0 && (

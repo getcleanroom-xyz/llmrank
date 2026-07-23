@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { useBrands, useCreateBrand, useDeleteBrand } from "@/lib/hooks";
 import { AppHeader, PageHeader } from "@/components/AppHeader";
 import { BrandWizard } from "@/components/brands/BrandWizard";
+import { useToast } from "@/components/ui/Toast";
 
 const BRAND_CARD_COLORS = [
   { bg: "#FFF9DB", acc: "var(--primary)", rot: "-0.8deg" },
@@ -16,26 +17,18 @@ const BRAND_CARD_COLORS = [
 ];
 
 interface State {
-  success: string | null;
-  brandError: string | null;
   searchInput: string;
   showModal: boolean;
   deleteConfirm: string | null;
 }
 
 type Action =
-  | { type: "success"; value: string | null }
-  | { type: "brandError"; value: string | null }
   | { type: "searchInput"; value: string }
   | { type: "showModal"; value: boolean }
   | { type: "deleteConfirm"; value: string | null };
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
-    case "success":
-      return { ...state, success: action.value };
-    case "brandError":
-      return { ...state, brandError: action.value };
     case "searchInput":
       return { ...state, searchInput: action.value };
     case "showModal":
@@ -59,12 +52,12 @@ function BrandsPageInner() {
   const deleteBrand = useDeleteBrand();
 
   const [state, dispatch] = useReducer(reducer, {
-    success: null,
-    brandError: null,
     searchInput: search,
     showModal: false,
     deleteConfirm: null,
   });
+
+  const { addToast } = useToast();
 
   const set = <K extends keyof State>(field: K, value: State[K]) =>
     dispatch({ type: field, value } as Action);
@@ -85,11 +78,9 @@ function BrandsPageInner() {
     try {
       await createBrand.mutateAsync({ name, domain, competitors });
       set("showModal", false);
-      set("success", `${name} created`);
-      setTimeout(() => set("success", null), 3000);
+      addToast(`${name} created`, "success");
     } catch (err) {
-      set("success", null);
-      set("brandError", err instanceof Error ? err.message : "Failed to create brand");
+      addToast(err instanceof Error ? err.message : "Failed to create brand", "error");
     }
   };
 
@@ -97,11 +88,9 @@ function BrandsPageInner() {
     try {
       await deleteBrand.mutateAsync(id);
       set("deleteConfirm", null);
-      set("success", "Brand deleted");
-      setTimeout(() => set("success", null), 3000);
+      addToast("Brand deleted", "success");
     } catch (err) {
-      set("success", null);
-      set("brandError", err instanceof Error ? err.message : "Failed to delete brand");
+      addToast(err instanceof Error ? err.message : "Failed to delete brand", "error");
     }
   };
 
@@ -171,15 +160,6 @@ function BrandsPageInner() {
           <div className="card" style={{ background: "#FEE2E2", borderColor: "var(--red)", padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#991B1B", fontWeight: 600 }}>
             {error}
           </div>
-        )}
-        {state.brandError && (
-          <div className="card" style={{ background: "#FEE2E2", borderColor: "var(--red)", padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#991B1B", fontWeight: 600 }}>
-            {state.brandError}
-            <button onClick={() => set("brandError", null)} style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer", fontWeight: 700, color: "#991B1B" }}>x</button>
-          </div>
-        )}
-        {state.success && (
-          <div className="card" style={{ background: "#DCFCE7", borderColor: "var(--green)", padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#166534", fontWeight: 600 }}>{state.success}</div>
         )}
 
         {isLoading ? (

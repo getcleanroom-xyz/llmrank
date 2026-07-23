@@ -18,6 +18,7 @@ import { ScoreHistoryChart } from "@/components/dashboard/ScoreHistoryChart";
 import { ScanHistory } from "@/components/dashboard/ScanHistory";
 import { ChatWidget } from "@/components/ChatWidget";
 import { DashboardSkeleton } from "@/components/dashboard/Skeletons";
+import { useToast } from "@/components/ui/Toast";
 
 type Tab = "overview" | "queries" | "scans" | "competitors";
 
@@ -50,6 +51,7 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
 
   const { data: dashResult, error: loadError, refetch } = useDashboard(brandId);
   const qc = useQueryClient();
+  const { addToast } = useToast();
   const [scanComplete, setScanComplete] = useState(false);
   const [optimisticScanning, setOptimisticScanning] = useState(false);
   const wasRunningRef = useRef(false);
@@ -76,6 +78,7 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
     if (!isScanRunning) {
       if (wasRunningRef.current) {
         setScanComplete(true);
+        addToast("Scan complete! Your results have been updated.", "success");
         qc.invalidateQueries({ queryKey: queryKeys.dashboard(brandId) });
         setTimeout(() => setScanComplete(false), 10000);
         wasRunningRef.current = false;
@@ -123,11 +126,6 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
           </div>
         </div>
         {isScanRunning && <div className="scan-progress"><div className="scan-progress-fill" /></div>}
-        {scanComplete && (
-          <div style={{ background: "#DCFCE7", border: "2px solid #22C55E", borderRadius: "var(--radius)", padding: "8px 14px", fontSize: 12, color: "#166534", fontWeight: 700, display: "flex", alignItems: "center", gap: 8, boxShadow: "2px 2px 0 #1A1A1A", marginBottom: 8 }}>
-            <span style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 18 }}>Done!</span> Scan complete. Your results have been updated.
-          </div>
-        )}
       </div>
 
       <div style={{ flex: 1, padding: "0 var(--page-px)", width: "100%" }}>

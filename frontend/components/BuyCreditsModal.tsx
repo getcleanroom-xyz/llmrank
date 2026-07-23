@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useCreditPackages, useCreateCheckout } from "@/lib/hooks";
 import { getEncryptionKey } from "@/lib/api";
 import { encryptAES, generateNonce } from "@/lib/encrypt";
+import { useToast } from "@/components/ui/Toast";
 
 interface BuyCreditsModalProps {
   open: boolean;
@@ -19,43 +20,40 @@ export function BuyCreditsModal({ open, onClose }: BuyCreditsModalProps) {
   const [expiry, setExpiry] = useState("");
   const [cvv, setCvv] = useState("");
   const [encrypting, setEncrypting] = useState(false);
-  const [error, setError] = useState("");
   const [encKey, setEncKey] = useState("");
   const prevOpen = useRef(false);
+  const { addToast } = useToast();
 
   useEffect(() => {
     if (open && !prevOpen.current) {
       setStep("packages");
-      setError("");
       setCardNumber("");
       setExpiry("");
       setCvv("");
-      getEncryptionKey().then((r) => setEncKey(r.key)).catch(() => setError("Failed to load encryption key"));
+      getEncryptionKey().then((r) => setEncKey(r.key)).catch(() => addToast("Failed to load encryption key", "error"));
     }
     prevOpen.current = open;
-  }, [open]);
+  }, [open, addToast]);
 
   if (!open) return null;
 
   const handleSelectPackage = (pkg: string) => {
     setSelectedPkg(pkg);
     setStep("card");
-    setError("");
   };
 
   const handlePay = async () => {
     const num = cardNumber.replace(/\s/g, "");
-    if (num.length < 13 || num.length > 19) { setError("Invalid card number"); return; }
+    if (num.length < 13 || num.length > 19) { addToast("Invalid card number", "error"); return; }
 
     const [m, y] = expiry.split("/").map((s) => s.trim());
-    if (!m || !y || m.length !== 2 || y.length !== 2) { setError("Invalid expiry (MM/YY)"); return; }
+    if (!m || !y || m.length !== 2 || y.length !== 2) { addToast("Invalid expiry (MM/YY)", "error"); return; }
 
-    if (cvv.length < 3 || cvv.length > 4) { setError("Invalid CVV"); return; }
+    if (cvv.length < 3 || cvv.length > 4) { addToast("Invalid CVV", "error"); return; }
 
-    if (!encKey) { setError("Encryption key not loaded"); return; }
+    if (!encKey) { addToast("Encryption key not loaded", "error"); return; }
 
     setEncrypting(true);
-    setError("");
 
     try {
       const nonce = generateNonce();
@@ -78,12 +76,13 @@ export function BuyCreditsModal({ open, onClose }: BuyCreditsModalProps) {
       });
 
       if (session.checkout_url) {
+        addToast("Redirecting to payment...", "info");
         window.location.replace(session.checkout_url);
       } else {
-        setError("No redirect URL returned. Try again.");
+        addToast("No redirect URL returned. Try again.", "error");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Payment failed");
+      addToast(err instanceof Error ? err.message : "Payment failed", "error");
     } finally {
       setEncrypting(false);
     }
@@ -115,12 +114,6 @@ export function BuyCreditsModal({ open, onClose }: BuyCreditsModalProps) {
           </div>
           <button onClick={onClose} className="btn btn-ghost btn-sm" aria-label="Close">x</button>
         </div>
-
-        {error && (
-          <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "8px 12px", marginBottom: 12, fontSize: 12, color: "#991B1B", fontWeight: 600 }}>
-            {error}
-          </div>
-        )}
 
         {step === "packages" && (
           isLoading ? (
@@ -165,7 +158,7 @@ export function BuyCreditsModal({ open, onClose }: BuyCreditsModalProps) {
             </div>
 
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => { setStep("packages"); setError(""); }} className="btn btn-ghost btn-sm" style={{ flex: 1 }}>Back</button>
+              <button onClick={() => setStep("packages")} className="btn btn-ghost btn-sm" style={{ flex: 1 }}>Back</button>
               <button onClick={handlePay} disabled={encrypting} className="btn btn-primary" style={{ flex: 1 }}>
                 {encrypting ? "Processing..." : `Pay $${pkg.amount_usd.toFixed(2)}`}
               </button>

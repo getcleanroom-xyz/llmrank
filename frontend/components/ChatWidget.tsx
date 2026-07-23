@@ -12,6 +12,7 @@ import {
 } from "@/lib/hooks/conversations";
 import type { Conversation } from "@/lib/api/conversations";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
+import { useToast } from "@/components/ui/Toast";
 
 interface State {
   open: boolean;
@@ -105,6 +106,7 @@ export function ChatWidget({ brandId }: { brandId: string }) {
   const streamAbortRef = useRef<AbortController | null>(null);
   const titleRefreshRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const qc = useQueryClient();
+  const { addToast } = useToast();
 
   const { data: convsData } = useConversations(brandId);
   const { data: serverMessages } = useConversationMessages(brandId, state.activeConvId);
@@ -185,6 +187,7 @@ export function ChatWidget({ brandId }: { brandId: string }) {
         qc.invalidateQueries({ queryKey: ["conversations", brandId] });
       } catch {
         dispatch({ type: "SEND_ERROR", message: "Failed to create conversation" });
+        addToast("Failed to create conversation", "error");
         return;
       }
     }
@@ -200,7 +203,9 @@ export function ChatWidget({ brandId }: { brandId: string }) {
         fullResponse += token;
       }
     } catch (err) {
-      dispatch({ type: "SEND_ERROR", message: err instanceof Error ? err.message : "Failed to get response" });
+      const msg = err instanceof Error ? err.message : "Failed to get response";
+      dispatch({ type: "SEND_ERROR", message: msg });
+      addToast(msg, "error");
     } finally {
       dispatch({ type: "STREAM_FINISH", fullResponse });
       qc.invalidateQueries({ queryKey: ["conversations", brandId] });
@@ -490,12 +495,6 @@ export function ChatWidget({ brandId }: { brandId: string }) {
               <div ref={messagesEndRef} />
             </div>
           </div>
-
-          {state.error && (
-            <div style={{ padding: "8px 16px", fontSize: 12, color: "var(--red)", fontWeight: 600, borderTop: "1px solid var(--border)" }}>
-              {state.error}
-            </div>
-          )}
 
           <div style={{
             borderTop: "2px solid var(--border)",

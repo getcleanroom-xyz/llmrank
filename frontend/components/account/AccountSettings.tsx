@@ -4,6 +4,7 @@ import { useReducer, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/components/ui/Toast";
 import { AppHeader } from "@/components/AppHeader";
 import {
   authListPasskeys,
@@ -24,26 +25,19 @@ interface AccountState {
   loading: boolean;
   adding: boolean;
   deleting: string | null;
-  error: string;
-  success: string;
 }
 
 type AccountAction =
   | { type: "SET_PASSKEYS"; passkeys: Passkey[] }
   | { type: "SET_LOADING"; loading: boolean }
   | { type: "SET_ADDING"; adding: boolean }
-  | { type: "SET_DELETING"; deleting: string | null }
-  | { type: "SET_ERROR"; error: string }
-  | { type: "SET_SUCCESS"; success: string }
-  | { type: "CLEAR_MESSAGES" };
+  | { type: "SET_DELETING"; deleting: string | null };
 
 const initialState: AccountState = {
   passkeys: [],
   loading: true,
   adding: false,
   deleting: null,
-  error: "",
-  success: "",
 };
 
 function accountReducer(state: AccountState, action: AccountAction): AccountState {
@@ -56,12 +50,6 @@ function accountReducer(state: AccountState, action: AccountAction): AccountStat
       return { ...state, adding: action.adding };
     case "SET_DELETING":
       return { ...state, deleting: action.deleting };
-    case "SET_ERROR":
-      return { ...state, error: action.error, loading: false, adding: false, deleting: null };
-    case "SET_SUCCESS":
-      return { ...state, success: action.success, error: "", loading: false, adding: false, deleting: null };
-    case "CLEAR_MESSAGES":
-      return { ...state, error: "", success: "" };
     default:
       return state;
   }
@@ -102,6 +90,7 @@ export function AccountSettings() {
   const { user } = useAuth();
   const router = useRouter();
   const [state, dispatch] = useReducer(accountReducer, initialState);
+  const { addToast } = useToast();
 
   const loadPasskeys = async () => {
     try {
@@ -109,7 +98,7 @@ export function AccountSettings() {
       const data = await authListPasskeys();
       dispatch({ type: "SET_PASSKEYS", passkeys: data });
     } catch (err) {
-      dispatch({ type: "SET_ERROR", error: err instanceof Error ? err.message : "Failed to load passkeys" });
+      addToast(err instanceof Error ? err.message : "Failed to load passkeys", "error");
     } finally {
       dispatch({ type: "SET_LOADING", loading: false });
     }
@@ -124,7 +113,6 @@ export function AccountSettings() {
   }, [user, router]);
 
   const handleAddPasskey = async () => {
-    dispatch({ type: "CLEAR_MESSAGES" });
     dispatch({ type: "SET_ADDING", adding: true });
     try {
       const device_name = getDeviceName();
@@ -173,25 +161,24 @@ export function AccountSettings() {
       };
 
       await authAddPasskeyFinish(cred, device_name);
-      dispatch({ type: "SET_SUCCESS", success: `Passkey "${device_name}" added successfully` });
+      addToast(`Passkey "${device_name}" added successfully`, "success");
       await loadPasskeys();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to add passkey";
-      dispatch({ type: "SET_ERROR", error: msg.includes("cancelled") ? "Setup cancelled." : msg });
+      addToast(msg.includes("cancelled") ? "Setup cancelled." : msg, "error");
     } finally {
       dispatch({ type: "SET_ADDING", adding: false });
     }
   };
 
   const handleDeletePasskey = async (id: string) => {
-    dispatch({ type: "CLEAR_MESSAGES" });
     dispatch({ type: "SET_DELETING", deleting: id });
     try {
       await authDeletePasskey(id);
-      dispatch({ type: "SET_SUCCESS", success: "Passkey removed" });
+      addToast("Passkey removed", "success");
       await loadPasskeys();
     } catch (err) {
-      dispatch({ type: "SET_ERROR", error: err instanceof Error ? err.message : "Failed to delete passkey" });
+      addToast(err instanceof Error ? err.message : "Failed to delete passkey", "error");
     } finally {
       dispatch({ type: "SET_DELETING", deleting: null });
     }
@@ -247,13 +234,6 @@ export function AccountSettings() {
           <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 14, lineHeight: 1.5 }}>
             Passkeys let you sign in with your fingerprint, Face ID, or security key — no password needed.
           </div>
-
-          {state.error && (
-            <div style={{ fontSize: 12, color: "var(--red)", marginBottom: 10, fontWeight: 600 }}>{state.error}</div>
-          )}
-          {state.success && (
-            <div style={{ fontSize: 12, color: "var(--green)", marginBottom: 10, fontWeight: 600 }}>{state.success}</div>
-          )}
 
           {state.loading ? (
             <div style={{ fontSize: 12, color: "var(--text-muted)", padding: "12px 0" }}>Loading...</div>

@@ -8,6 +8,7 @@ import StarterKit from "@tiptap/starter-kit";
 import LinkExtension from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/components/ui/Toast";
 import { AppHeader, PageHeader } from "@/components/AppHeader";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { MultiUserSelect } from "@/components/admin/MultiUserSelect";
@@ -386,8 +387,6 @@ interface CampaignEditorState {
   cronExpr: string;
   scheduledAt: string;
   templateVars: TemplateVar[];
-  error: string;
-  success: string;
   selectedUserIds: string[];
   manualEmails: string[];
   showSource: boolean;
@@ -412,8 +411,6 @@ type CampaignEditorAction =
   | { type: "SET_CRON_EXPR"; value: string }
   | { type: "SET_SCHEDULED_AT"; value: string }
   | { type: "SET_TEMPLATE_VARS"; value: TemplateVar[] }
-  | { type: "SET_ERROR"; value: string }
-  | { type: "SET_SUCCESS"; value: string }
   | { type: "SET_SELECTED_USER_IDS"; value: string[] }
   | { type: "SET_MANUAL_EMAILS"; value: string[] }
   | { type: "SET_SHOW_SOURCE"; value: boolean }
@@ -448,10 +445,6 @@ function campaignReducer(state: CampaignEditorState, action: CampaignEditorActio
       return { ...state, scheduledAt: action.value };
     case "SET_TEMPLATE_VARS":
       return { ...state, templateVars: action.value };
-    case "SET_ERROR":
-      return { ...state, error: action.value };
-    case "SET_SUCCESS":
-      return { ...state, success: action.value };
     case "SET_SELECTED_USER_IDS":
       return { ...state, selectedUserIds: action.value };
     case "SET_MANUAL_EMAILS":
@@ -489,8 +482,6 @@ function buildInitialState(existing?: AdminCampaignDetail): CampaignEditorState 
     cronExpr: "",
     scheduledAt: "",
     templateVars: existing?.template_vars || [],
-    error: "",
-    success: "",
     selectedUserIds: (existing?.audience_config?.user_ids as string[]) || [],
     manualEmails: (existing?.audience_config?.emails as string[]) || [],
     showSource: false,
@@ -508,6 +499,7 @@ function buildInitialState(existing?: AdminCampaignDetail): CampaignEditorState 
 export function CampaignEditor({ existing }: CampaignEditorProps) {
   const { user } = useAuth();
   const router = useRouter();
+  const { addToast } = useToast();
 
   const createCampaign = useAdminCreateCampaign();
   const updateCampaign = useAdminUpdateCampaign();
@@ -569,25 +561,22 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
   }, [state.name, state.subject, getHtmlBody, state.fromEmail, state.audienceType, state.signedUpAfter, state.signedUpBefore, state.selectedUserIds, state.manualEmails, state.templateVars]);
 
   const saveDraft = async () => {
-    set("error", "");
-    set("success", "");
     try {
       const payload = buildPayload();
       if (state.campaignId) {
         await updateCampaign.mutateAsync({ id: state.campaignId, data: payload });
-        set("success", "Campaign saved as draft");
+        addToast("Campaign saved as draft", "success");
       } else {
         const c = await createCampaign.mutateAsync(payload);
         set("campaignId", c.id);
-        set("success", "Campaign saved as draft");
+        addToast("Campaign saved as draft", "success");
       }
     } catch (err) {
-      set("error", err instanceof Error ? err.message : "Save failed");
+      addToast(err instanceof Error ? err.message : "Save failed", "error");
     }
   };
 
   const scheduleAndSend = async () => {
-    set("error", "");
     try {
       let id = state.campaignId;
       if (!id) {
@@ -611,23 +600,23 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
 
       router.push("/admin");
     } catch (err) {
-      set("error", err instanceof Error ? err.message : "Schedule failed");
+      addToast(err instanceof Error ? err.message : "Schedule failed", "error");
       set("showConfirm", false);
     }
   };
 
   const handlePreview = async () => {
     if (!existing && !state.campaignId) {
-      set("error", "Save the campaign as draft first before sending a preview");
+      addToast("Save the campaign as draft first before sending a preview", "error");
       return;
     }
     const id = state.campaignId || existing?.id;
     if (!id) return;
     try {
       const result = await previewCampaign.mutateAsync(id);
-      set("success", result.message);
+      addToast(result.message, "success");
     } catch (err) {
-      set("error", err instanceof Error ? err.message : "Preview failed");
+      addToast(err instanceof Error ? err.message : "Preview failed", "error");
     }
   };
 
@@ -721,19 +710,6 @@ export function CampaignEditor({ existing }: CampaignEditorProps) {
       </PageHeader>
 
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
-        {state.error && (
-          <div className="card" style={{ marginBottom: "var(--gap)", color: "var(--red)", fontSize: 12, fontWeight: 600, padding: "10px 14px" }}>
-            {state.error}
-            <button onClick={() => set("error", "")} style={{ float: "right", background: "none", border: "none", cursor: "pointer", color: "var(--red)", fontSize: 14 }}>✕</button>
-          </div>
-        )}
-        {state.success && (
-          <div className="card" style={{ marginBottom: "var(--gap)", color: "var(--green)", fontSize: 12, fontWeight: 600, padding: "10px 14px" }}>
-            {state.success}
-            <button onClick={() => set("success", "")} style={{ float: "right", background: "none", border: "none", cursor: "pointer", color: "var(--green)", fontSize: 14 }}>✕</button>
-          </div>
-        )}
-
         <div className="editor-grid">
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap)" }}>
             <div className="card" style={{ padding: "14px 16px" }}>

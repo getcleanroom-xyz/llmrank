@@ -2,6 +2,7 @@
 
 import { useReducer, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/components/ui/Toast";
 import {
   authRegisterStart,
   authRegisterFinish,
@@ -30,7 +31,6 @@ interface AuthState {
   recoverCode: string;
   recoverMessage: string;
   loading: boolean;
-  error: string;
 }
 
 type AuthAction =
@@ -41,7 +41,6 @@ type AuthAction =
   | { type: "SET_STEP"; step: AuthStep }
   | { type: "SET_FIELD"; field: string; value: string }
   | { type: "SET_LOADING"; loading: boolean }
-  | { type: "SET_ERROR"; error: string }
   | { type: "SET_RECOVER_MESSAGE"; message: string }
   | { type: "GO_BACK_TO_AUTH" };
 
@@ -50,23 +49,21 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
     case "RESET":
       return { ...initialState, mode: action.mode };
     case "SET_MODE":
-      return { ...state, mode: action.mode, step: "form", error: "" };
+      return { ...state, mode: action.mode, step: "form" };
     case "SET_METHOD":
-      return { ...state, method: action.method, step: "form", error: "" };
+      return { ...state, method: action.method, step: "form" };
     case "SET_VIEW":
-      return { ...state, view: action.view, error: "" };
+      return { ...state, view: action.view };
     case "SET_STEP":
       return { ...state, step: action.step };
     case "SET_FIELD":
       return { ...state, [action.field]: action.value };
     case "SET_LOADING":
       return { ...state, loading: action.loading };
-    case "SET_ERROR":
-      return { ...state, error: action.error, loading: false };
     case "SET_RECOVER_MESSAGE":
       return { ...state, recoverMessage: action.message };
     case "GO_BACK_TO_AUTH":
-      return { ...state, view: "auth", error: "", loading: false };
+      return { ...state, view: "auth", loading: false };
     default:
       return state;
   }
@@ -84,12 +81,12 @@ const initialState: AuthState = {
   recoverCode: "",
   recoverMessage: "",
   loading: false,
-  error: "",
 };
 
 export function AuthModal() {
   const { user, setUser, closeAuthModal, authModalOpen, authModalMode } = useAuth();
   const [state, dispatch] = useReducer(authReducer, { ...initialState, mode: authModalMode });
+  const { addToast } = useToast();
 
   useEffect(() => {
     dispatch({ type: "RESET", mode: authModalMode });
@@ -101,7 +98,6 @@ export function AuthModal() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch({ type: "SET_ERROR", error: "" });
 
     if (state.method === "passkey") {
       if (state.step === "form") {
@@ -118,12 +114,12 @@ export function AuthModal() {
         closeAuthModal();
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Registration failed";
-        dispatch({
-          type: "SET_ERROR",
-          error: msg.includes("cancelled")
+        addToast(
+          msg.includes("cancelled")
             ? "Setup cancelled. No worries — you can try again whenever you're ready."
             : msg,
-        });
+          "error"
+        );
         dispatch({ type: "SET_STEP", step: "form" });
       } finally {
         dispatch({ type: "SET_LOADING", loading: false });
@@ -135,7 +131,7 @@ export function AuthModal() {
         setUser(result.user);
         closeAuthModal();
       } catch (err) {
-        dispatch({ type: "SET_ERROR", error: err instanceof Error ? err.message : "Registration failed" });
+        addToast(err instanceof Error ? err.message : "Registration failed", "error");
       } finally {
         dispatch({ type: "SET_LOADING", loading: false });
       }
@@ -144,7 +140,6 @@ export function AuthModal() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch({ type: "SET_ERROR", error: "" });
     dispatch({ type: "SET_LOADING", loading: true });
 
     try {
@@ -161,10 +156,10 @@ export function AuthModal() {
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Login failed";
-      dispatch({
-        type: "SET_ERROR",
-        error: msg.includes("cancelled") ? "Sign-in cancelled. Try again when you're ready." : msg,
-      });
+      addToast(
+        msg.includes("cancelled") ? "Sign-in cancelled. Try again when you're ready." : msg,
+        "error"
+      );
     } finally {
       dispatch({ type: "SET_LOADING", loading: false });
     }
@@ -182,14 +177,13 @@ export function AuthModal() {
 
   const handleRecoverRequest = async (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch({ type: "SET_ERROR", error: "" });
     dispatch({ type: "SET_LOADING", loading: true });
     try {
       const result = await authRecover(state.email);
       dispatch({ type: "SET_RECOVER_MESSAGE", message: result.message });
       dispatch({ type: "SET_VIEW", view: "recover-verify" });
     } catch (err) {
-      dispatch({ type: "SET_ERROR", error: err instanceof Error ? err.message : "Failed to send recovery code" });
+      addToast(err instanceof Error ? err.message : "Failed to send recovery code", "error");
     } finally {
       dispatch({ type: "SET_LOADING", loading: false });
     }
@@ -197,14 +191,13 @@ export function AuthModal() {
 
   const handleRecoverFinish = async (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch({ type: "SET_ERROR", error: "" });
     dispatch({ type: "SET_LOADING", loading: true });
     try {
       const result = await authRecoverFinish(state.email, state.recoverCode, state.password, state.displayName || undefined);
       setUser(result.user);
       closeAuthModal();
     } catch (err) {
-      dispatch({ type: "SET_ERROR", error: err instanceof Error ? err.message : "Recovery failed" });
+      addToast(err instanceof Error ? err.message : "Recovery failed", "error");
     } finally {
       dispatch({ type: "SET_LOADING", loading: false });
     }
@@ -294,10 +287,6 @@ export function AuthModal() {
                     {state.displayName && <> &middot; {state.displayName}</>}
                   </div>
 
-                  {state.error && (
-                    <div style={{ fontSize: 12, color: "var(--red)", marginBottom: 12, fontWeight: 600 }}>{state.error}</div>
-                  )}
-
                   <div style={{ display: "flex", gap: 8 }}>
                     <button type="button" onClick={() => dispatch({ type: "SET_STEP", step: "form" })} className="btn btn-ghost" style={{ flex: 1 }}>
                       Back
@@ -364,10 +353,6 @@ export function AuthModal() {
                     </div>
                   )}
 
-                  {state.error && (
-                    <div style={{ fontSize: 12, color: "var(--red)", marginBottom: 12, fontWeight: 600 }}>{state.error}</div>
-                  )}
-
                   <button type="submit" disabled={state.loading} className="btn btn-primary" style={{ width: "100%" }}>
                     {state.loading
                       ? "Loading..."
@@ -421,10 +406,6 @@ export function AuthModal() {
                 autoFocus
               />
             </div>
-
-            {state.error && (
-              <div style={{ fontSize: 12, color: "var(--red)", marginBottom: 12, fontWeight: 600 }}>{state.error}</div>
-            )}
 
             <button type="submit" disabled={state.loading} className="btn btn-primary" style={{ width: "100%" }}>
               {state.loading ? "Sending..." : "Send recovery code"}
@@ -487,10 +468,6 @@ export function AuthModal() {
                 placeholder="Optional — display name"
               />
             </div>
-
-            {state.error && (
-              <div style={{ fontSize: 12, color: "var(--red)", marginBottom: 12, fontWeight: 600 }}>{state.error}</div>
-            )}
 
             <button type="submit" disabled={state.loading || state.recoverCode.length !== 6} className="btn btn-primary" style={{ width: "100%" }}>
               {state.loading ? "Recovering..." : "Set password & sign in"}

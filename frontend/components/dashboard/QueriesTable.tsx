@@ -8,6 +8,7 @@ import {
 } from "@/lib/hooks";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { Sparkline } from "@/components/ui/Sparkline";
+import { useToast } from "@/components/ui/Toast";
 import { FilterBar, type FilterState } from "./FilterBar";
 import { timeAgo } from "@/lib/utils";
 
@@ -37,7 +38,6 @@ interface State {
   showSuggest: boolean;
   keywords: string;
   suggestions: string[];
-  error: string | null;
   deleteTarget: { id: string; text: string } | null;
   bulkDeleteConfirm: boolean;
   selected: Set<string>;
@@ -53,7 +53,6 @@ const initialState: State = {
   showSuggest: false,
   keywords: "",
   suggestions: [],
-  error: null,
   deleteTarget: null,
   bulkDeleteConfirm: false,
   selected: new Set(),
@@ -93,6 +92,7 @@ export function QueriesTable({
 }) {
   const router = useRouter();
   const isMobile = useIsMobile();
+  const { addToast } = useToast();
   const [state, dispatch] = useReducer(reducer, initialState);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -112,37 +112,34 @@ export function QueriesTable({
 
   const handleAdd = useCallback(async (text: string) => {
     if (!text.trim()) return;
-    set("error", null);
     try {
       await addQuery.mutateAsync({ brandId, query_text: text.trim() });
       set("input", "");
       set("suggestions", state.suggestions.filter((s) => s !== text));
       set("page", 1);
     } catch (e) {
-      set("error", e instanceof Error ? e.message : "Failed to add query");
+      addToast(e instanceof Error ? e.message : "Failed to add query", "error");
     }
   }, [brandId, addQuery, set]);
 
   const handleDelete = useCallback(async () => {
     if (!state.deleteTarget) return;
-    set("error", null);
     try {
       await deleteQuery.mutateAsync({ brandId, queryId: state.deleteTarget.id });
       set("deleteTarget", null);
     } catch (e) {
-      set("error", e instanceof Error ? e.message : "Failed to delete query");
+      addToast(e instanceof Error ? e.message : "Failed to delete query", "error");
     }
   }, [brandId, deleteQuery, state.deleteTarget, set]);
 
   const handleSuggest = useCallback(async () => {
-    set("error", null);
     try {
       const kws = state.keywords.split(",").map((k) => k.trim()).filter(Boolean);
       const existing = new Set(data?.items.map((q) => q.query_text.toLowerCase()) ?? []);
       const res = await suggestQueries.mutateAsync({ brandId, brand_name: brandName, domain, keywords: kws });
       set("suggestions", res.suggested_queries.filter((s) => !existing.has(s.toLowerCase())));
     } catch (e) {
-      set("error", e instanceof Error ? e.message : "Failed to generate suggestions");
+      addToast(e instanceof Error ? e.message : "Failed to generate suggestions", "error");
     }
   }, [brandId, brandName, domain, state.keywords, suggestQueries, data, set]);
 
@@ -172,12 +169,11 @@ export function QueriesTable({
 
   const handleBulkAction = useCallback(async (action: "activate" | "deactivate" | "delete") => {
     if (state.selected.size === 0) return;
-    set("error", null);
     try {
       await bulkUpdate.mutateAsync({ brandId, action, queryIds: Array.from(state.selected) });
       set("selected", new Set());
     } catch (e) {
-      set("error", e instanceof Error ? e.message : `Failed to ${action} queries`);
+      addToast(e instanceof Error ? e.message : `Failed to ${action} queries`, "error");
     }
   }, [brandId, state.selected, bulkUpdate, set]);
 
@@ -202,13 +198,6 @@ export function QueriesTable({
 
   return (
     <div>
-      {state.error && (
-        <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "8px 12px", marginBottom: 12, fontSize: 12, color: "#991B1B", display: "flex", justifyContent: "space-between", alignItems: "center", fontWeight: 600 }}>
-          <span>{state.error}</span>
-          <button onClick={() => set("error", null)} style={{ background: "none", border: "none", color: "#991B1B", cursor: "pointer", fontSize: 16, lineHeight: 1 }}>x</button>
-        </div>
-      )}
-
       {/* Hero row */}
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, flexWrap: "wrap", marginBottom: 16 }}>
         <div>
