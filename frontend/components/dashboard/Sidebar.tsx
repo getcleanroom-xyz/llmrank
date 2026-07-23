@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
-import { useParams, usePathname, useSearchParams } from "next/navigation";
+import { useParams, usePathname, useSearchParams, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
+import { authLogout } from "@/lib/api";
 import { useBrands, useDashboard, useCreateBrand, useCredits } from "@/lib/hooks";
 import {
   Search, ChevronLeft, ChevronRight, LayoutDashboard, SearchCode,
@@ -84,6 +86,8 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   const { brandId } = useParams<{ brandId: string }>();
   const searchParams = useSearchParams();
   const { user, logout } = useAuth();
+  const router = useRouter();
+  const qc = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -176,6 +180,11 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
                   <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.name}</span>
                 </Link>
               ))}
+            </div>
+          )}
+          {searchOpen && searchQuery.trim() && searchItems.length === 0 && (
+            <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 10, right: 10, background: "var(--surface)", border: "1.5px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow)", zIndex: 100, padding: "12px 10px", textAlign: "center", fontSize: 12, color: "var(--text-muted)", fontWeight: 600 }}>
+              No brands found
             </div>
           )}
         </div>
@@ -362,7 +371,12 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
             </div>
           )}
           {!collapsed && (
-            <button onClick={logout} className="btn btn-ghost" style={{ padding: 4, minWidth: 24, minHeight: 24 }} title="Sign out">
+            <button onClick={async () => {
+              try { await authLogout(); } catch { /* continue */ }
+              qc.clear();
+              logout();
+              router.push("/");
+            }} className="btn btn-ghost" style={{ padding: 4, minWidth: 24, minHeight: 24 }} title="Sign out">
               <LogOut size={14} strokeWidth={ICON_STROKE} />
             </button>
           )}

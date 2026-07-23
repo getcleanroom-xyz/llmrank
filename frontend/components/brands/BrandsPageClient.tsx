@@ -75,9 +75,10 @@ function BrandsPageInner() {
 
   const handleCreate = async (name: string, domain: string, competitors: string[]) => {
     try {
-      await createBrand.mutateAsync({ name, domain, competitors });
+      const newBrand = await createBrand.mutateAsync({ name, domain, competitors });
       set("showModal", false);
       addToast(`${name} created`, "success");
+      router.push(`/brands/${newBrand.id}`);
     } catch (err) {
       addToast(err instanceof Error ? err.message : "Failed to create brand", "error");
     }

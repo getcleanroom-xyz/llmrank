@@ -1,6 +1,7 @@
 "use client";
 
 import { useReducer, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -85,6 +86,7 @@ const initialState: AuthState = {
 
 export function AuthModal() {
   const { user, setUser, closeAuthModal, authModalOpen, authModalMode } = useAuth();
+  const router = useRouter();
   const [state, dispatch] = useReducer(authReducer, { ...initialState, mode: authModalMode });
   const { addToast } = useToast();
 
@@ -112,6 +114,7 @@ export function AuthModal() {
         const result = await authRegisterFinish(credential, device);
         setUser(result.user);
         closeAuthModal();
+        router.push("/brands");
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Registration failed";
         addToast(
@@ -130,6 +133,7 @@ export function AuthModal() {
         const result = await authEmailRegister(state.email, state.displayName, state.password);
         setUser(result.user);
         closeAuthModal();
+        router.push("/brands");
       } catch (err) {
         addToast(err instanceof Error ? err.message : "Registration failed", "error");
       } finally {

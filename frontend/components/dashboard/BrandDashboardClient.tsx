@@ -57,6 +57,7 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
   const [optimisticScanning, setOptimisticScanning] = useState(false);
   const wasRunningRef = useRef(false);
   const scanCompleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [scanProgress, setScanProgress] = useState(0);
 
   const freshData = dashResult?.dashboard ?? null;
   const data: DashboardData | null = freshData ?? initialData ?? null;
@@ -75,6 +76,22 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
   useEffect(() => {
     refetchRef.current = refetch;
   });
+
+  useEffect(() => {
+    if (!isScanRunning || !dashResult?.dashboard?.active_scan?.started_at) {
+      setScanProgress(0);
+      return;
+    }
+    const started = new Date(dashResult.dashboard.active_scan.started_at).getTime();
+    const update = () => {
+      const elapsed = Date.now() - started;
+      const estimated = 5 * 60 * 1000;
+      setScanProgress(Math.min(95, Math.round((elapsed / estimated) * 100)));
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [isScanRunning, dashResult?.dashboard?.active_scan?.started_at]);
 
   useEffect(() => {
     if (!isScanRunning) {
@@ -146,7 +163,7 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
             )}
           </div>
         </div>
-        {isScanRunning && <div className="scan-progress"><div className="scan-progress-fill" /></div>}
+        {isScanRunning && <div className="scan-progress"><div className="scan-progress-fill" style={{ width: `${scanProgress}%` }} /></div>}
       </div>
 
       <div style={{ flex: 1, padding: "0 var(--page-px)", width: "100%" }}>

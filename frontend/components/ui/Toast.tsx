@@ -154,13 +154,22 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: 10,
-            fontWeight: 800,
             flexShrink: 0,
             marginTop: 1,
           }}
         >
-          {c.icon}
+          {toast.type === "success" ? (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          ) : toast.type === "error" ? (
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          ) : (
+            <span style={{ fontSize: 10, fontWeight: 800 }}>{c.icon}</span>
+          )}
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>

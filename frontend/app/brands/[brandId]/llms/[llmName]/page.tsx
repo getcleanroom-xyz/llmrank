@@ -197,7 +197,7 @@ export default function LLMDrilldownPage() {
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", flexShrink: 0 }}>Appears alongside</span>
                     {competitors.map(([cName, count]) => (
-                      <Link key={cName} href={`/brands/${brandId}/competitors/${encodeURIComponent(cName)}`} style={{ textDecoration: "none" }}>
+                      <Link key={cName} href={`/brands/${brandId}/competitors/${encodeURIComponent(encodeURIComponent(cName))}`} style={{ textDecoration: "none" }}>
                         <span className="pill pill-neu" style={{ fontSize: 10, cursor: "pointer" }}>{cName} ({count})</span>
                       </Link>
                     ))}
