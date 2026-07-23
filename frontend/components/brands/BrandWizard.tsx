@@ -26,7 +26,7 @@ type Action =
   | { type: "SET_NAME_ERR"; value: string }
   | { type: "SET_DOMAIN_ERR"; value: string }
   | { type: "SET_COMPETITORS"; value: string[] }
-  | { type: "SET_COMP_INPUT"; value: string }
+  | { type: "SET_COMPINPUT"; value: string }
   | { type: "ADD_COMPETITOR"; competitor: string; name: string }
   | { type: "REMOVE_COMPETITOR"; competitor: string }
   | { type: "RESET_ERRORS" };
@@ -55,7 +55,7 @@ function reducer(state: State, action: Action): State {
       return { ...state, domainErr: action.value };
     case "SET_COMPETITORS":
       return { ...state, competitors: action.value };
-    case "SET_COMP_INPUT":
+    case "SET_COMPINPUT":
       return { ...state, compInput: action.value };
     case "ADD_COMPETITOR": {
       const trimmed = action.competitor.trim();
