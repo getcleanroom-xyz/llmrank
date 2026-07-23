@@ -22,6 +22,9 @@ def send_email(to_email: str, subject: str, html: str, from_email: str) -> tuple
             "subject": subject,
             "html": html,
         })
+        # Check if the response indicates an error
+        if isinstance(r, dict) and r.get("error"):
+            return False, str(r["error"])
         return True, None
     except Exception as e:
         logger.exception("Failed to send email to %s", to_email)

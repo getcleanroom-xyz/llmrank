@@ -96,7 +96,7 @@ async def generate_scored_queries(brand_name: str, domain: str, classification: 
         try:
             resp = await _call_openrouter([
                 {"role": "developer", "content": (
-                    "Generate natural, scenario-based questions people ask AI when researching {brand_name} ({domain}). "
+                    f"Generate natural, scenario-based questions people ask AI when researching {brand_name} ({domain}). "
                     "Avoid 'best X' patterns. Be specific and conversational.\n"
                     "Return ONLY a valid JSON array."
                 )},

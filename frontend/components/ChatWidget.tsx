@@ -66,6 +66,8 @@ function reducer(state: State, action: Action): State {
         : state.localMessages;
       return { ...state, streaming: false, thinking: false, streamingMsg: "", localMessages };
     }
+    default:
+      return state;
   }
 }
 

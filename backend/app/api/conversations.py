@@ -254,6 +254,8 @@ async def add_messages_batch(
     user: User = Depends(get_current_user),
 ):
     """Add multiple messages at once (used after streaming completes)."""
+    if len(messages) > 50:
+        raise HTTPException(400, "Batch size limit is 50 messages")
     await _verify_brand_owner(db, brand_id, user.id)
 
     result = await db.execute(

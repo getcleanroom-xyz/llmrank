@@ -134,12 +134,24 @@ async def flutterwave_webhook(request: Request, db: AsyncSession = Depends(get_d
         logger.warning("Invalid user_id in webhook: %s", user_id_str)
         return {"status": "error", "reason": "invalid_user_id"}
 
+    # Validate package exists
+    if package_key not in CREDIT_PACKAGES:
+        logger.warning("Invalid package_key in webhook: %s", package_key)
+        return {"status": "ignored", "reason": "invalid_package"}
+
+    # Validate payment amount matches the package
+    charged_amount = charge_data.get("amount", 0)
+    expected_amount = CREDIT_PACKAGES[package_key]["amount_usd"]
+    if abs(charged_amount - expected_amount) > 0.01:
+        logger.warning("Payment amount mismatch for %s: charged %s, expected %s", charge_id, charged_amount, expected_amount)
+        return {"status": "ignored", "reason": "amount_mismatch"}
+
     # Grant credits
     try:
         await grant_credits_from_payment(
             db=db,
             user_id=user_id,
-            amount=charge_data.get("amount", 0),
+            amount=charged_amount,
             package_key=package_key,
             reference=reference,
             charge_id=charge_id,
@@ -185,10 +197,16 @@ async def verify_payment(
         meta = result.get("meta", {})
         package_key = meta.get("package_key")
         if package_key and package_key in CREDIT_PACKAGES:
+            # Validate payment amount matches the package
+            charged_amount = result.get("amount", 0)
+            expected_amount = CREDIT_PACKAGES[package_key]["amount_usd"]
+            if abs(charged_amount - expected_amount) > 0.01:
+                logger.warning("Verify: amount mismatch for %s: charged %s, expected %s", transaction_id, charged_amount, expected_amount)
+                raise HTTPException(400, "Payment amount does not match selected package")
             await grant_credits_from_payment(
                 db=db,
                 user_id=user.id,
-                amount=result["amount"],
+                amount=charged_amount,
                 package_key=package_key,
                 reference=result.get("tx_ref", ""),
                 charge_id=str(transaction_id),

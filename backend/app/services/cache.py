@@ -45,9 +45,12 @@ class TTLCache:
             self._store.pop(k, None)
 
     def _evict_oldest(self) -> None:
+        """Evict oldest 10% of entries to amortize eviction cost."""
         if self._store:
-            oldest_key = min(self._store, key=lambda k: self._store[k][0])
-            self._store.pop(oldest_key, None)
+            count = max(1, len(self._store) // 10)
+            oldest_keys = sorted(self._store, key=lambda k: self._store[k][0])[:count]
+            for k in oldest_keys:
+                self._store.pop(k, None)
 
 
 dashboard_cache = TTLCache(default_ttl=30, max_size=200)

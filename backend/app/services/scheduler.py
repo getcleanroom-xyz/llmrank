@@ -121,7 +121,7 @@ async def init_scheduler():
 
 async def shutdown_scheduler():
     if scheduler.running:
-        scheduler.shutdown(wait=False)
+        scheduler.shutdown(wait=True)
         logger.info("APScheduler shut down")
 
 

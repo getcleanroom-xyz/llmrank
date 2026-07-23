@@ -53,8 +53,14 @@ class EventBus:
     def subscribe(self, topic: str, handler: EventHandler, name: str = "",
                   event_types: list[str] | None = None,
                   max_retries: int = 3, retry_delay: float = 1.0) -> Subscription:
-        """Subscribe to events on a topic."""
+        """Subscribe to events on a topic. Prevents duplicate subscriptions by name."""
         sub_name = name or f"sub-{uuid.uuid4().hex[:8]}"
+        # Check for existing subscription with same name
+        existing_subs = self._subscriptions.get(topic, [])
+        for existing in existing_subs:
+            if existing.name == sub_name:
+                logger.warning("Duplicate subscription '%s' on topic '%s' — skipping", sub_name, topic)
+                return existing
         sub = Subscription(sub_name, handler, event_types, max_retries, retry_delay)
         self._subscriptions.setdefault(topic, []).append(sub)
         logger.info("Subscription '%s' registered on topic '%s' (types=%s)", sub_name, topic, event_types)

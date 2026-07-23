@@ -120,7 +120,7 @@ export function QueriesTable({
     } catch (e) {
       addToast(e instanceof Error ? e.message : "Failed to add query", "error");
     }
-  }, [brandId, addQuery, set]);
+  }, [brandId, addQuery, set, state.suggestions, addToast]);
 
   const handleDelete = useCallback(async () => {
     if (!state.deleteTarget) return;
@@ -161,12 +161,6 @@ export function QueriesTable({
     set("lastClicked", id);
   }, [state.lastClicked, state.selected, data, set]);
 
-  const toggleSelectAll = useCallback(() => {
-    const items = data?.items ?? [];
-    if (state.selected.size === items.length) set("selected", new Set());
-    else set("selected", new Set(items.map((q) => q.id)));
-  }, [data, state.selected.size, set]);
-
   const handleBulkAction = useCallback(async (action: "activate" | "deactivate" | "delete") => {
     if (state.selected.size === 0) return;
     try {
@@ -195,6 +189,11 @@ export function QueriesTable({
   }, [items, state.filters]);
 
   const allSelected = filteredItems.length > 0 && filteredItems.every((q) => state.selected.has(q.id));
+
+  const toggleSelectAll = useCallback(() => {
+    if (allSelected) set("selected", new Set());
+    else set("selected", new Set(filteredItems.map((q) => q.id)));
+  }, [allSelected, filteredItems, set]);
 
   return (
     <div>
@@ -493,8 +492,8 @@ export function QueriesTable({
           {Array.from({ length: Math.min(pages, 7) }, (_, i) => {
             let n: number;
             if (pages <= 7) n = i + 1;
-            else if (state.page <= 4) n = i + 1;
-            else if (state.page >= pages - 3) n = pages - 6 + i;
+            else if (state.page <= 3) n = i + 1;
+            else if (state.page >= pages - 2) n = pages - 6 + i;
             else n = state.page - 3 + i;
             return (
               <button key={n} onClick={() => set("page", n)} className="btn btn-sm"

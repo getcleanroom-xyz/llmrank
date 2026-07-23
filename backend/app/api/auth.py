@@ -86,11 +86,49 @@ def _cleanup_pending_registrations():
             _pending_reg_timestamps.pop(k, None)
 
 
+# ─── Revoked session store (for logout/revocation) ───────────────────────────
+_revoked_tokens: set[str] = set()
+MAX_REVOKED_TOKENS = 10000
+
+def _revoke_token(token: str):
+    """Mark a session token as revoked."""
+    if len(_revoked_tokens) >= MAX_REVOKED_TOKENS:
+        # Evict oldest entries (tokens are FIFO, so just clear half)
+        to_remove = len(_revoked_tokens) // 2
+        for _ in range(to_remove):
+            _revoked_tokens.pop()
+    _revoked_tokens.add(token)
+
+def _is_token_revoked(token: str) -> bool:
+    """Check if a session token has been revoked."""
+    return token in _revoked_tokens
+
+
+# ─── Recovery code rate limiting ──────────────────────────────────────────────
+_recovery_rate_limits: dict[str, list[float]] = {}  # email -> list of timestamps
+RECOVERY_RATE_LIMIT = 3  # max attempts per window
+RECOVERY_RATE_WINDOW = 900  # 15 minutes
+
+def _check_recovery_rate_limit(email: str) -> bool:
+    """Returns True if rate limit allows, False if exceeded."""
+    now = time.time()
+    attempts = _recovery_rate_limits.get(email, [])
+    # Remove expired entries
+    attempts = [t for t in attempts if now - t < RECOVERY_RATE_WINDOW]
+    if len(attempts) >= RECOVERY_RATE_LIMIT:
+        return False
+    attempts.append(now)
+    _recovery_rate_limits[email] = attempts
+    return True
+
+
 async def get_current_user(request: Request, db: AsyncSession = Depends(get_db)) -> User:
     """Dependency to get current authenticated user."""
     token = request.cookies.get("session")
     if not token:
         raise HTTPException(401, "Not authenticated")
+    if _is_token_revoked(token):
+        raise HTTPException(401, "Session has been revoked")
     user_id = _verify_session_token(token)
     if not user_id:
         raise HTTPException(401, "Invalid or expired session")
@@ -105,6 +143,8 @@ async def get_optional_user(request: Request, db: AsyncSession = Depends(get_db)
     """Dependency to get current user if authenticated, None otherwise."""
     token = request.cookies.get("session")
     if not token:
+        return None
+    if _is_token_revoked(token):
         return None
     user_id = _verify_session_token(token)
     if not user_id:

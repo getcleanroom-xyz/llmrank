@@ -51,7 +51,7 @@ export const streamRecommendation = async function* (
         if (parsed.error) throw new Error(parsed.error);
         if (parsed.token) yield parsed.token;
       } catch (e) {
-        if (e instanceof Error && e.message !== "Unexpected token") throw e;
+        if (!(e instanceof SyntaxError)) throw e;
       }
     }
   }

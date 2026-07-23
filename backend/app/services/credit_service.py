@@ -42,10 +42,12 @@ CREDIT_COSTS: dict[str, int] = {
 }
 
 def calculate_scan_cost(llm_names: list[str], num_queries: int) -> int:
-    """Calculate total credits needed for a scan."""
+    """Calculate total credits needed for a scan. Raises ValueError for unknown LLM names."""
     total = 0
     for llm in llm_names:
-        cost_per_query = CREDIT_COSTS.get(llm, 0)
+        if llm not in CREDIT_COSTS:
+            raise ValueError(f"Unknown LLM name: {llm}. Valid options: {sorted(CREDIT_COSTS.keys())}")
+        cost_per_query = CREDIT_COSTS[llm]
         total += cost_per_query * num_queries
     return total
 
@@ -147,10 +149,12 @@ async def grant_credits(db: AsyncSession, amount: int, description: str, tx_type
     )
     wallet = result.scalar_one_or_none()
     if not wallet:
+        # For payment grants, don't add signup bonus — create wallet with 0 balance
+        initial_balance = 0 if tx_type == "payment" else FREE_CREDITS
         wallet = CreditWallet(
             id=uuid.uuid4(),
             user_id=user_id,
-            balance=FREE_CREDITS,
+            balance=initial_balance,
             total_purchased=0,
             total_used=0,
         )

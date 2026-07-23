@@ -217,7 +217,7 @@ async def get_competitor_drilldown(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    competitor_name = unquote(unquote(competitor_name))
+    competitor_name = unquote(competitor_name)
     # Verify brand exists and not deleted
     brand_row = (await db.execute(
         Brand.active().where(Brand.id == brand_id, Brand.owner_id == user.id)
@@ -267,7 +267,7 @@ async def get_competitor_drilldown(
     brand_wins = 0
     neither_mentioned = 0
     queries_out = []
-    sentiments = {"positive": 0, "neutral": 0, "negative": 0}
+    sentiments = {"positive": 0, "neutral": 0, "negative": 0, "not_mentioned": 0}
     llm_stats: dict[str, dict] = {}
 
     # Compute brand mention rate early (used in historical trend)

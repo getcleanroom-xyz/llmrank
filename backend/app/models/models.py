@@ -38,8 +38,8 @@ class User(Base):
 
     passkeys: Mapped[list["Passkey"]] = relationship("Passkey", back_populates="user", cascade="all, delete-orphan")
     wallet: Mapped["CreditWallet | None"] = relationship("CreditWallet", back_populates="user", uselist=False)
-    brands: Mapped[list["Brand"]] = relationship("Brand", back_populates="owner")
-    conversations: Mapped[list["Conversation"]] = relationship("Conversation", back_populates="user")
+    brands: Mapped[list["Brand"]] = relationship("Brand", back_populates="owner", cascade="all, delete-orphan", passive_deletes=True)
+    conversations: Mapped[list["Conversation"]] = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
 
 
 class Passkey(Base):
@@ -60,9 +60,12 @@ class Passkey(Base):
 
 class Brand(Base):
     __tablename__ = "brands"
+    __table_args__ = (
+        {"comment": "Brands monitored for AI visibility"},
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    owner_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    owner_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     domain: Mapped[str] = mapped_column(String(200), nullable=False)
     country: Mapped[str | None] = mapped_column(String(10), nullable=True)
@@ -87,9 +90,12 @@ class Brand(Base):
 
 class MonitoredQuery(Base):
     __tablename__ = "monitored_queries"
+    __table_args__ = (
+        {"comment": "Queries monitored for AI visibility"},
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    brand_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("brands.id"), nullable=False)
+    brand_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("brands.id", ondelete="CASCADE"), nullable=False, index=True)
     query_text: Mapped[str] = mapped_column(Text, nullable=False)
     query_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
     query_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -102,9 +108,12 @@ class MonitoredQuery(Base):
 
 class Scan(Base):
     __tablename__ = "scans"
+    __table_args__ = (
+        {"comment": "AI visibility scans"},
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    brand_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("brands.id"), nullable=False)
+    brand_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("brands.id", ondelete="CASCADE"), nullable=False, index=True)
     status: Mapped[ScanStatus] = mapped_column(Enum(ScanStatus), default=ScanStatus.pending)
     started_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -117,10 +126,13 @@ class Scan(Base):
 
 class QueryResult(Base):
     __tablename__ = "query_results"
+    __table_args__ = (
+        {"comment": "Individual LLM query results"},
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    scan_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("scans.id"), nullable=False)
-    query_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("monitored_queries.id"), nullable=False)
+    scan_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("scans.id", ondelete="CASCADE"), nullable=False, index=True)
+    query_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("monitored_queries.id", ondelete="CASCADE"), nullable=False, index=True)
     llm_name: Mapped[str] = mapped_column(String(50), nullable=False)
     raw_response: Mapped[str] = mapped_column(Text, nullable=False)
     mentioned: Mapped[bool] = mapped_column(default=False)
@@ -140,7 +152,7 @@ class CreditWallet(Base):
     __tablename__ = "credit_wallets"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, unique=True)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, unique=True)
     balance: Mapped[int] = mapped_column(Integer, default=500)
     total_purchased: Mapped[int] = mapped_column(Integer, default=0)
     total_used: Mapped[int] = mapped_column(Integer, default=0)
@@ -155,7 +167,7 @@ class CreditTransaction(Base):
     __tablename__ = "credit_transactions"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     amount: Mapped[int] = mapped_column(Integer, nullable=False)  # positive = add, negative = deduct
     type: Mapped[str] = mapped_column(String(50), nullable=False)  # "purchase", "scan_usage", "admin_grant", "signup_bonus"
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
@@ -226,9 +238,9 @@ class CampaignRecipient(Base):
     __tablename__ = "campaign_recipients"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    campaign_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("campaigns.id"), nullable=False)
+    campaign_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True)
     email: Mapped[str] = mapped_column(String(255), nullable=False)
-    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     status: Mapped[RecipientStatus] = mapped_column(Enum(RecipientStatus), default=RecipientStatus.pending)
     sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     opened_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -314,8 +326,8 @@ class Conversation(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, onupdate=_utcnow)
 
-    brand: Mapped["Brand"] = relationship("Brand")
-    user: Mapped["User"] = relationship("User")
+    brand: Mapped["Brand"] = relationship("Brand", back_populates="conversations")
+    user: Mapped["User"] = relationship("User", back_populates="conversations")
     messages: Mapped[list["ChatMessage"]] = relationship("ChatMessage", back_populates="conversation", cascade="all, delete-orphan", order_by="ChatMessage.created_at")
 
 

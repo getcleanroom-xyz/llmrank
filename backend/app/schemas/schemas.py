@@ -26,8 +26,8 @@ class BrandOut(BaseModel):
 # Query schemas
 class QueryCreate(BaseModel):
     query_text: str = Field(..., min_length=3, max_length=500)
-    query_type: Optional[str] = None
-    query_score: Optional[int] = None
+    query_type: Optional[str] = Field(default=None, max_length=20)
+    query_score: Optional[int] = Field(default=None, ge=0, le=5)
 
 
 class QueryOut(BaseModel):
@@ -43,8 +43,8 @@ class QueryOut(BaseModel):
 
 
 class QuerySuggestRequest(BaseModel):
-    brand_name: str
-    domain: str
+    brand_name: str = Field(..., min_length=1, max_length=200)
+    domain: str = Field(..., min_length=1, max_length=200)
     keywords: list[str] = Field(default_factory=list)
 
 
@@ -75,7 +75,7 @@ class QueryTableResponse(BaseModel):
 
 # Scan schemas
 class ScanCreate(BaseModel):
-    llms: list[str] = Field(default_factory=lambda: ["chatgpt", "llama"])
+    llms: list[str] = Field(default_factory=lambda: ["chatgpt", "llama"], min_length=1)
 
     @field_validator("llms")
     @classmethod
@@ -276,7 +276,7 @@ class CreditBalanceOut(BaseModel):
 
 
 class CreditGrantRequest(BaseModel):
-    amount: int = Field(..., gt=0, description="Credits to grant")
+    amount: int = Field(..., gt=0, le=1000000, description="Credits to grant (max 1M)")
     description: str = Field(default="Admin grant")
     target_user_id: UUID | None = Field(default=None, description="User to grant credits to (admin only)")
 
@@ -321,7 +321,7 @@ class ConversationOut(BaseModel):
 
 class ChatMessageCreate(BaseModel):
     role: str = Field(..., pattern="^(user|assistant)$")
-    content: str = Field(..., min_length=1)
+    content: str = Field(..., min_length=1, max_length=50000)
 
 
 class ChatMessageOut(BaseModel):

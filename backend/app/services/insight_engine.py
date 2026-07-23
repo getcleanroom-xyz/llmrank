@@ -139,7 +139,7 @@ def _diagnose_sync(
         # Rate-limited: pause before search to avoid 429s
         citation_query = f'"{brand_name}" {query_text}'
         try:
-            time.sleep(1.5)  # Rate limit: pause before citation search
+            time.sleep(1.5)  # Sync sleep is acceptable here — this runs in a thread pool executor
             try:
                 with DDGS() as ddgs:
                     citation_results = list(ddgs.text(citation_query, max_results=10))
@@ -251,7 +251,7 @@ async def generate_insights_for_query(
     try:
         import re
         resp = await _call_llm(messages, "chatgpt")
-        match = re.search(r"\[.*\]", resp, re.DOTALL)
+        match = re.search(r"\[.*?\]", resp, re.DOTALL)
         if match:
             insights = json.loads(match.group())
             if isinstance(insights, list):
@@ -339,7 +339,7 @@ async def generate_dashboard_insights(
     try:
         import re
         resp = await _call_llm(messages, "chatgpt")
-        match = re.search(r"\[.*\]", resp, re.DOTALL)
+        match = re.search(r"\[.*?\]", resp, re.DOTALL)
         if match:
             insights = json.loads(match.group())
             if isinstance(insights, list):

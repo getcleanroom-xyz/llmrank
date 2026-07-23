@@ -190,6 +190,20 @@ export function ScanHistory({ brandId }: { brandId: string }) {
       if (filters.status === "failed" && scan.status !== "failed") return false;
       if (filters.scoreMin && scan.visibility_score != null && scan.visibility_score < parseInt(filters.scoreMin)) return false;
       if (filters.scoreMax && scan.visibility_score != null && scan.visibility_score > parseInt(filters.scoreMax)) return false;
+      if (filters.search) {
+        const term = filters.search.toLowerCase();
+        const matchesId = scan.id.toLowerCase().includes(term);
+        const matchesScore = scan.visibility_score != null && String(scan.visibility_score).includes(term);
+        if (!matchesId && !matchesScore) return false;
+      }
+      if (filters.dateRange && filters.dateRange !== "all") {
+        const now = new Date();
+        const rangeMs = filters.dateRange === "7d" ? 7 * 24 * 60 * 60 * 1000
+          : filters.dateRange === "90d" ? 90 * 24 * 60 * 60 * 1000
+          : 30 * 24 * 60 * 60 * 1000;
+        const cutoff = new Date(now.getTime() - rangeMs);
+        if (scan.started_at && new Date(scan.started_at) < cutoff) return false;
+      }
       return true;
     });
   }, [scans, filters]);

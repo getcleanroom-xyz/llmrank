@@ -50,8 +50,8 @@ class CompetitorIntelAgent(BaseAgent):
             permissions=["db:read", "db:write", "event:emit"],
         ))
 
-        # Subscribe to scan.completed events
-        event_bus.subscribe("scans", self._on_scan_completed, name="competitor_intel_handler",
+        # Subscribe to scan.completed events — use self.event_bus for testability
+        self.event_bus.subscribe("scans", self._on_scan_completed, name="competitor_intel_handler",
                            event_types=["scan.completed"])
 
     async def _analyze_skill(self, brand_id: str, scan_id: str, db=None) -> dict:

@@ -30,10 +30,21 @@ export function BuyCreditsModal({ open, onClose }: BuyCreditsModalProps) {
       setCardNumber("");
       setExpiry("");
       setCvv("");
+      setEncKey("");
       getEncryptionKey().then((r) => setEncKey(r.key)).catch(() => addToast("Failed to load encryption key", "error"));
     }
     prevOpen.current = open;
   }, [open, addToast]);
+
+  // Escape key handler
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, onClose]);
 
   if (!open) return null;
 
@@ -111,7 +122,7 @@ export function BuyCreditsModal({ open, onClose }: BuyCreditsModalProps) {
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" }} onClick={onClose} onKeyDown={(e) => { if (e.key === "Escape") onClose(); }} />
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" }} onClick={onClose} />
       <div style={{ ...receiptStyle, width: "100%", maxWidth: 420, margin: "0 16px", padding: "28px 24px 24px", zIndex: 10 }}>
         {/* Torn top edge */}
         <svg width="100%" height="8" viewBox="0 0 200 8" preserveAspectRatio="none" style={{ position: "absolute", top: -4, left: 0, right: 0 }}>

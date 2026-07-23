@@ -78,7 +78,7 @@ async def _call_openrouter(messages: list[dict], model_key: str, client, tempera
 
 
 def _parse_json(text: str) -> any:
-    """Safely extract JSON from LLM response. Tries direct parse, then regex fallback."""
+    """Safely extract JSON from LLM response. Tries direct parse, then code block, then bracket-matching."""
     try:
         return json.loads(text)
     except (json.JSONDecodeError, TypeError):
@@ -89,7 +89,8 @@ def _parse_json(text: str) -> any:
             return json.loads(match.group(1))
         except (json.JSONDecodeError, TypeError):
             pass
-    match = re.search(r"(\[.*\]|\{.*\})", text, re.DOTALL)
+    # Use non-greedy matching to avoid capturing across multiple JSON objects
+    match = re.search(r"(\[.*?\]|\{.*?\})", text, re.DOTALL)
     if match:
         try:
             return json.loads(match.group(1))
@@ -137,40 +138,61 @@ async def scan_query(query_text: str, llm_name: str, client, brand_name: str = "
             if brand_name:
                 summary_text = parsed.get("summary", "").lower()
                 items = parsed.get("items", [])
+                brand_lower = brand_name.lower()
+                
+                # Use word-boundary regex for exact brand matching to avoid false positives
+                # e.g., "Art" should not match "SmartArt", "Go" should not match "going"
+                brand_pattern = re.compile(r'\b' + re.escape(brand_lower) + r'\b', re.IGNORECASE)
                 
                 # Check items list for brand mention
                 for item in items:
                     item_name = item.get("name", "").lower()
-                    if brand_name.lower() in item_name or item_name in brand_name.lower():
+                    if brand_lower == item_name or brand_pattern.search(item.get("name", "")):
                         brand_mentioned = True
                         brand_position = item.get("position")
                         break
                 
                 # Also check summary text
-                if not brand_mentioned and brand_name.lower() in summary_text:
+                if not brand_mentioned and brand_pattern.search(summary_text):
                     brand_mentioned = True
                 
-                # Fuzzy check: brand name words appear in items
+                # Fuzzy check: brand name words appear in items (at least 1 word for 2-word brands)
                 if not brand_mentioned and len(brand_name.split()) > 1:
-                    brand_words = set(brand_name.lower().split())
+                    brand_words = set(brand_lower.split())
                     for item in items:
                         item_words = set(item.get("name", "").lower().split())
-                        if len(brand_words & item_words) >= len(brand_words) * 0.7:
+                        if len(brand_words & item_words) >= 1:
                             brand_mentioned = True
                             brand_position = item.get("position")
                             break
 
-                # Determine sentiment when brand is mentioned
+                # Determine sentiment — scope to text about the brand only
                 if brand_mentioned:
-                    full_text = (parsed.get("summary", "") + " " + " ".join(
-                        item.get("description", "") for item in items
-                    )).lower()
+                    # Extract text segments that mention the brand
+                    brand_relevant_text = ""
+                    if brand_pattern.search(summary_text):
+                        brand_relevant_text += parsed.get("summary", "") + " "
+                    for item in items:
+                        item_desc = item.get("description", "")
+                        item_name = item.get("name", "")
+                        if brand_pattern.search(item_name) or brand_pattern.search(item_desc):
+                            brand_relevant_text += f" {item_name} {item_desc}"
                     
+                    # Fall back to full text if no brand-specific segments found
+                    if not brand_relevant_text.strip():
+                        brand_relevant_text = parsed.get("summary", "") + " " + " ".join(
+                            item.get("description", "") for item in items
+                        )
+                    
+                    full_text = brand_relevant_text.lower()
+                    
+                    # Use word-boundary matching for sentiment keywords to avoid false matches
+                    # e.g., "best" should not match "bestial", "top" should not match "topic"
                     positive_signals = ["best", "excellent", "top", "great", "recommend", "leading", "popular", "trusted", "innovative", "award"]
                     negative_signals = ["avoid", "poor", "bad", "issue", "problem", "complaint", "expensive", "overpriced", "disappointing"]
                     
-                    pos_count = sum(1 for s in positive_signals if s in full_text)
-                    neg_count = sum(1 for s in negative_signals if s in full_text)
+                    pos_count = sum(1 for s in positive_signals if re.search(r'\b' + re.escape(s) + r'\b', full_text))
+                    neg_count = sum(1 for s in negative_signals if re.search(r'\b' + re.escape(s) + r'\b', full_text))
                     
                     if pos_count > neg_count:
                         brand_sentiment = "positive"

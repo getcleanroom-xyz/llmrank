@@ -28,9 +28,11 @@ async def get_brand_context(db: AsyncSession, brand_id: uuid.UUID) -> dict:
 
 
 async def update_brand_context(db: AsyncSession, brand_id: uuid.UUID, updates: dict):
-    """Merge updates into the brand's agent context."""
+    """Merge updates into the brand's agent context (single read-merge-write to avoid races)."""
     result = await db.execute(
-        select(BrandAgentContext).where(BrandAgentContext.brand_id == brand_id)
+        select(BrandAgentContext)
+        .where(BrandAgentContext.brand_id == brand_id)
+        .with_for_update()
     )
     row = result.scalar_one_or_none()
     if row:

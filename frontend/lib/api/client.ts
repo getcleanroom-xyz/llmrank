@@ -42,7 +42,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit, timeoutMs = 
       const body = await res.text();
       throw new ApiError(res.status, body);
     }
-    if (res.status === 204) return undefined as T;
+    if (res.status === 204) return undefined as unknown as T;
     return res.json() as Promise<T>;
   } catch (err) {
     if (err instanceof Error && err.name === "AbortError") {

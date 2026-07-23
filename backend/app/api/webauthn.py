@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.config import settings
 from app.models.models import User, Passkey, CreditWallet, CreditTransaction
-from app.api.auth import _utcnow, _create_session_token, _sign_data, _verify_signed_data, _pending_registrations, _pending_reg_timestamps, _cleanup_pending_registrations, get_current_user
+from app.api.auth import _utcnow, _create_session_token, _sign_data, _verify_signed_data, _pending_registrations, _pending_reg_timestamps, _cleanup_pending_registrations, _revoke_token, _check_recovery_rate_limit, get_current_user
 from app.api.webauthn_types import (
     RegisterStartRequest, RegisterStartResponse, RegisterFinishRequest,
     LoginStartRequest, LoginStartResponse, LoginFinishRequest,
@@ -159,6 +159,8 @@ async def register_finish(body: RegisterFinishRequest, request: Request, respons
 
     except ImportError:
         raise HTTPException(500, "WebAuthn library not installed")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Registration finish failed")
         raise HTTPException(400, "Registration failed")
@@ -171,7 +173,8 @@ async def login_start(body: LoginStartRequest, request: Request, response: Respo
     result = await db.execute(select(User).where(User.email == body.email))
     user = result.scalar_one_or_none()
     if not user or not (await db.execute(select(Passkey).where(Passkey.user_id == user.id))).scalars().first():
-        raise HTTPException(400, "No passkeys found for this email. Please register first.")
+        # Use generic error to prevent user enumeration
+        raise HTTPException(400, "Invalid email or passkey not found.")
 
     passkeys = (await db.execute(select(Passkey).where(Passkey.user_id == user.id))).scalars().all()
 
@@ -266,6 +269,8 @@ async def login_finish(body: LoginFinishRequest, request: Request, response: Res
 
     except ImportError:
         raise HTTPException(500, "WebAuthn library not installed")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Login finish failed")
         raise HTTPException(400, "Login failed")
@@ -363,7 +368,10 @@ async def get_me(user: User = Depends(get_current_user)):
 
 
 @router.post("/logout")
-async def logout(response: Response):
+async def logout(request: Request, response: Response):
+    token = request.cookies.get("session")
+    if token:
+        _revoke_token(token)
     response.delete_cookie(
         key="session",
         path="/",
@@ -401,10 +409,11 @@ async def delete_passkey(passkey_id: uuid.UUID, user: User = Depends(get_current
         raise HTTPException(404, "Passkey not found")
 
     # Don't allow deleting the last passkey
+    from sqlalchemy import func
     count_result = await db.execute(
-        select(Passkey).where(Passkey.user_id == user.id)
+        select(func.count()).select_from(Passkey).where(Passkey.user_id == user.id)
     )
-    if len(count_result.scalars().all()) <= 1:
+    if count_result.scalar() <= 1:
         raise HTTPException(400, "Cannot delete your last passkey")
 
     await db.delete(passkey)
@@ -425,6 +434,10 @@ async def recover_account(body: RecoverRequest, db: AsyncSession = Depends(get_d
     Allows passkey-only users to set a password and regain access.
     """
     import secrets as _secrets
+
+    # Rate limit recovery code requests per email
+    if not _check_recovery_rate_limit(body.email.lower()):
+        return {"status": "ok", "message": "If an account exists, a recovery code has been sent."}
 
     result = await db.execute(select(User).where(User.email == body.email))
     user = result.scalar_one_or_none()
@@ -510,6 +523,20 @@ async def recover_finish(body: RecoverFinishRequest, request: Request, response:
 
 _pending_add_passkey: dict[str, str] = {}  # user_id -> challenge_b64
 _pending_add_passkey_ts: dict[str, float] = {}
+MAX_PENDING_ADD_PASSKEY = 500
+
+def _cleanup_pending_add_passkey():
+    """Remove expired pending add-passkey entries."""
+    now = time.time()
+    expired = [k for k, ts in _pending_add_passkey_ts.items() if now - ts > REGISTRATION_TTL]
+    for k in expired:
+        _pending_add_passkey.pop(k, None)
+        _pending_add_passkey_ts.pop(k, None)
+    if len(_pending_add_passkey) > MAX_PENDING_ADD_PASSKEY:
+        oldest = sorted(_pending_add_passkey_ts, key=_pending_add_passkey_ts.get)[:len(_pending_add_passkey) - MAX_PENDING_ADD_PASSKEY]
+        for k in oldest:
+            _pending_add_passkey.pop(k, None)
+            _pending_add_passkey_ts.pop(k, None)
 
 
 @router.post("/passkeys/start", response_model=RegisterStartResponse)
@@ -520,6 +547,7 @@ async def add_passkey_start(body: AddPasskeyStartRequest, request: Request, resp
         import webauthn
         from webauthn.helpers import bytes_to_base64url
 
+        _cleanup_pending_add_passkey()
         user_id_str = str(user.id)
         options = webauthn.generate_registration_options(
             rp_id=settings.RP_ID,
@@ -632,6 +660,8 @@ async def add_passkey_finish(body: AddPasskeyFinishRequest, request: Request, re
 
     except ImportError:
         raise HTTPException(500, "WebAuthn library not installed")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Add passkey finish failed")
         raise HTTPException(400, "Failed to add passkey")

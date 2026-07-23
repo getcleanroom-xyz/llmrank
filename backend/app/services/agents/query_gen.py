@@ -102,14 +102,17 @@ class QueryGenAgent(BaseAgent):
             permissions=["db:read", "db:write", "llm:call", "event:emit"],
         ))
 
-        # Subscribe to competitor updates
-        event_bus.subscribe("competitors", self._on_competitors_updated, name="query_gen_handler",
+        # Subscribe to competitor updates — use self.event_bus for testability
+        self.event_bus.subscribe("competitors", self._on_competitors_updated, name="query_gen_handler",
                            event_types=["competitors.updated"])
 
     async def _generate_skill(self, brand_id: str, brand_name: str, domain: str,
-                               summary: dict) -> list[dict]:
+                               classification: dict = None, competitors: list = None,
+                               summary: dict = None) -> list[dict]:
         from app.services.skills.manage_queries import generate_queries
-        return await generate_queries(brand_id, brand_name, domain, summary, self.name)
+        # Use summary if provided, otherwise create a minimal one from classification/competitors
+        summary_data = summary or {"industry": (classification or {}).get("industry", ""), "competitors_mentioned": [c.get("name", "") for c in (competitors or [])]}
+        return await generate_queries(brand_id, brand_name, domain, summary_data, self.name)
 
     async def _score_skill(self, brand_id: str) -> list[dict]:
         from app.services.skills.manage_queries import score_queries

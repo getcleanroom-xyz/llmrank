@@ -45,7 +45,7 @@ export function FilterBar({
   };
 
   const hasFilters = filters.scoreMin || filters.scoreMax ||
-    filters.status !== "all" || filters.dateRange !== "30d";
+    filters.status !== "all" || filters.dateRange !== "30d" || filters.search;
 
   return (
     <div

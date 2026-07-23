@@ -22,12 +22,15 @@ def _compute_score(mentioned: bool, position: int | None, sentiment: str) -> flo
     if not mentioned:
         return 0.0
     base = 40.0
-    position_bonus = {1: 35, 2: 25, 3: 15, 4: 8}.get(position or 99, 3)
+    # Use `position is not None` instead of `position or 99` to avoid treating 0 as falsy
+    position_bonus = {1: 35, 2: 25, 3: 15, 4: 8}.get(position, 3) if position is not None else 3
     sentiment_bonus = {"positive": 20, "neutral": 10, "negative": 0}.get(sentiment, 0)
     return round(min(100.0, base + position_bonus + sentiment_bonus), 1)
 
 
-async def _keepalive_ping(db: AsyncSession, scan_id: uuid.UUID, stop_event: asyncio.Event):
+async def _keepalive_ping(scan_id: uuid.UUID, stop_event: asyncio.Event):
+    """Keep database connection alive during long scans. Uses its own session."""
+    from app.core.database import AsyncSessionLocal
     while not stop_event.is_set():
         try:
             await asyncio.wait_for(stop_event.wait(), timeout=30)
@@ -36,7 +39,8 @@ async def _keepalive_ping(db: AsyncSession, scan_id: uuid.UUID, stop_event: asyn
         if stop_event.is_set():
             break
         try:
-            await db.execute(text("SELECT 1"))
+            async with AsyncSessionLocal() as ping_db:
+                await ping_db.execute(text("SELECT 1"))
         except Exception:
             logger.warning("Keepalive ping failed for scan %s", scan_id)
             break
@@ -82,7 +86,7 @@ async def run_scan(
                  scan.id, len(queries), len(llm_names), len(queries) * len(llm_names))
 
     stop_event = asyncio.Event()
-    keepalive_task = asyncio.create_task(_keepalive_ping(db, scan.id, stop_event))
+    keepalive_task = asyncio.create_task(_keepalive_ping(scan.id, stop_event))
 
     # Fire ALL LLMs for ALL queries concurrently using a shared httpx client
     import httpx as _httpx
@@ -203,9 +207,10 @@ async def generate_query_suggestions(brand_name: str, domain: str, keywords: lis
             if link.startswith(("#", "javascript:", "mailto:", "tel:")):
                 continue
             full = urljoin(base_url, link)
-            if is_internal(full) and full not in visited:
+            if is_internal(full):
                 clean = urlparse(full)._replace(fragment="").geturl().rstrip("/")
-                urls.append(clean)
+                if clean not in visited:
+                    urls.append(clean)
         return urls
 
     try:

@@ -110,13 +110,17 @@ async def trigger_scan(
 
 
 async def _handle_scan_failure(db: AsyncSession, scan_id: uuid.UUID, brand_id: uuid.UUID, credit_tx_id: str):
-    """Mark scan as failed and refund credits."""
+    """Mark scan as failed and refund credits. Uses idempotent checks to prevent double-refund."""
     scan_result = await db.execute(select(Scan).where(Scan.id == scan_id))
     scan = scan_result.scalar_one_or_none()
-    if scan and scan.status != ScanStatus.failed:
-        scan.status = ScanStatus.failed
-        scan.completed_at = _utcnow()
-        await db.commit()
+    if not scan:
+        return
+    if scan.status == ScanStatus.failed:
+        return  # Already failed, don't double-refund
+    scan.status = ScanStatus.failed
+    scan.completed_at = _utcnow()
+    await db.flush()  # Use flush instead of commit to keep in same transaction
+
     if credit_tx_id:
         from app.services.credit_service import grant_credits
         from app.models.models import CreditTransaction
@@ -125,11 +129,9 @@ async def _handle_scan_failure(db: AsyncSession, scan_id: uuid.UUID, brand_id: u
         )
         last_tx = tx_result.scalar_one_or_none()
         if last_tx and last_tx.amount < 0:
-            brand_result = await db.execute(Brand.active().where(Brand.id == brand_id))
-            brand = brand_result.scalar_one_or_none()
-            if brand:
-                await grant_credits(db, abs(last_tx.amount), f"Refund: failed scan {scan_id}", "refund", brand.owner_id)
-                await db.commit()
+            # Refund to the user who was charged (credit_tx.user_id), not brand owner
+            await grant_credits(db, abs(last_tx.amount), f"Refund: failed scan {scan_id}", "refund", last_tx.user_id)
+            await db.flush()
 
 
 async def _run_scan_background(brand_id: uuid.UUID, scan_id: uuid.UUID, llm_names: list[str], credit_tx_id: str = ""):
@@ -147,12 +149,26 @@ async def _run_scan_background(brand_id: uuid.UUID, scan_id: uuid.UUID, llm_name
             if result.success:
                 logger.info("Background scan completed: scan_id=%s", scan_id)
             else:
-                logger.error("Background scan failed: scan_id=%s error=%s", scan_id, result.error)
-                await _handle_scan_failure(db, scan_id, brand_id, credit_tx_id)
+                # Check scan status before marking as failed to avoid overwriting a committed result
+                scan_result = await db.execute(select(Scan).where(Scan.id == scan_id))
+                scan = scan_result.scalar_one_or_none()
+                if scan and scan.status == ScanStatus.completed:
+                    logger.info("Scan %s already completed, skipping failure handler", scan_id)
+                else:
+                    logger.error("Background scan failed: scan_id=%s error=%s", scan_id, result.error)
+                    await _handle_scan_failure(db, scan_id, brand_id, credit_tx_id)
+                    await db.commit()
         except Exception as e:
             logger.exception("Background scan failed: scan_id=%s error=%s", scan_id, e)
             try:
-                await _handle_scan_failure(db, scan_id, brand_id, credit_tx_id)
+                # Check scan status before marking as failed
+                scan_result = await db.execute(select(Scan).where(Scan.id == scan_id))
+                scan = scan_result.scalar_one_or_none()
+                if scan and scan.status == ScanStatus.completed:
+                    logger.info("Scan %s already completed, skipping failure handler", scan_id)
+                else:
+                    await _handle_scan_failure(db, scan_id, brand_id, credit_tx_id)
+                    await db.commit()
             except Exception as refund_err:
                 logger.error("Failed to refund credits for scan %s: %s", scan_id, refund_err)
 
@@ -292,28 +308,29 @@ async def stream_scan_progress(
                 return
 
         seen_terminal = False
-        for i in range(180):  # Poll up to 180s
-            try:
-                # Check progress store first (real-time updates from run_scan)
-                prog = get_progress(str(scan_id))
-                if prog:
-                    payload = {
-                        "status": prog.status,
-                        "step": prog.step,
-                        "message": prog.message,
-                        "progress": prog.progress,
-                        "visibility_score": prog.visibility_score,
-                        "mention_rate": prog.mention_rate,
-                    }
-                    yield f"data: {json.dumps(payload)}\n\n"
+        # Use a single session for all DB polling iterations
+        async with AsyncSessionLocal() as db:
+            for i in range(180):  # Poll up to 180s
+                try:
+                    # Check progress store first (real-time updates from run_scan)
+                    prog = get_progress(str(scan_id))
+                    if prog:
+                        payload = {
+                            "status": prog.status,
+                            "step": prog.step,
+                            "message": prog.message,
+                            "progress": prog.progress,
+                            "visibility_score": prog.visibility_score,
+                            "mention_rate": prog.mention_rate,
+                        }
+                        yield f"data: {json.dumps(payload)}\n\n"
 
-                    if prog.status in ("completed", "failed"):
-                        seen_terminal = True
-                        cleanup_stale()
-                        break
-                else:
-                    # Fallback to DB polling if progress store has no entry yet
-                    async with AsyncSessionLocal() as db:
+                        if prog.status in ("completed", "failed"):
+                            seen_terminal = True
+                            cleanup_stale()
+                            break
+                    else:
+                        # Fallback to DB polling if progress store has no entry yet
                         result = await db.execute(select(Scan).where(Scan.id == scan_id, Scan.brand_id == brand_id))
                         scan = result.scalar_one_or_none()
                         if not scan:
@@ -339,16 +356,17 @@ async def stream_scan_progress(
                             seen_terminal = True
                             break
 
-                # Send keepalive comment every 10 iterations
-                if i % 10 == 0:
-                    yield f": keepalive\n\n"
+                    # Send keepalive comment every 10 iterations
+                    if i % 10 == 0:
+                        yield f": keepalive\n\n"
 
-                await asyncio.sleep(1)
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                logger.warning("SSE poll error for scan %s: %s", scan_id, e)
-                break
+                    await asyncio.sleep(1)
+                except asyncio.CancelledError:
+                    break
+                except Exception as e:
+                    logger.warning("SSE poll error for scan %s: %s", scan_id, e)
+                    yield f"data: {json.dumps({'error': str(e), 'status': 'failed'})}\n\n"
+                    break
 
     return StreamingResponse(event_generator(), media_type="text/event-stream", headers={
         "Cache-Control": "no-cache",

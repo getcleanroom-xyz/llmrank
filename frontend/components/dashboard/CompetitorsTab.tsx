@@ -82,7 +82,7 @@ export function CompetitorsTab({ brandId }: { brandId: string }) {
                 </div>
                 {c.beats_you ? `${c.name} beats you in ${c.beats_you} queries. ` : ""}
                 Appears in {c.mention_pct}% of responses.{" "}
-                <a href={`/brands/${bid}/competitors/${encodeURIComponent(encodeURIComponent(c.name))}`} style={{ color: "var(--primary)", fontWeight: 600, textDecoration: "underline" }}>Analyze &rarr;</a>
+                <a href={`/brands/${bid}/competitors/${encodeURIComponent(c.name)}`} style={{ color: "var(--primary)", fontWeight: 600, textDecoration: "underline" }}>Analyze &rarr;</a>
               </div>
             );
           })}
@@ -99,7 +99,7 @@ export function CompetitorsTab({ brandId }: { brandId: string }) {
             <div
               key={c.name}
               className="card sketchy"
-              onClick={() => router.push(`/brands/${bid}/competitors/${encodeURIComponent(encodeURIComponent(c.name))}`)}
+              onClick={() => router.push(`/brands/${bid}/competitors/${encodeURIComponent(c.name)}`)}
               style={{
                 padding: "14px 16px",
                 cursor: "pointer",
