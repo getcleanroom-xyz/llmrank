@@ -198,6 +198,32 @@ async def build_brand_context(brand_id: str, db: AsyncSession | None = None) -> 
         total = len(scan_results) or 1
         lines.append(f"\n## Overall: {mentioned}/{total} mentions ({round(mentioned/total*100, 1)}%)")
 
+        # Add sample raw responses so insights can explain WHY
+        raw_samples = []
+        for r in scan_results:
+            resp_text = r.raw_response or ""
+            if resp_text and not resp_text.startswith("[Error") and not resp_text.startswith("[Empty") and len(resp_text) > 50:
+                brand_lower = brand.name.lower()
+                has_brand = brand_lower in resp_text.lower()
+                sample = resp_text[:400]
+                if len(resp_text) > 400:
+                    sample += "..."
+                raw_samples.append({
+                    "llm": r.llm_name,
+                    "query_id": str(r.query_id),
+                    "mentioned": r.mentioned,
+                    "sentiment": r.sentiment.value if hasattr(r.sentiment, "value") else r.sentiment,
+                    "response": sample,
+                })
+
+        if raw_samples:
+            lines.append("\n## Sample AI Responses (what models actually said)")
+            lines.append("These are excerpts from the actual AI responses. Use them to understand the root cause of visibility issues.")
+            for rs in raw_samples[:8]:  # Limit to 8 samples to control context size
+                status = "MENTIONED" if rs["mentioned"] else "NOT MENTIONED"
+                lines.append(f"\n[{rs['llm']}] ({status}, sentiment: {rs['sentiment']}):")
+                lines.append(f'"{rs["response"]}"')
+
         return "\n".join(lines)
 
     if db:

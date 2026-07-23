@@ -64,8 +64,7 @@ def extract_links(html: str, base_url: str, visited: set) -> list[str]:
 async def crawl_website(domain: str, max_pages: int = MAX_PAGES) -> str:
     """Crawl a website and return combined text content.
 
-    Follows internal links up to max_pages. No priority paths —
-    just natural link discovery from the homepage.
+    Follows internal links up to max_pages using BFS.
     """
     base_url = f"https://{domain}" if not domain.startswith("http") else domain
     parsed_base = urlparse(base_url)
@@ -78,7 +77,6 @@ async def crawl_website(domain: str, max_pages: int = MAX_PAGES) -> str:
             headers={"User-Agent": "Mozilla/5.0 (compatible; LLMRanked/1.0)"}
         ) as client:
             to_visit = [base_url.rstrip("/")]
-            all_links = []
 
             while to_visit and len(visited) < max_pages:
                 url = to_visit.pop(0)
@@ -93,9 +91,12 @@ async def crawl_website(domain: str, max_pages: int = MAX_PAGES) -> str:
                     if len(text) > 100:
                         path = urlparse(url).path or "/"
                         all_content.append(f"=== Page: {path} ===\n{text}")
+                    # Discover new internal links and add to queue
                     links = extract_links(resp.text, url, visited)
-                    all_links.extend(links)
-                    logger.debug("Crawled %s: %d chars", url, len(text))
+                    for link in links:
+                        if link not in to_visit and link not in visited:
+                            to_visit.append(link)
+                    logger.debug("Crawled %s: %d chars, %d new links", url, len(text), len(links))
                 except Exception as e:
                     logger.debug("Failed to crawl %s: %s", url, e)
                     continue
