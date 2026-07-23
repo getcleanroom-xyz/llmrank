@@ -58,15 +58,6 @@ export function KpiCardsSkeleton() {
   );
 }
 
-export function ChartSkeleton() {
-  return (
-    <div className="card" style={{ padding: 16 }}>
-      <div className="skeleton" style={{ width: 100, height: 10, marginBottom: 12 }} />
-      <div className="skeleton" style={{ width: "100%", height: 120 }} />
-    </div>
-  );
-}
-
 export function TableSkeleton({ rows = 5 }: { rows?: number }) {
   return (
     <div className="card" style={{ padding: 16 }}>

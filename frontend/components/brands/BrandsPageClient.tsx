@@ -97,8 +97,43 @@ function BrandsPageInner() {
   const error = loadError ? (loadError instanceof Error ? loadError.message : "Failed to load brands") : null;
 
   return (
-    <div className="page" style={{ display: "flex", flexDirection: "column" }}>
+    <div className="page" style={{ display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
+      {/* Decorative squiggles */}
+      <svg width="120" height="40" viewBox="0 0 120 40" fill="none" style={{ position: "absolute", top: 40, right: 60, opacity: 0.15, pointerEvents: "none" }}>
+        <path d="M0 20 Q15 5 30 25 Q45 40 60 15 Q75 0 90 20 Q105 35 120 10" stroke="#3B82F6" strokeWidth="3" fill="none" strokeLinecap="round" />
+      </svg>
+      <svg width="80" height="30" viewBox="0 0 80 30" fill="none" style={{ position: "absolute", top: 120, left: 40, opacity: 0.12, pointerEvents: "none" }}>
+        <path d="M0 15 Q10 5 20 18 Q30 28 40 12 Q50 2 60 16 Q70 26 80 10" stroke="#22C55E" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+      </svg>
+      <svg width="100" height="35" viewBox="0 0 100 35" fill="none" style={{ position: "absolute", bottom: 100, right: 30, opacity: 0.1, pointerEvents: "none" }}>
+        <path d="M0 18 Q12 4 25 20 Q38 32 50 14 Q62 2 75 18 Q88 30 100 12" stroke="#A855F7" strokeWidth="2" fill="none" strokeLinecap="round" />
+      </svg>
+      <svg width="60" height="25" viewBox="0 0 60 25" fill="none" style={{ position: "absolute", top: 200, right: 100, opacity: 0.12, pointerEvents: "none" }}>
+        <path d="M0 12 Q8 3 16 14 Q24 22 32 10 Q40 2 48 13 Q56 20 60 8" stroke="#F59E0B" strokeWidth="2" fill="none" strokeLinecap="round" />
+      </svg>
+
       <div style={{ flex: 1, maxWidth: 700, margin: "0 auto", padding: "var(--gap) var(--page-px)", width: "100%" }}>
+
+        {/* Centered logo */}
+        <div style={{ textAlign: "center", marginBottom: 32, position: "relative" }}>
+          <Link href="/" style={{ textDecoration: "none", display: "inline-block" }}>
+            <div style={{
+              fontFamily: "var(--font-hand), Caveat, cursive",
+              fontSize: "clamp(32px, 5vw, 42px)",
+              fontWeight: 800,
+              color: "var(--text)",
+              lineHeight: 1,
+            }}>
+              llm<span style={{ background: "var(--primary)", padding: "0 6px", border: "2px solid var(--border)", display: "inline-block", transform: "rotate(-1deg)" }}>ranked</span>
+            </div>
+          </Link>
+          <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 8, fontFamily: "var(--font-serif), Georgia, serif" }}>
+            Track how AI models rank your brand
+          </div>
+          <svg width="80" height="6" viewBox="0 0 80 6" preserveAspectRatio="none" style={{ display: "block", margin: "10px auto 0" }}>
+            <path d="M0 3 Q8 0 16 4 Q24 6 32 2 Q40 0 48 5 Q56 6 64 2 Q72 0 80 3" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </div>
 
         {user && (
           <div style={{ marginBottom: 16, display: "flex", gap: 8, alignItems: "center" }}>

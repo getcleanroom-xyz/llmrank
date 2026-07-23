@@ -76,16 +76,6 @@ export function Bar({ pct, color }: { pct: number; color: string }) {
   );
 }
 
-export function KpiCard({ label, value, sub, subColor }: { label: string; value: string | number; sub?: React.ReactNode; subColor?: string }) {
-  return (
-    <div className="card" style={{ padding: "14px 16px" }}>
-      <div className="section-label" style={{ marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 700, color: "var(--text)", lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize: 12, marginTop: 6, color: subColor ?? "var(--text-muted)", fontWeight: 500 }}>{sub}</div>}
-    </div>
-  );
-}
-
 export function InsightRow({ type, text }: { type: "tip" | "warning"; text: string }) {
   const isTip = type === "tip";
   return (
