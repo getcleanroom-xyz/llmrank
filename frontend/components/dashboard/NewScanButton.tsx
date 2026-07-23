@@ -10,13 +10,13 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v
 
 const LLM_OPTIONS = [
   { id: "chatgpt", label: "GPT-4o Mini", provider: "OpenAI", credits: 1 },
-  { id: "gpt4o", label: "GPT-4o", provider: "OpenAI", credits: 5 },
+  { id: "gpt4o", label: "GPT-4o", provider: "OpenAI", credits: 2 },
   { id: "gemini", label: "Gemini 3 Flash", provider: "Google", credits: 1 },
   { id: "llama", label: "Llama 3.3 70B", provider: "Meta", credits: 1 },
   { id: "llama-small", label: "Llama 3.1 8B", provider: "Meta", credits: 1 },
-  { id: "claude", label: "Claude Sonnet 4.5", provider: "Anthropic", credits: 5 },
+  { id: "claude", label: "Claude Sonnet 4.5", provider: "Anthropic", credits: 3 },
   { id: "deepseek", label: "DeepSeek Chat", provider: "DeepSeek", credits: 1 },
-  { id: "deepseek-r1", label: "DeepSeek R1", provider: "DeepSeek", credits: 2 },
+  { id: "deepseek-r1", label: "DeepSeek R1", provider: "DeepSeek", credits: 1 },
   { id: "mistral", label: "Mistral Large", provider: "Mistral", credits: 2 },
   { id: "qwen", label: "Qwen 2.5 72B", provider: "Alibaba", credits: 1 },
 ];

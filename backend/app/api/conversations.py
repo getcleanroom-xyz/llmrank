@@ -53,6 +53,7 @@ async def list_conversations(
     )
     total = (await db.execute(count_q)).scalar() or 0
 
+    page = max(1, page)
     offset = (page - 1) * per_page
     result = await db.execute(
         select(Conversation)

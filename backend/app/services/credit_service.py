@@ -157,7 +157,8 @@ async def grant_credits(db: AsyncSession, amount: int, description: str, tx_type
         db.add(wallet)
         await db.flush()
     wallet.balance += amount
-    wallet.total_purchased += amount
+    if tx_type == "payment":
+        wallet.total_purchased += amount
 
     tx = CreditTransaction(
         id=uuid.uuid4(),

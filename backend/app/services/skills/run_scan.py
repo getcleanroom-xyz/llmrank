@@ -1,6 +1,7 @@
 """Run Scan skill — full visibility scan lifecycle."""
 import uuid
 import json
+import re
 import asyncio
 import logging
 from datetime import datetime, timezone
@@ -12,6 +13,7 @@ from app.services.tools.llm import call_llm
 from app.services.tools.event import emit_event
 from app.services.tools.domain import compute_visibility_score
 from app.services.scan_progress import set_progress, clear_progress
+from app.services.competitor_service import _is_valid_competitor
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +114,10 @@ async def run_scan(brand_id: str, scan_id: str, llm_names: list[str],
                 brand_lower = brand.name.lower()
                 competitors = [{"name": c} for c in comps_raw
                               if isinstance(c, str) and c.lower() != brand_lower and
-                              c.lower() != brand.domain.split(".")[0]]
+                              c.lower() != brand.domain.split(".")[0] and
+                              _is_valid_competitor(c) and
+                              len(c) <= 100 and
+                              not re.search(r'[][{}()<>@#$%^&*+=|\\/:;"]', c)]
                 score = compute_visibility_score(mentioned, position, sentiment)
 
                 # Use full raw response text if available, fallback to summary

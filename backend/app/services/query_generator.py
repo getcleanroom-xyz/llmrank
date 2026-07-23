@@ -177,7 +177,7 @@ async def orchestrate_query_generation(brand_name, domain, crawl_content, user_c
             seen[name_lower] = c
     for name in user_competitors:
         if name.lower() not in seen and _is_valid_competitor(name.lower()):
-            seen[name_lower] = {"name": name, "domain": "", "relevance_score": 5}
+            seen[name.lower()] = {"name": name, "domain": "", "relevance_score": 5}
     competitors = sorted(seen.values(), key=lambda c: c.get("relevance_score", 0), reverse=True)[:10]
     logger.info("Discovered %d competitors for %s", len(competitors), domain)
 

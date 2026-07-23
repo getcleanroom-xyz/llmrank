@@ -13,6 +13,7 @@ from app.core.rate_limit import limiter
 from app.models.models import User, Brand
 from app.schemas.schemas import BrandCreate, BrandOut
 from app.api.auth import get_current_user
+from app.services.competitor_service import _is_valid_competitor
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -33,7 +34,8 @@ def _normalize_competitor(name: str) -> str:
 @router.post("/brands", response_model=BrandOut, status_code=201, tags=["Brands"])
 @limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")
 async def create_brand(request: Request, body: BrandCreate, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    competitors_json = [{"name": c, "domain": "", "relevance_score": 5} for c in body.competitors] if body.competitors else None
+    valid_competitors = [c for c in body.competitors if _is_valid_competitor(c)] if body.competitors else []
+    competitors_json = [{"name": c, "domain": "", "relevance_score": 5} for c in valid_competitors] if valid_competitors else None
     brand = Brand(id=uuid.uuid4(), name=body.name, domain=body.domain, owner_id=user.id, competitors=competitors_json)
     db.add(brand)
     await db.commit()

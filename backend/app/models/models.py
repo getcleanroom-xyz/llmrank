@@ -65,6 +65,7 @@ class Brand(Base):
     owner_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     domain: Mapped[str] = mapped_column(String(200), nullable=False)
+    country: Mapped[str | None] = mapped_column(String(10), nullable=True)
     competitors: Mapped[list | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)

@@ -4,3 +4,4 @@ export * from "./hooks/dashboard";
 export * from "./hooks/credits";
 export * from "./hooks/auth";
 export * from "./hooks/admin";
+export * from "./hooks/conversations";

@@ -17,10 +17,10 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-def _compute_score(mentioned: bool, position: int | None, sentiment: str) -> float | None:
-    """Compute visibility score 0-100 from structured LLM output. Returns None if not mentioned."""
+def _compute_score(mentioned: bool, position: int | None, sentiment: str) -> float:
+    """Compute visibility score 0-100 from structured LLM output. Returns 0.0 if not mentioned."""
     if not mentioned:
-        return None
+        return 0.0
     base = 40.0
     position_bonus = {1: 35, 2: 25, 3: 15, 4: 8}.get(position or 99, 3)
     sentiment_bonus = {"positive": 20, "neutral": 10, "negative": 0}.get(sentiment, 0)

@@ -173,6 +173,8 @@ async def login_start(body: LoginStartRequest, request: Request, response: Respo
     if not user or not (await db.execute(select(Passkey).where(Passkey.user_id == user.id))).scalars().first():
         raise HTTPException(400, "No passkeys found for this email. Please register first.")
 
+    passkeys = (await db.execute(select(Passkey).where(Passkey.user_id == user.id))).scalars().all()
+
     try:
         import webauthn
         from webauthn.helpers import bytes_to_base64url
@@ -383,7 +385,7 @@ async def list_passkeys(user: User = Depends(get_current_user), db: AsyncSession
             id=str(pk.id),
             device_name=pk.device_name,
             created_at=pk.created_at.isoformat(),
-            last_used_at=pk.last_used_at.isoformat(),
+            last_used_at=pk.last_used_at.isoformat() if pk.last_used_at else None,
         )
         for pk in passkeys
     ]

@@ -87,14 +87,15 @@ async def discover_competitors_from_crawl(content: str, client) -> list[dict]:
     return []
 
 
-async def discover_competitors_by_category(classification: dict, client) -> list[dict]:
+async def discover_competitors_by_category(classification: dict, client, country: str = "") -> list[dict]:
     from app.services.llm_core import _call_openrouter, _parse_json
+    country_hint = f" The brand is based in {country}. Prefer competitors from the same country when known." if country else ""
     messages = [
         {"role": "developer", "content": "Return ONLY a valid JSON array. No text, no markdown, no explanation. Return [] if you don't know any."},
         {"role": "user", "content": (
             f"Name real competitors in the {classification.get('industry','')} industry, "
             f"sub-category: {classification.get('sub_category','')}, "
-            f"target audience: {classification.get('target_audience','')}.\n\n"
+            f"target audience: {classification.get('target_audience','')}.{country_hint}\n\n"
             f'Return: [{{"name":"BrandName","domain":"domain.com","relevance_score":1-5}}]\n'
             f'IMPORTANT: Only include real, verified brands. If you are not sure about a competitor, leave it out. '
             f'It is better to return [] than to make up names.'
@@ -106,6 +107,11 @@ async def discover_competitors_by_category(classification: dict, client) -> list
             result = _parse_json(resp)
             if isinstance(result, list):
                 cleaned = [c for c in (_clean_competitor(item) for item in result if isinstance(item, dict)) if c]
+                if country:
+                    country_lower = country.lower()
+                    same_country = [c for c in cleaned if country_lower in c.get("domain", "").lower().split(".")[-1]]
+                    other = [c for c in cleaned if country_lower not in c.get("domain", "").lower().split(".")[-1]]
+                    cleaned = same_country + other
                 return cleaned[:10]
         except Exception:
             continue
