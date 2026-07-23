@@ -19,6 +19,37 @@ interface ScanProgressEvent {
   error?: string;
 }
 
+async function readSSEStream(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  onEvent: (data: ScanProgressEvent) => void,
+  signal: AbortSignal,
+) {
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (signal.aborted) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      if (line.startsWith("data: ")) {
+        const jsonStr = line.slice(6).trim();
+        if (!jsonStr) continue;
+        try {
+          onEvent(JSON.parse(jsonStr));
+        } catch {
+          // ignore parse errors
+        }
+      }
+    }
+  }
+}
+
 export function NewScanButton({
   brandId,
   lastScanLLMs,
@@ -40,6 +71,8 @@ export function NewScanButton({
     if (scanning) return;
 
     const llms = lastScanLLMs && lastScanLLMs.length > 0 ? lastScanLLMs : DEFAULT_LLMS;
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     setScanning(true);
     setProgress(5);
@@ -53,6 +86,7 @@ export function NewScanButton({
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ llms }),
+        signal: controller.signal,
       });
 
       if (!res.ok) {
@@ -64,85 +98,79 @@ export function NewScanButton({
       const scanId = scan.id;
 
       onScanStarted?.();
-      updateToast(toastId, { message: "Scan started! Connecting to progress...", progress: 10 });
+      updateToast(toastId, { message: "Scanning...", progress: 10 });
 
-      // 2. Connect to SSE stream
-      const eventSource = new EventSource(
-        `${BASE_URL}/brands/${brandId}/scans/${scanId}/stream`
-      );
+      // 2. Connect to SSE stream via fetch (supports credentials)
+      const sseRes = await fetch(`${BASE_URL}/brands/${brandId}/scans/${scanId}/stream`, {
+        credentials: "include",
+        signal: controller.signal,
+      });
 
-      abortRef.current = new AbortController();
+      if (!sseRes.ok) {
+        throw new Error(`SSE connection failed: ${sseRes.status}`);
+      }
 
-      eventSource.onmessage = (event) => {
-        try {
-          const data: ScanProgressEvent = JSON.parse(event.data);
+      const reader = sseRes.body!.getReader();
+      let completed = false;
 
-          if (data.error) {
-            eventSource.close();
-            setScanning(false);
-            setProgress(0);
-            updateToast(toastId, { message: `Error: ${data.error}`, type: "error", progress: undefined });
-            setTimeout(() => removeToast(toastId), 4000);
-            return;
-          }
+      await readSSEStream(reader, (data) => {
+        if (completed) return;
 
-          const p = data.progress || 0;
-          setProgress(p);
-          updateToast(toastId, {
-            message: data.message || "Scanning...",
-            progress: p,
-          });
-
-          // Step notifications
-          if (data.step === "scanning" && p === 15) {
-            addToast("Querying AI models...", "info");
-          }
-
-          if (data.status === "completed") {
-            eventSource.close();
-            setProgress(100);
-            updateToast(toastId, {
-              message: `Done! Score: ${data.visibility_score}/100`,
-              type: "success",
-              progress: 100,
-            });
-            setTimeout(() => {
-              removeToast(toastId);
-              setScanning(false);
-              setProgress(0);
-            }, 3000);
-
-            // Refresh dashboard data
-            qc.invalidateQueries({ queryKey: queryKeys.dashboard(brandId) });
-            qc.invalidateQueries({ queryKey: queryKeys.scans(brandId) });
-          } else if (data.status === "failed") {
-            eventSource.close();
-            setScanning(false);
-            setProgress(0);
-            updateToast(toastId, {
-              message: data.message || "Scan failed",
-              type: "error",
-              progress: undefined,
-            });
-            setTimeout(() => removeToast(toastId), 5000);
-          }
-        } catch {
-          // Parse error, ignore
-        }
-      };
-
-      eventSource.onerror = () => {
-        eventSource.close();
-        // If we haven't completed, poll for status as fallback
-        if (scanning) {
+        if (data.error) {
+          completed = true;
+          controller.abort();
           setScanning(false);
           setProgress(0);
-          updateToast(toastId, { message: "Connection lost. Checking results...", type: "info", progress: undefined });
-          qc.invalidateQueries({ queryKey: queryKeys.dashboard(brandId) });
-          setTimeout(() => removeToast(toastId), 3000);
+          updateToast(toastId, { message: `Error: ${data.error}`, type: "error", progress: undefined });
+          setTimeout(() => removeToast(toastId), 4000);
+          return;
         }
-      };
+
+        const p = data.progress || 0;
+        setProgress(p);
+        updateToast(toastId, {
+          message: data.message || "Scanning...",
+          progress: p,
+        });
+
+        if (data.status === "completed") {
+          completed = true;
+          setProgress(100);
+          updateToast(toastId, {
+            message: `Done! Score: ${data.visibility_score}/100`,
+            type: "success",
+            progress: 100,
+          });
+          setTimeout(() => {
+            removeToast(toastId);
+            setScanning(false);
+            setProgress(0);
+          }, 3000);
+          qc.invalidateQueries({ queryKey: queryKeys.dashboard(brandId) });
+          qc.invalidateQueries({ queryKey: queryKeys.scans(brandId) });
+        } else if (data.status === "failed") {
+          completed = true;
+          setScanning(false);
+          setProgress(0);
+          updateToast(toastId, {
+            message: data.message || "Scan failed",
+            type: "error",
+            progress: undefined,
+          });
+          setTimeout(() => removeToast(toastId), 5000);
+        }
+      }, controller.signal);
+
+      // If stream ended without completion (e.g. server closed), do a final check
+      if (!completed) {
+        qc.invalidateQueries({ queryKey: queryKeys.dashboard(brandId) });
+        setScanning(false);
+        setProgress(0);
+        updateToast(toastId, { message: "Scan finished", type: "success", progress: 100 });
+        setTimeout(() => removeToast(toastId), 3000);
+      }
     } catch (err) {
+      if (controller.signal.aborted) return;
       setScanning(false);
       setProgress(0);
       const msg = err instanceof Error ? err.message : "Scan failed";
@@ -155,8 +183,6 @@ export function NewScanButton({
       setTimeout(() => removeToast(toastId), 5000);
     }
   }, [brandId, lastScanLLMs, scanning, onScanStarted, qc, addToast, updateToast, removeToast]);
-
-  const strokeDashoffset = scanning ? 100 - progress : 100;
 
   return (
     <button
@@ -200,7 +226,6 @@ export function NewScanButton({
       <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: 6, width: "100%", justifyContent: "center" }}>
         {scanning ? (
           <>
-            {/* Spinning loader */}
             <svg width="14" height="14" viewBox="0 0 24 24" style={{ animation: "spin 1s linear infinite", flexShrink: 0 }}>
               <circle cx="12" cy="12" r="10" stroke="var(--border)" strokeWidth="3" fill="none" />
               <path d="M12 2 A10 10 0 0 1 22 12" stroke="var(--black)" strokeWidth="3" fill="none" strokeLinecap="round" />

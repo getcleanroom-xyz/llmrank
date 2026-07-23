@@ -290,7 +290,8 @@ async def stream_scan_progress(
                 yield f"data: {json.dumps({'error': 'brand not found'})}\n\n"
                 return
 
-        for _ in range(120):  # Poll up to 120s
+        seen_terminal = False
+        for i in range(180):  # Poll up to 180s
             try:
                 # Check progress store first (real-time updates from run_scan)
                 prog = get_progress(str(scan_id))
@@ -306,6 +307,7 @@ async def stream_scan_progress(
                     yield f"data: {json.dumps(payload)}\n\n"
 
                     if prog.status in ("completed", "failed"):
+                        seen_terminal = True
                         cleanup_stale()
                         break
                 else:
@@ -314,6 +316,11 @@ async def stream_scan_progress(
                         result = await db.execute(select(Scan).where(Scan.id == scan_id, Scan.brand_id == brand_id))
                         scan = result.scalar_one_or_none()
                         if not scan:
+                            # Scan record doesn't exist yet — send heartbeat and keep waiting
+                            if i < 10:
+                                yield f": heartbeat\n\n"
+                                await asyncio.sleep(0.5)
+                                continue
                             yield f"data: {json.dumps({'error': 'scan not found'})}\n\n"
                             break
 
@@ -328,7 +335,12 @@ async def stream_scan_progress(
                         yield f"data: {json.dumps(payload)}\n\n"
 
                         if scan.status in (ScanStatus.completed, ScanStatus.failed):
+                            seen_terminal = True
                             break
+
+                # Send keepalive comment every 10 iterations
+                if i % 10 == 0:
+                    yield f": keepalive\n\n"
 
                 await asyncio.sleep(1)
             except asyncio.CancelledError:
@@ -337,4 +349,8 @@ async def stream_scan_progress(
                 logger.warning("SSE poll error for scan %s: %s", scan_id, e)
                 break
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    return StreamingResponse(event_generator(), media_type="text/event-stream", headers={
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+    })
