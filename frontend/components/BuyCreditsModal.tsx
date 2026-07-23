@@ -112,34 +112,34 @@ export function BuyCreditsModal({ open, onClose }: BuyCreditsModalProps) {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" }} onClick={onClose} onKeyDown={(e) => { if (e.key === "Escape") onClose(); }} />
-      <div style={{ ...receiptStyle, width: "100%", maxWidth: 400, margin: "0 16px", padding: "24px 20px 20px", zIndex: 10, fontFamily: "'Courier New', Courier, monospace" }}>
+      <div style={{ ...receiptStyle, width: "100%", maxWidth: 420, margin: "0 16px", padding: "28px 24px 24px", zIndex: 10 }}>
         {/* Torn top edge */}
         <svg width="100%" height="8" viewBox="0 0 200 8" preserveAspectRatio="none" style={{ position: "absolute", top: -4, left: 0, right: 0 }}>
           <path d="M0 8 L5 2 L10 6 L15 1 L20 5 L25 2 L30 7 L35 1 L40 6 L45 3 L50 7 L55 1 L60 5 L65 2 L70 6 L75 1 L80 5 L85 3 L90 7 L95 2 L100 6 L105 1 L110 5 L115 3 L120 7 L125 1 L130 6 L135 2 L140 5 L145 3 L150 7 L155 1 L160 6 L165 2 L170 5 L175 3 L180 7 L185 1 L190 6 L195 2 L200 5 L200 8 Z" fill="#FFFEF5" />
         </svg>
 
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "#1A1A1A" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <div style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 24, fontWeight: 700, color: "#1A1A1A" }}>
             {step === "packages" ? "Buy Credits" : "Card details"}
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#999", fontSize: 16, padding: 0 }}>x</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#999", fontSize: 18, padding: 0 }}>x</button>
         </div>
 
-        <div style={{ borderTop: "1px dashed #D4D0C8", margin: "0 0 12px" }} />
+        <div style={{ borderTop: "1px dashed #D4D0C8", margin: "0 0 14px" }} />
 
         {step === "packages" && (
           isLoading ? (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton" style={{ height: 90 }} />)}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton" style={{ height: 100 }} />)}
             </div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               {packages.map((p) => (
                 <button key={p.key} onClick={() => handleSelectPackage(p.key)}
                   style={{
                     ...receiptStyle,
-                    padding: "14px 12px",
+                    padding: "16px 14px",
                     cursor: "pointer",
                     textAlign: "center",
                     transform: `rotate(${p.key === "popular" ? "-0.5deg" : "0.4deg"})`,
@@ -150,13 +150,13 @@ export function BuyCreditsModal({ open, onClose }: BuyCreditsModalProps) {
                   onMouseLeave={(e) => { e.currentTarget.style.transform = `rotate(${p.key === "popular" ? "-0.5deg" : "0.4deg"})`; e.currentTarget.style.boxShadow = "1px 2px 4px rgba(0,0,0,0.06)"; }}
                 >
                   {p.key === "popular" ? (
-                    <div style={{ fontSize: 8, fontWeight: 700, color: "var(--primary)", marginBottom: 6, letterSpacing: "0.1em" }}>POPULAR</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--primary)", marginBottom: 6, letterSpacing: "0.1em" }}>POPULAR</div>
                   ) : (
-                    <div style={{ fontSize: 8, fontWeight: 600, color: "#999", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>{p.label}</div>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: "#999", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>{p.label}</div>
                   )}
-                  <div style={{ fontSize: 9, color: "#888", marginBottom: 4 }}>{p.credits.toLocaleString()} credits</div>
-                  <div style={{ borderTop: "1px dashed #D4D0C8", margin: "0 0 6px" }} />
-                  <div style={{ fontSize: 22, fontWeight: 800, color: "#1A1A1A", lineHeight: 1 }}>${p.amount_usd.toFixed(2)}</div>
+                  <div style={{ fontSize: 13, color: "#666", marginBottom: 6 }}>{p.credits.toLocaleString()} credits</div>
+                  <div style={{ borderTop: "1px dashed #D4D0C8", margin: "0 0 8px" }} />
+                  <div style={{ fontSize: 26, fontWeight: 800, color: "#1A1A1A", lineHeight: 1 }}>${p.amount_usd.toFixed(2)}</div>
                 </button>
               ))}
             </div>
@@ -166,14 +166,14 @@ export function BuyCreditsModal({ open, onClose }: BuyCreditsModalProps) {
         {step === "card" && pkg && (
           <>
             {/* Selected package receipt */}
-            <div style={{ ...receiptStyle, padding: "10px 12px", marginBottom: 14 }}>
-              <div style={{ fontSize: 9, color: "#888", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Selected plan</div>
+            <div style={{ ...receiptStyle, padding: "12px 14px", marginBottom: 16 }}>
+              <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Selected plan</div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 700 }}>{pkg.label}</div>
-                  <div style={{ fontSize: 10, color: "#666" }}>{pkg.credits.toLocaleString()} credits</div>
+                  <div style={{ fontSize: 14, fontWeight: 700 }}>{pkg.label}</div>
+                  <div style={{ fontSize: 12, color: "#666" }}>{pkg.credits.toLocaleString()} credits</div>
                 </div>
-                <div style={{ fontSize: 18, fontWeight: 800 }}>${pkg.amount_usd.toFixed(2)}</div>
+                <div style={{ fontSize: 22, fontWeight: 800 }}>${pkg.amount_usd.toFixed(2)}</div>
               </div>
             </div>
 
@@ -202,9 +202,9 @@ export function BuyCreditsModal({ open, onClose }: BuyCreditsModalProps) {
           </>
         )}
 
-        <div style={{ borderTop: "1px dashed #D4D0C8", margin: "14px 0 10px" }} />
+        <div style={{ borderTop: "1px dashed #D4D0C8", margin: "16px 0 12px" }} />
 
-        <p style={{ fontSize: 9, color: "#999", textAlign: "center", fontStyle: "italic" }}>
+        <p style={{ fontSize: 11, color: "#888", textAlign: "center", fontStyle: "italic" }}>
           Secured by Flutterwave. We never store your card details.
         </p>
 
