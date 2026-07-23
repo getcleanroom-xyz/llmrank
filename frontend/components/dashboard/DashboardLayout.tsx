@@ -1,9 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { Sidebar } from "@/components/dashboard/Sidebar";
+import { ChatWidget } from "@/components/ChatWidget";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { brandId } = useParams<{ brandId: string }>();
+
   return (
     <div className="dashboard-layout">
       <Sidebar />
@@ -16,6 +20,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </div>
         {children}
       </div>
+      {brandId && <ChatWidget brandId={brandId} />}
     </div>
   );
 }

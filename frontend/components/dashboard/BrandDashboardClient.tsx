@@ -16,7 +16,6 @@ import { QueriesTable } from "@/components/dashboard/QueriesTable";
 import { CompetitorsTab } from "@/components/dashboard/CompetitorsTab";
 import { ScoreHistoryChart } from "@/components/dashboard/ScoreHistoryChart";
 import { ScanHistory } from "@/components/dashboard/ScanHistory";
-import { ChatWidget } from "@/components/ChatWidget";
 import { DashboardSkeleton } from "@/components/dashboard/Skeletons";
 import { useToast } from "@/components/ui/Toast";
 
@@ -300,8 +299,6 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
         {tab === "competitors" && <CompetitorsTab brandId={brandId} />}
       </div>
       </div>
-
-      <ChatWidget brandId={brandId} />
     </div>
   );
 }

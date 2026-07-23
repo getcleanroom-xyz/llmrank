@@ -9,6 +9,47 @@ import { PageHeader } from "@/components/AppHeader";
 import { InsightRow, getLLMColor } from "@/components/ui";
 import { SENTIMENT_LABELS, LLM_NAMES } from "@/lib/utils";
 
+function QueryResultRow({ r, i, color, total, hasRawResponse }: { r: any; i: number; color: string; total: number; hasRawResponse: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div style={{ padding: "10px 0", borderBottom: i < total - 1 ? "1px solid var(--border)" : "none" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, textTransform: "capitalize", minWidth: 80 }}>{LLM_NAMES[r.llm_name] ?? r.llm_name}</span>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          {r.position != null && r.position > 0 ? (
+            <span className="pill" style={{ fontSize: 10, fontWeight: 800, background: r.position <= 2 ? "#DCFCE7" : "var(--bg-dark)", color: r.position <= 2 ? "#166534" : "var(--text)", border: "2px solid var(--border)" }}>#{r.position}</span>
+          ) : (
+            <span className="pill pill-neg" style={{ fontSize: 10 }}>--</span>
+          )}
+          <span className="pill" style={{ fontSize: 10, fontWeight: 700, background: r.sentiment === "positive" ? "#DCFCE7" : r.sentiment === "negative" ? "#FEE2E2" : "var(--bg-dark)", color: r.sentiment === "positive" ? "#166534" : r.sentiment === "negative" ? "#991B1B" : "var(--text)", border: "2px solid var(--border)" }}>
+            {SENTIMENT_LABELS[r.sentiment] ?? "Unmentioned"}
+          </span>
+        </div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="bar-track" style={{ flex: 1, height: 10 }}>
+          <div className="bar-fill" style={{ width: `${r.score ?? 0}%`, background: color, borderRadius: 0 }} />
+        </div>
+        <span style={{ fontSize: 12, fontWeight: 800, minWidth: 28, textAlign: "right" }}>{r.score ?? 0}</span>
+        {hasRawResponse && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            style={{ fontSize: 10, fontWeight: 600, color: "var(--primary)", background: "none", border: "none", cursor: "pointer", padding: "2px 4px", whiteSpace: "nowrap" }}
+          >
+            {expanded ? "Hide" : "Response"}
+          </button>
+        )}
+      </div>
+      {expanded && hasRawResponse && (
+        <div style={{ marginTop: 8, padding: "10px 12px", background: "var(--bg-dark)", border: "1.5px solid var(--border)", fontSize: 12, lineHeight: 1.6, color: "var(--text-secondary)", fontFamily: "var(--font-serif), Georgia, serif", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+          {r.raw_response}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function QueryDrilldownInner() {
   const { brandId, queryId } = useParams<{ brandId: string; queryId: string }>();
   const { data, isFetching, error: loadError, refetch } = useQueryDrilldown(brandId, queryId);
@@ -139,28 +180,9 @@ function QueryDrilldownInner() {
             <div className="card" style={{ padding: "8px 16px" }}>
               {data.results.map((r, i) => {
                 const color = getLLMColor(r.llm_name);
+                const hasRawResponse = Boolean(r.raw_response && !r.raw_response.startsWith("[Error") && !r.raw_response.startsWith("[Empty"));
                 return (
-                  <div key={r.id} style={{ padding: "10px 0", borderBottom: i < data.results.length - 1 ? "1px solid var(--border)" : "none" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, textTransform: "capitalize", minWidth: 80 }}>{LLM_NAMES[r.llm_name] ?? r.llm_name}</span>
-                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        {r.position != null && r.position > 0 ? (
-                          <span className="pill" style={{ fontSize: 10, fontWeight: 800, background: r.position <= 2 ? "#DCFCE7" : "var(--bg-dark)", color: r.position <= 2 ? "#166534" : "var(--text)", border: "2px solid var(--border)" }}>#{r.position}</span>
-                        ) : (
-                          <span className="pill pill-neg" style={{ fontSize: 10 }}>--</span>
-                        )}
-                        <span className="pill" style={{ fontSize: 10, fontWeight: 700, background: r.sentiment === "positive" ? "#DCFCE7" : r.sentiment === "negative" ? "#FEE2E2" : "var(--bg-dark)", color: r.sentiment === "positive" ? "#166534" : r.sentiment === "negative" ? "#991B1B" : "var(--text)", border: "2px solid var(--border)" }}>
-                          {SENTIMENT_LABELS[r.sentiment] ?? "Unmentioned"}
-                        </span>
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div className="bar-track" style={{ flex: 1, height: 10 }}>
-                        <div className="bar-fill" style={{ width: `${r.score ?? 0}%`, background: color, borderRadius: 0 }} />
-                      </div>
-                      <span style={{ fontSize: 12, fontWeight: 800, minWidth: 28, textAlign: "right" }}>{r.score ?? 0}</span>
-                    </div>
-                  </div>
+                  <QueryResultRow key={r.id} r={r} i={i} color={color} total={data.results.length} hasRawResponse={hasRawResponse} />
                 );
               })}
             </div>
