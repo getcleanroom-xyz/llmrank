@@ -23,7 +23,7 @@ DeepSeek R1 uses reinforcement learning to generate reasoning chains before prod
 
 ## The reasoning model advantage
 
-The GEO research paper didn't test reasoning models specifically, but the findings extrapolate:
+The GEO research paper ([arXiv:2311.09735](https://arxiv.org/abs/2311.09735)) didn't test reasoning models specifically, but the findings extrapolate:
 
 **1. Specificity wins.** R1 evaluates brands against specific criteria. Generic positioning loses to specific, verifiable claims.
 

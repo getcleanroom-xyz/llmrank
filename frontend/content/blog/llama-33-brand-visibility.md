@@ -23,7 +23,7 @@ Llama is a dense transformer model, not a Mixture of Experts like Gemini. This m
 
 ## The open-source advantage for brands
 
-The GEO research paper found that different models respond to different optimization strategies. Llama specifically responds well to:
+The GEO research paper ([arXiv:2311.09735](https://arxiv.org/abs/2311.09735)) found that different models respond to different optimization strategies. Llama specifically responds well to:
 
 **1. Community presence.** Brands that appear in GitHub discussions, Reddit threads, and open-source communities get mentioned more often. Llama's training data includes more of these sources.
 

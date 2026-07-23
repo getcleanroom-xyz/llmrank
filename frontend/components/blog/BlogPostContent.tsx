@@ -91,6 +91,21 @@ const markdownComponents: Components = {
       ~ ~ ~
     </div>
   ),
+  a: ({ href, children }) => {
+    const text = typeof children === "string" ? children : "";
+    const isCitation = /^(arXiv:|doi:|ISBN:|vol\.|pp\.|et al\.|Proc\.|IEEE|ACM|KDD|NeurIPS|ICML|ICLR)/i.test(text) ||
+                       /\d{4}/.test(text) && text.length < 60;
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={isCitation ? "citation" : undefined}
+      >
+        {children}
+      </a>
+    );
+  },
 };
 
 function SocialSnippet({ label, content }: { label: string; content: string }) {

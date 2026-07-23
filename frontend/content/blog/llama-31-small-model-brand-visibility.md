@@ -23,7 +23,7 @@ The 8B parameter model has fundamental constraints that affect brand selection:
 
 ## The small model challenge for brands
 
-The GEO research paper found that model size affects optimization strategies. Smaller models respond differently to the same content:
+The GEO research paper ([arXiv:2311.09735](https://arxiv.org/abs/2311.09735)) found that model size affects optimization strategies. Smaller models respond differently to the same content:
 
 | Strategy | Large Model (70B+) | Small Model (8B) |
 |----------|-------------------|------------------|

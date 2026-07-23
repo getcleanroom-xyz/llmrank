@@ -5,12 +5,10 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
-import { useDashboard, useCredits } from "@/lib/hooks";
+import { useDashboard } from "@/lib/hooks";
 import { queryKeys } from "@/lib/query-keys";
 import type { DashboardData, MonitoredQuery } from "@/types";
-import type { AuthUser } from "@/lib/api/auth";
 import { ScoreRing, InsightRow } from "@/components/ui";
-import { ScanControls } from "@/components/dashboard/DashboardHeader";
 import { LLMBreakdownTable } from "@/components/dashboard/LLMBreakdownTable";
 import { CompetitorShare } from "@/components/dashboard/CompetitorShare";
 import { QueryChipsPanel } from "@/components/dashboard/QueryChipsPanel";
@@ -51,9 +49,7 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
   const tab = (searchParams.get("tab") as Tab) ?? "overview";
 
   const { data: dashResult, error: loadError, refetch } = useDashboard(brandId);
-  const { data: credits } = useCredits();
   const qc = useQueryClient();
-  const [scanError, setScanError] = useState<string | null>(null);
   const [scanComplete, setScanComplete] = useState(false);
   const [optimisticScanning, setOptimisticScanning] = useState(false);
   const wasRunningRef = useRef(false);
@@ -114,7 +110,7 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
 
   return (
     <div className="page" style={{ display: "flex", flexDirection: "column" }}>
-      {/* Scan status & controls */}
+      {/* Scan status bar */}
       <div style={{ width: "100%", padding: "0 var(--page-px)", background: "var(--surface)", borderBottom: "2px solid var(--border)" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", gap: 8, padding: "var(--gap) 0" }}>
           {isScanRunning && <span className="pill pill-gold" style={{ fontSize: 10, flexShrink: 0 }}>Scanning</span>}
@@ -125,16 +121,12 @@ function BrandDashboardPageInner({ brandId, initialData, initialQueries }: Brand
               </span>
             )}
           </div>
-          <ScanControls brandId={brandId} latestScan={active_scan ?? latest_scan} credits={credits} onScanError={setScanError} lastScanLLMs={llm_breakdown.map((b) => b.llm_name)} onScanStarted={() => setOptimisticScanning(true)} />
         </div>
         {isScanRunning && <div className="scan-progress"><div className="scan-progress-fill" /></div>}
         {scanComplete && (
           <div style={{ background: "#DCFCE7", border: "2px solid #22C55E", borderRadius: "var(--radius)", padding: "8px 14px", fontSize: 12, color: "#166534", fontWeight: 700, display: "flex", alignItems: "center", gap: 8, boxShadow: "2px 2px 0 #1A1A1A", marginBottom: 8 }}>
             <span style={{ fontFamily: "var(--font-hand), Caveat, cursive", fontSize: 18 }}>Done!</span> Scan complete. Your results have been updated.
           </div>
-        )}
-        {scanError && (
-          <div style={{ background: "#FEE2E2", border: "1.5px solid var(--red)", borderRadius: "var(--radius)", padding: "5px 10px", fontSize: 11, color: "#991B1B", fontWeight: 600, marginBottom: 8 }}>{scanError}</div>
         )}
       </div>
 

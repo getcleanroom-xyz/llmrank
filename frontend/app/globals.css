@@ -707,6 +707,34 @@ input[type="checkbox"]:not(.native):disabled, input[type="radio"]:not(.native):d
 .blog-post a:hover {
   background: var(--primary);
 }
+/* Citation links */
+.blog-post a.citation {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-dark);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2px 8px;
+  font-family: var(--font-sans), Inter, sans-serif;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+  box-shadow: 2px 2px 0 #1A1A1A;
+  transition: transform 0.1s, box-shadow 0.1s;
+  vertical-align: baseline;
+}
+.blog-post a.citation:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 #1A1A1A;
+  background: var(--primary);
+}
+.blog-post a.citation::after {
+  content: "↗";
+  font-size: 0.8em;
+  opacity: 0.6;
+}
 .blog-post table {
   width: 100%;
   border-collapse: collapse;

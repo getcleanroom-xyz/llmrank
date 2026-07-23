@@ -38,7 +38,7 @@ The architecture is similar to GPT-4o but with key differences:
 
 ## The Mini optimization playbook
 
-Based on the GEO research paper findings and my testing:
+Based on the GEO research paper ([arXiv:2311.09735](https://arxiv.org/abs/2311.09735)) findings and my testing:
 
 **1. Focus on volume over depth.**
 GPT-4o Mini responds to breadth of mentions more than depth. Getting mentioned in 20 mid-tier sources beats being featured in 2 premium publications.

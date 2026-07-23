@@ -281,6 +281,7 @@ async def stream_scan_progress(
 ):
     async def event_generator() -> AsyncGenerator[str, None]:
         from app.core.database import AsyncSessionLocal
+        from app.services.scan_progress import get_progress, cleanup_stale
 
         # Verify brand ownership once upfront
         async with AsyncSessionLocal() as db:
@@ -289,26 +290,47 @@ async def stream_scan_progress(
                 yield f"data: {json.dumps({'error': 'brand not found'})}\n\n"
                 return
 
-        for _ in range(60):  # Poll up to 60s
+        for _ in range(120):  # Poll up to 120s
             try:
-                async with AsyncSessionLocal() as db:
-                    result = await db.execute(select(Scan).where(Scan.id == scan_id, Scan.brand_id == brand_id))
-                    scan = result.scalar_one_or_none()
-                    if not scan:
-                        yield f"data: {json.dumps({'error': 'scan not found'})}\n\n"
-                        break
-
+                # Check progress store first (real-time updates from run_scan)
+                prog = get_progress(str(scan_id))
+                if prog:
                     payload = {
-                        "status": scan.status.value,
-                        "visibility_score": scan.visibility_score,
-                        "mention_rate": scan.mention_rate,
+                        "status": prog.status,
+                        "step": prog.step,
+                        "message": prog.message,
+                        "progress": prog.progress,
+                        "visibility_score": prog.visibility_score,
+                        "mention_rate": prog.mention_rate,
                     }
                     yield f"data: {json.dumps(payload)}\n\n"
 
-                    if scan.status in (ScanStatus.completed, ScanStatus.failed):
+                    if prog.status in ("completed", "failed"):
+                        cleanup_stale()
                         break
+                else:
+                    # Fallback to DB polling if progress store has no entry yet
+                    async with AsyncSessionLocal() as db:
+                        result = await db.execute(select(Scan).where(Scan.id == scan_id, Scan.brand_id == brand_id))
+                        scan = result.scalar_one_or_none()
+                        if not scan:
+                            yield f"data: {json.dumps({'error': 'scan not found'})}\n\n"
+                            break
 
-                await asyncio.sleep(2)
+                        payload = {
+                            "status": scan.status.value,
+                            "step": "pending" if scan.status.value == "pending" else "scanning",
+                            "message": "Waiting to start..." if scan.status.value == "pending" else "Scanning...",
+                            "progress": 5 if scan.status.value == "pending" else 15,
+                            "visibility_score": scan.visibility_score,
+                            "mention_rate": scan.mention_rate,
+                        }
+                        yield f"data: {json.dumps(payload)}\n\n"
+
+                        if scan.status in (ScanStatus.completed, ScanStatus.failed):
+                            break
+
+                await asyncio.sleep(1)
             except asyncio.CancelledError:
                 break
             except Exception as e:

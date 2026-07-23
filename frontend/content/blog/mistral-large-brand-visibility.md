@@ -23,7 +23,7 @@ Mistral Large uses a sliding window attention mechanism, which is more efficient
 
 ## The European advantage
 
-The GEO research paper found that different models have different geographic biases. Mistral specifically:
+The GEO research paper ([arXiv:2311.09735](https://arxiv.org/abs/2311.09735)) found that different models have different geographic biases. Mistral specifically:
 
 **1. Favors European brands.** Brands based in or with significant European presence get mentioned more favorably.
 

@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.tools.llm import call_llm
 from app.services.tools.event import emit_event
 from app.services.tools.domain import compute_visibility_score
+from app.services.scan_progress import set_progress, clear_progress
 
 logger = logging.getLogger(__name__)
 
@@ -40,20 +41,24 @@ async def run_scan(brand_id: str, scan_id: str, llm_names: list[str],
 
     async with AsyncSessionLocal() as db:
         # 1. Get brand
+        set_progress(scan_id, status="running", step="setup", message="Loading brand info...", progress=5)
         brand_result = await db.execute(
             Brand.active().where(Brand.id == uuid.UUID(brand_id))
         )
         brand = brand_result.scalar_one_or_none()
         if not brand:
+            set_progress(scan_id, status="failed", step="error", message="Brand not found", progress=0)
             raise ValueError(f"Brand {brand_id} not found")
 
         # 2. Get active queries
+        set_progress(scan_id, step="setup", message="Loading queries...", progress=10)
         queries_result = await db.execute(
             select(MonitoredQuery)
             .where(MonitoredQuery.brand_id == uuid.UUID(brand_id), MonitoredQuery.is_active == True)
         )
         queries = queries_result.scalars().all()
         if not queries:
+            set_progress(scan_id, status="failed", step="error", message="No active queries", progress=0)
             raise ValueError("No active queries for this brand")
 
         # 3. Get or create scan
@@ -72,12 +77,15 @@ async def run_scan(brand_id: str, scan_id: str, llm_names: list[str],
                      scan.id, len(queries), len(llm_names), len(queries) * len(llm_names))
 
         # 4. Fire all LLMs concurrently
+        set_progress(scan_id, step="scanning", message=f"Scanning with {len(llm_names)} models...", progress=15, status="running")
         import httpx
         async with httpx.AsyncClient(timeout=45) as client:
             raw_results = await scan_all_llms(
                 [(str(q.id), q.query_text) for q in queries], llm_names, client,
                 brand_name=brand.name,
             )
+
+        set_progress(scan_id, step="processing", message="Processing results...", progress=75)
 
         # 5. Process results
         all_results = []
@@ -168,6 +176,18 @@ async def run_scan(brand_id: str, scan_id: str, llm_names: list[str],
             "mention_rate": mention_rate,
             "llm_names": llm_names,
         }, agent_name=agent_name)
+
+        # 7. Update progress store with final results
+        final_status = "completed" if has_any_success else "failed"
+        set_progress(
+            scan_id,
+            status=final_status,
+            step="done",
+            message=f"Score: {visibility_score}/100 | Mention rate: {mention_rate}%",
+            progress=100,
+            visibility_score=visibility_score,
+            mention_rate=mention_rate,
+        )
 
         return {
             "scan_id": str(scan.id),

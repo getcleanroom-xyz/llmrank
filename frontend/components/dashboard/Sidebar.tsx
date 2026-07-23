@@ -4,11 +4,12 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { useBrands } from "@/lib/hooks";
+import { useBrands, useDashboard } from "@/lib/hooks";
 import {
   Search, ChevronLeft, ChevronRight, LayoutDashboard, SearchCode,
   History, Swords, Plus, LogOut, User, ExternalLink,
 } from "lucide-react";
+import { NewScanButton } from "./NewScanButton";
 
 const ICON_STROKE = 2.5;
 
@@ -86,6 +87,12 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   const searchRef = useRef<HTMLDivElement>(null);
   const { data: searchResults } = useBrands(1, searchQuery);
   const [recentBrands, setRecentBrands] = useState<{ id: string; name: string }[]>(() => getRecentBrands());
+  const { data: dashResult } = useDashboard(brandId || "");
+
+  const lastScanLLMs = useMemo(
+    () => dashResult?.dashboard?.llm_breakdown?.map((b) => b.llm_name) ?? [],
+    [dashResult]
+  );
 
   const currentBrand = (searchResults ?? []).find((b) => b.id === brandId);
   useEffect(() => {
@@ -251,14 +258,11 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       {/* Quick action */}
       {brandId && !collapsed && (
         <div style={{ padding: "4px 10px", borderTop: "1.5px solid var(--border)" }}>
-          <Link
-            href={`/brands/${brandId}?tab=overview`}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px", borderRadius: "var(--radius)", textDecoration: "none", background: "var(--primary)", color: "var(--black)", fontSize: 12, fontWeight: 700, border: "1.5px solid var(--border)", justifyContent: "center" }}
-            onClick={onNavigate}
-          >
-            <Plus size={14} strokeWidth={ICON_STROKE} />
-            <span>New scan</span>
-          </Link>
+          <NewScanButton
+            brandId={brandId}
+            lastScanLLMs={lastScanLLMs}
+            onScanStarted={onNavigate}
+          />
         </div>
       )}
 

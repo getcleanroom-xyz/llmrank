@@ -23,7 +23,7 @@ Qwen is a dense transformer model with strong multilingual capabilities. Its arc
 
 ## The multilingual advantage
 
-The GEO research paper found that multilingual capabilities create unique optimization opportunities:
+The GEO research paper ([arXiv:2311.09735](https://arxiv.org/abs/2311.09735)) found that multilingual capabilities create unique optimization opportunities:
 
 **1. Language-specific brand associations.** Brands have different associations in different languages. Qwen captures these nuances better than models that translate.
 

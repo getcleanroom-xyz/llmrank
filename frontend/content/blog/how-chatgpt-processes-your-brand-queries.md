@@ -30,7 +30,7 @@ When a user asks GPT-4o about brands in a category, the model doesn't search the
 
 ## What the research says
 
-The GEO research paper (arXiv:2311.09735, KDD 2024) tested optimization strategies across 10,000 queries. For GPT-4o specifically:
+The GEO research paper ([arXiv:2311.09735](https://arxiv.org/abs/2311.09735), KDD 2024) tested optimization strategies across 10,000 queries. For GPT-4o specifically:
 
 - **Statistics boost visibility by 97.9%.** Content with specific numbers gets cited more often.
 - **Quotation addition improves visibility by 115.1%.** Credible quotes from authoritative sources make a massive difference.
@@ -62,7 +62,7 @@ GPT-4o extracts information from structured content more reliably:
 Instead of "we help teams work faster," write "our customers report 34% faster sprint completion." Numbers survive training better than adjectives.
 
 **5. Earn third-party validation.**
-A University of Toronto study found AI systems cite third-party authoritative sources 92.1% of the time. Your own website carries far less weight than a mention in Forbes, TechCrunch, or a respected industry blog.
+A University of Toronto study ([arXiv:2509.08919](https://arxiv.org/abs/2509.08919)) found AI systems cite third-party authoritative sources 92.1% of the time. Your own website carries far less weight than a mention in Forbes, TechCrunch, or a respected industry blog.
 
 ## What to do next
 

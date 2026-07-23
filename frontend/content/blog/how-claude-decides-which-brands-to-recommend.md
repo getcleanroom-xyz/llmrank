@@ -23,7 +23,7 @@ Claude uses Constitutional AI (CAI), which trains the model to be helpful, harml
 
 ## The Claude-specific signals
 
-Based on my testing and the GEO research:
+Based on my testing and the GEO research ([arXiv:2311.09735](https://arxiv.org/abs/2311.09735)):
 
 **1. Factual accuracy matters most.** Claude's training emphasizes truthfulness. Brands with verifiable claims and specific data points get mentioned more favorably.
 

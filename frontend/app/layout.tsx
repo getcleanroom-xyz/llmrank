@@ -6,6 +6,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { Providers } from "@/components/Providers";
+import { ToastProvider } from "@/components/ui/Toast";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -37,9 +38,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className={inter.className}>
         <Providers>
           <AuthProvider>
-            <ErrorBoundary>{children}</ErrorBoundary>
-            <AuthModal />
-            <Analytics />
+            <ToastProvider>
+              <ErrorBoundary>{children}</ErrorBoundary>
+              <AuthModal />
+              <Analytics />
+            </ToastProvider>
           </AuthProvider>
         </Providers>
       </body>
